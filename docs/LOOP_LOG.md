@@ -127,3 +127,25 @@
   - M1: Implement windows provider with optional `hyprctl`/`jq` diagnostics.
 
 ---
+## 2026-02-21 (Cycle 7)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Implement windows provider with optional `hyprctl`/`jq` diagnostics
+- Changes:
+  - Added `src/providers/windows.zig`:
+    - provider health based on optional tool availability
+    - window collection via `hyprctl clients -j` + `jq` projection
+    - normalized window candidates (`title`, `class`, `address`)
+    - owned-string lifecycle management
+  - Added tests for ready/degraded health paths.
+  - Exported `WindowsProvider` in `src/providers/mod.zig`.
+  - Updated queue completion in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Runtime command execution currently shells through `sh -lc`.
+- Next slice:
+  - M1: Implement dirs provider with optional `zoxide` diagnostics.
+
+---
