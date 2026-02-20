@@ -171,3 +171,24 @@
   - M1: Add provider registry and health snapshot report.
 
 ---
+## 2026-02-21 (Cycle 9)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Add provider registry and health snapshot report
+- Changes:
+  - Added `src/providers/registry.zig`:
+    - provider aggregation (`collectAll`)
+    - health snapshot generation (`healthSnapshot`)
+    - text report rendering (`renderHealthReport`)
+  - Added registry unit test covering aggregate collection + report content.
+  - Exported `ProviderRegistry` and `ProviderStatus` in `src/providers/mod.zig`.
+  - Updated `docs/TASK_QUEUE.md` to close M1 and open M2 ready slices.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Aggregation currently ignores per-provider collect errors by design for resilience.
+- Next slice:
+  - M2: Add query parser for prefix routing (`@ # ~ > = ?`).
+
+---

@@ -3,7 +3,9 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M1: Add provider registry and health snapshot report.
+- [ ] M2: Add query parser for prefix routing (`@ # ~ > = ?`).
+- [ ] M2: Implement baseline blended ranking (exact/prefix/source weights).
+- [ ] M2: Add recency boost from action history.
 
 ## In Progress
 - [ ] (empty)
@@ -20,3 +22,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M1: Implement apps provider from `.desktop` cache/source with graceful fallback.
 - [x] M1: Implement windows provider with optional `hyprctl`/`jq` diagnostics.
 - [x] M1: Implement dirs provider with optional `zoxide` diagnostics.
+- [x] M1: Add provider registry and health snapshot report.
