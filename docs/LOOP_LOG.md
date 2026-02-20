@@ -60,3 +60,27 @@
   - M1: Define `Candidate` model and `Provider` interface in `src/search/`.
 
 ---
+## 2026-02-21 (Cycle 4)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Define `Candidate` model and `Provider` interface in `src/search/`
+- Changes:
+  - Added `src/search/types.zig` with:
+    - `CandidateKind`
+    - `Candidate`
+    - `ProviderHealth`
+    - `Provider` vtable contract
+    - `CandidateList`
+  - Added unit test using fake provider context.
+  - Added `src/search/mod.zig` exports.
+  - Exported `search` from `src/root.zig`.
+  - Marked search contract task complete in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Interface intentionally minimal; diagnostics payload can be expanded later.
+- Next slice:
+  - M1: Implement actions provider with static candidates and executor mapping.
+
+---
