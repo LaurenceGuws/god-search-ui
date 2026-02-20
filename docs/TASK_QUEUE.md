@@ -3,7 +3,6 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M1: Implement dirs provider with optional `zoxide` diagnostics.
 - [ ] M1: Add provider registry and health snapshot report.
 
 ## In Progress
@@ -20,3 +19,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M1: Implement actions provider with static candidates and executor mapping.
 - [x] M1: Implement apps provider from `.desktop` cache/source with graceful fallback.
 - [x] M1: Implement windows provider with optional `hyprctl`/`jq` diagnostics.
+- [x] M1: Implement dirs provider with optional `zoxide` diagnostics.

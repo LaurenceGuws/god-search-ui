@@ -149,3 +149,25 @@
   - M1: Implement dirs provider with optional `zoxide` diagnostics.
 
 ---
+## 2026-02-21 (Cycle 8)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Implement dirs provider with optional `zoxide` diagnostics
+- Changes:
+  - Added `src/providers/dirs.zig`:
+    - provider health based on optional `zoxide` availability
+    - directory collection from `zoxide query -l`
+    - normalized directory candidates (`basename`, `Directory`, `full path`)
+    - owned-string lifecycle management
+  - Added tests for ready/degraded health and candidate mapping.
+  - Exported `DirsProvider` in `src/providers/mod.zig`.
+  - Updated queue completion in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Runtime command execution currently shells for tool check.
+- Next slice:
+  - M1: Add provider registry and health snapshot report.
+
+---
