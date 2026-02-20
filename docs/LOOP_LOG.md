@@ -40,3 +40,23 @@
   - M0: Add structured logger with levels (`debug/info/warn/error`).
 
 ---
+## 2026-02-21 (Cycle 3)
+- Milestone: M0 Foundation
+- Task slice: Add structured logger with levels (`debug/info/warn/error`)
+- Changes:
+  - Added `src/app/logger.zig` with `Level` enum and `Logger`.
+  - Added level helpers: `debug/info/warn/error`.
+  - Added enablement test for level filtering.
+  - Exported logger types from `src/app/mod.zig`.
+  - Wired startup logging in `src/main.zig`.
+  - Marked logger task complete in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Logger currently writes to stderr via `std.debug.print`.
+- Next slice:
+  - M1: Define `Candidate` model and `Provider` interface in `src/search/`.
+
+---
