@@ -234,3 +234,23 @@
   - M2: Add recency boost from action history.
 
 ---
+## 2026-02-21 (Cycle 12)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Add recency boost from action history
+- Changes:
+  - Extended ranking with `rankCandidatesWithHistory`.
+  - Added action-history recency boost with decaying score bonus.
+  - Kept `rankCandidates` as a compatibility wrapper.
+  - Added recency ranking test.
+  - Exported `rankCandidatesWithHistory` in `src/search/mod.zig`.
+  - Marked recency slice complete in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Recency currently keys on exact `candidate.action` string match.
+- Next slice:
+  - M2: Wire query parser + ranking into a search service that consumes provider registry.
+
+---

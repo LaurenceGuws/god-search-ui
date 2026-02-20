@@ -12,6 +12,15 @@ pub fn rankCandidates(
     query: query_mod.Query,
     candidates: []const types.Candidate,
 ) ![]ScoredCandidate {
+    return rankCandidatesWithHistory(allocator, query, candidates, &.{});
+}
+
+pub fn rankCandidatesWithHistory(
+    allocator: std.mem.Allocator,
+    query: query_mod.Query,
+    candidates: []const types.Candidate,
+    recent_actions: []const []const u8,
+) ![]ScoredCandidate {
     var scored = std.ArrayList(ScoredCandidate).empty;
     defer scored.deinit(allocator);
 
@@ -20,7 +29,7 @@ pub fn rankCandidates(
 
     for (candidates) |candidate| {
         if (!matchesRoute(query.route, candidate.kind)) continue;
-        const score = candidateScore(needle, candidate);
+        const score = candidateScore(needle, candidate, recent_actions);
         if (score <= 0 and needle.len > 0) continue;
         try scored.append(allocator, .{ .candidate = candidate, .score = score });
     }
@@ -44,9 +53,12 @@ fn matchesRoute(route: query_mod.Route, kind: types.CandidateKind) bool {
     };
 }
 
-fn candidateScore(needle: []const u8, candidate: types.Candidate) i32 {
+fn candidateScore(needle: []const u8, candidate: types.Candidate, recent_actions: []const []const u8) i32 {
     var score: i32 = baseWeight(candidate.kind);
-    if (needle.len == 0) return score;
+    if (needle.len == 0) {
+        score += recencyBoost(candidate.action, recent_actions);
+        return score;
+    }
 
     const title = std.ascii.allocLowerString(std.heap.page_allocator, candidate.title) catch return 0;
     defer std.heap.page_allocator.free(title);
@@ -63,7 +75,18 @@ fn candidateScore(needle: []const u8, candidate: types.Candidate) i32 {
     {
         return 0;
     }
+    score += recencyBoost(candidate.action, recent_actions);
     return score;
+}
+
+fn recencyBoost(action: []const u8, recent_actions: []const []const u8) i32 {
+    for (recent_actions, 0..) |recent, idx| {
+        if (!std.mem.eql(u8, recent, action)) continue;
+        const decay = @as(i32, @intCast(idx)) * 5;
+        const bonus = 40 - decay;
+        return if (bonus > 0) bonus else 0;
+    }
+    return 0;
 }
 
 fn baseWeight(kind: types.CandidateKind) i32 {
@@ -102,4 +125,18 @@ test "route filter limits result kinds" {
 
     try std.testing.expectEqual(@as(usize, 1), ranked.len);
     try std.testing.expectEqual(types.CandidateKind.app, ranked[0].candidate.kind);
+}
+
+test "recency history boosts repeated action candidates" {
+    const candidates = [_]types.Candidate{
+        .init(.action, "Settings", "System", "settings"),
+        .init(.action, "Power menu", "Session", "power"),
+    };
+    const history = [_][]const u8{"power"};
+    const query = query_mod.parse("p");
+    const ranked = try rankCandidatesWithHistory(std.testing.allocator, query, &candidates, &history);
+    defer std.testing.allocator.free(ranked);
+
+    try std.testing.expectEqual(@as(usize, 1), ranked.len);
+    try std.testing.expectEqualStrings("Power menu", ranked[0].candidate.title);
 }

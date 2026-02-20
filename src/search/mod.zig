@@ -8,3 +8,4 @@ pub const Route = @import("query.zig").Route;
 pub const parseQuery = @import("query.zig").parse;
 pub const ScoredCandidate = @import("rank.zig").ScoredCandidate;
 pub const rankCandidates = @import("rank.zig").rankCandidates;
+pub const rankCandidatesWithHistory = @import("rank.zig").rankCandidatesWithHistory;
