@@ -212,3 +212,25 @@
   - M2: Implement baseline blended ranking (exact/prefix/source weights).
 
 ---
+## 2026-02-21 (Cycle 11)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Implement baseline blended ranking (exact/prefix/source weights)
+- Changes:
+  - Added `src/search/rank.zig`:
+    - scored candidate model
+    - ranking by source weight + exact/prefix/contains matching
+    - route-aware filtering
+    - deterministic sort by score then title
+  - Added ranking tests for exact-vs-prefix ordering and route filtering.
+  - Exported ranking symbols via `src/search/mod.zig`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Current matcher is lightweight substring logic; fuzzy matching is not yet added.
+- Next slice:
+  - M2: Add recency boost from action history.
+
+---

@@ -3,8 +3,8 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M2: Implement baseline blended ranking (exact/prefix/source weights).
 - [ ] M2: Add recency boost from action history.
+- [ ] M2: Wire query parser + ranking into a search service that consumes provider registry.
 
 ## In Progress
 - [ ] (empty)
@@ -23,3 +23,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M1: Implement dirs provider with optional `zoxide` diagnostics.
 - [x] M1: Add provider registry and health snapshot report.
 - [x] M2: Add query parser for prefix routing (`@ # ~ > = ?`).
+- [x] M2: Implement baseline blended ranking (exact/prefix/source weights).
