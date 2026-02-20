@@ -106,3 +106,24 @@
   - M1: Implement apps provider from `.desktop` cache/source with graceful fallback.
 
 ---
+## 2026-02-21 (Cycle 6)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Implement apps provider from `.desktop` cache/source with graceful fallback
+- Changes:
+  - Added `src/providers/apps.zig` with:
+    - cache-based TSV collection (`category\\tname\\texec`)
+    - health reporting (`ready` when cache exists, `degraded` otherwise)
+    - fallback candidate when cache is missing/empty
+  - Added tests for cache collection and fallback behavior.
+  - Exported apps provider via `src/providers/mod.zig`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Candidate strings are retained in provider-owned memory until `deinit`.
+- Next slice:
+  - M1: Implement windows provider with optional `hyprctl`/`jq` diagnostics.
+
+---
