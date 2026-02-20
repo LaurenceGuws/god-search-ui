@@ -192,3 +192,23 @@
   - M2: Add query parser for prefix routing (`@ # ~ > = ?`).
 
 ---
+## 2026-02-21 (Cycle 10)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Add query parser for prefix routing (`@ # ~ > = ?`)
+- Changes:
+  - Added `src/search/query.zig`:
+    - route enum for blended/apps/windows/dirs/run/calc/web
+    - parser for optional prefix-based routing
+    - unit tests for empty, prefixed, and plain queries
+  - Exported query types/parser in `src/search/mod.zig`.
+  - Updated queue completion in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Parser currently trims surrounding whitespace and strips one prefix char only.
+- Next slice:
+  - M2: Implement baseline blended ranking (exact/prefix/source weights).
+
+---

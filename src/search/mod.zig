@@ -3,3 +3,6 @@ pub const CandidateKind = @import("types.zig").CandidateKind;
 pub const CandidateList = @import("types.zig").CandidateList;
 pub const Provider = @import("types.zig").Provider;
 pub const ProviderHealth = @import("types.zig").ProviderHealth;
+pub const Query = @import("query.zig").Query;
+pub const Route = @import("query.zig").Route;
+pub const parseQuery = @import("query.zig").parse;
