@@ -84,3 +84,25 @@
   - M1: Implement actions provider with static candidates and executor mapping.
 
 ---
+## 2026-02-21 (Cycle 5)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Implement actions provider with static candidates and executor mapping
+- Changes:
+  - Added `src/providers/actions.zig`:
+    - static action candidates (`Settings`, `Power menu`, `Restart Waybar`, `Notifications panel`)
+    - action key to command resolver
+    - execution function using injected command runner
+  - Added tests for provider collection and action execution mapping.
+  - Added `src/providers/mod.zig` export barrel.
+  - Exported `providers` from `src/root.zig`.
+  - Updated `docs/TASK_QUEUE.md` with completion + next M1 slices.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Command strings are static for now; later config overrides can be layered on top.
+- Next slice:
+  - M1: Implement apps provider from `.desktop` cache/source with graceful fallback.
+
+---

@@ -1,6 +1,7 @@
 //! By convention, root.zig is the root source file when making a library.
 const std = @import("std");
 pub const app = @import("app/mod.zig");
+pub const providers = @import("providers/mod.zig");
 pub const search = @import("search/mod.zig");
 
 pub fn bufferedPrint() !void {
