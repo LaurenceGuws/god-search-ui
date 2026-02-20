@@ -1,5 +1,6 @@
 //! By convention, root.zig is the root source file when making a library.
 const std = @import("std");
+pub const app = @import("app/mod.zig");
 
 pub fn bufferedPrint() !void {
     // Stdout is for the actual output of your application, for example if you
@@ -9,7 +10,7 @@ pub fn bufferedPrint() !void {
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    try stdout.print("God Search UI scaffold ready. Run `zig build test`.\n", .{});
 
     try stdout.flush(); // Don't forget to flush!
 }
