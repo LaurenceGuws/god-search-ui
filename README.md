@@ -133,6 +133,10 @@ Release-contracts alias help/docs contract check:
 ```bash
 scripts/check_release_contracts_contract.sh
 ```
+Release-contracts doc consistency check:
+```bash
+scripts/check_release_contracts_doc.sh
+```
 Release-validate help/docs contract check:
 ```bash
 scripts/check_release_validate_contract.sh

@@ -3292,3 +3292,30 @@
   - M8: UX Phase 4 - add release_contracts doc consistency check in release docs meta guard.
 
 ---
+## 2026-02-21 (Cycle 151)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts doc consistency check and meta-guard integration
+- Changes:
+  - Added `scripts/check_release_contracts_doc.sh`:
+    - validates required sections and script references in `docs/RELEASE_CONTRACTS.md`
+  - Updated `scripts/check_release_docs_contracts.sh`:
+    - now includes release-contracts doc consistency check
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md` and `scripts/check_release_matrix.sh`:
+    - added/validated release-contracts doc checker script row
+  - Updated `README.md`:
+    - documented release-contracts doc checker command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - doc checker intentionally enforces section headers and key script mentions via string checks.
+- Next slice:
+  - M8: UX Phase 4 - add quick smoke command in release-contracts doc for local dirty-override workflow.
+
+---
