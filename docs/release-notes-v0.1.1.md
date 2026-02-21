@@ -3,54 +3,50 @@
 ## Release
 - Version: v0.1.1
 - Date: 2026-02-21
-- Milestone Scope: M8 Patch Release Cadence
+- Milestone Scope:
 
 ## Highlights
-- Release automation hardened with helper guard checks and matrix validation.
-- GTK search UX improved with explicit empty/error rows and clearer empty-query guidance.
-- Post-release patch cadence documented (plan, triage template/log, execution checklist).
+- 
+- 
+- 
 
 ## New Features
-- `scripts/check_release_matrix.sh` validates release-matrix script references and command anchors.
-- `scripts/release_smoke.sh --with-gtk-runtime` adds optional GTK runtime launch smoke.
-- New operational references: `docs/RELEASE_SCRIPT_MATRIX.md`, `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`, `docs/TRIAGE_LOG.md`.
+- 
 
 ## Improvements
-- `scripts/publish_release_tag.sh` supports explicit `--remote` selection.
-- Release runbook now includes SSH preflight guidance before first publish.
-- Release helper CLI contract checks are integrated into release smoke flow.
+- 
 
 ## Fixes
-- Corrected publish-helper help text to match `--remote` behavior.
-- Removed ambiguous GTK empty state by rendering a clear “No results” row.
-- Search errors in GTK now render visible status rows instead of silent empty list.
+- 
 
 ## Breaking / Behavior Changes
-- None.
+- 
 
 ## Migration Notes
-- No config migration required from `v0.1.0`.
-- Existing release scripts remain compatible; optional flags (`--with-gtk-runtime`, `--remote`) are additive.
+- 
 
 ## Verification Summary
-- `scripts/dev.sh check`: pass
-- GTK build (`zig build -Denable_gtk=true`): pass
+- `scripts/dev.sh check`: pass/fail
+- GTK build (`zig build -Denable_gtk=true`): pass/fail
 - Smoke test command(s):
-  - `scripts/release_smoke.sh` (pass)
-  - `scripts/release_smoke.sh --with-gtk-runtime` (pass)
-  - `scripts/check_release_helpers.sh` (pass)
-  - `scripts/check_release_matrix.sh` (pass)
+  - 
 
 ## Rollback Notes
-- Fallback keybind path: retain existing shell launcher binding on separate key.
-- Previous known-good commit/tag: `v0.1.0`
+- Fallback keybind path:
+- Previous known-good commit/tag:
 
 ## Known Issues
-- SSH environment setup can still fail on first publish if private-key permissions are incorrect.
+- 
 
 ## Draft Commit Digest
 
 ```text
+515d9d5 Queue v0.1.1 apply release slice
+2f4bc9c Record v0.1.1 release dry-run result
+a4af88d Queue v0.1.1 dry-run release slice
+9ac8132 Add v0.1.1 pre-cut readiness gate script
+0d78e2b Fill v0.1.1 release notes details
+c1286a6 Add v0.1.1 patch release notes draft
 2c7ae56 Add release matrix validator script
 740f1ea Add release helper script usage matrix
 3adbc0b Add optional GTK runtime mode to release smoke
@@ -65,10 +61,4 @@ dae366a Add release helper CLI contract guard checks
 e96cb0f Add v0.1.1 post-release patch plan
 5a16fea Record stable v0.1.0 release promotion
 1a9481a Add release notes draft for v0.1.0
-b8fefcb Queue stable v0.1.0 promotion slice
-a2a8eb1 Record v0.1.0-rc2 tag publish
-797803a Record publish blocker in task queue
-7486bbc Add remote selection to publish tag helper
-e8a09e4 Allow publish helper dry-run without origin
-8e8587d Add helper to publish existing release tags
 ```
