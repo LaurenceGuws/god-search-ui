@@ -45,9 +45,16 @@ scripts/dev.sh build
 scripts/dev.sh test
 ```
 
+Draft release notes from latest commits:
+```bash
+scripts/gen_release_notes.sh v0.1.0
+```
+
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`
 - systemd user unit template: `packaging/systemd/god-search-ui.service`
+- desktop entry template: `packaging/desktop/god-search-ui.desktop`
+- icon asset: `assets/icons/god-search-ui.svg`
 - Notes: `docs/ARCH_PACKAGING.md`
 - Hypr/Waybar integration: `docs/HYPR_WAYBAR_INTEGRATION.md`
 - GTK rollout checklist: `docs/GTK_ROLLOUT_CHECKLIST.md`

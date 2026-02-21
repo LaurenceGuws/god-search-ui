@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=God Search UI
+Comment=Spotlight-style launcher for Hyprland
+Exec=god-search-ui --ui
+Icon=god-search-ui
+Terminal=false
+Categories=Utility;
+Keywords=launcher;search;hyprland;
+StartupNotify=true

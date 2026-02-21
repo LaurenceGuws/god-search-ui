@@ -789,3 +789,47 @@
   - M5: Add async thread-based refresh worker (optional advanced path).
 
 ---
+## 2026-02-21 (Cycle 37)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add changelog generation script for release notes draft
+- Changes:
+  - Added `scripts/gen_release_notes.sh` to generate draft notes using:
+    - `docs/RELEASE_NOTES_TEMPLATE.md`
+    - latest commit digest (`git log --oneline -20`)
+  - Added usage references in:
+    - `README.md`
+    - `docs/ARCH_PACKAGING.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/gen_release_notes.sh v0.1.0 /tmp/god-search-ui-release-notes.md`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Commit digest is intentionally simple and may require manual curation.
+- Next slice:
+  - M6: Add desktop file + icon assets for launcher integration.
+
+---
+## 2026-02-21 (Cycle 38)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add desktop file + icon assets for launcher integration
+- Changes:
+  - Added desktop entry template:
+    - `packaging/desktop/god-search-ui.desktop`
+  - Added launcher icon asset:
+    - `assets/icons/god-search-ui.svg`
+  - Updated `packaging/arch/PKGBUILD` to install desktop file and icon.
+  - Added README packaging references.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `makepkg --printsrcinfo` (optional local packaging check)
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Desktop file assumes binary name `god-search-ui` is in `PATH`.
+- Next slice:
+  - M7: release hardening (tagging, packaged install smoke, rollout execution).
+
+---

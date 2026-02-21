@@ -2,6 +2,8 @@
 
 ## Skeleton Files
 - `packaging/arch/PKGBUILD`
+- `packaging/desktop/god-search-ui.desktop`
+- `assets/icons/god-search-ui.svg`
 
 ## Build Locally
 ```bash
@@ -22,8 +24,16 @@ You may also need runtime deps such as:
 
 ## Installed Binary
 - `/usr/bin/god-search-ui`
+- `/usr/share/applications/god-search-ui.desktop`
+- `/usr/share/icons/hicolor/scalable/apps/god-search-ui.svg`
 
 ## Suggested post-install check
 ```bash
 god-search-ui --ui
+```
+
+## Release notes draft helper
+Generate a notes draft from the release template + recent commits:
+```bash
+scripts/gen_release_notes.sh v0.1.0
 ```

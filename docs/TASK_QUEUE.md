@@ -3,8 +3,7 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M6: Add changelog generation script for release notes draft.
-- [ ] M6: Add desktop file + icon assets for launcher integration.
+- [ ] (empty)
 
 ## In Progress
 - [ ] (empty)
@@ -51,3 +50,5 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M6: Add operator troubleshooting runbook for common failures.
 - [x] M6: Add systemd user unit example file under `packaging/systemd/`.
 - [x] M6: Add release-notes template for milestone cutovers.
+- [x] M6: Add changelog generation script for release notes draft.
+- [x] M6: Add desktop file + icon assets for launcher integration.
