@@ -59,6 +59,7 @@ Release smoke checks:
 ```bash
 scripts/release_smoke.sh
 ```
+Headless smoke now includes `:icondiag` to validate icon metadata/fallback diagnostics path.
 Optional GTK runtime launch smoke:
 ```bash
 scripts/release_smoke.sh --with-gtk-runtime

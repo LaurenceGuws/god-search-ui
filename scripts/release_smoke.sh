@@ -13,7 +13,7 @@ echo "[1/9] full check"
 scripts/dev.sh check
 
 echo "[2/9] headless smoke"
-printf ':refresh\nkitty\n:q\n' | zig build run -- --ui
+printf ':refresh\n:icondiag\nkitty\n:q\n' | zig build run -- --ui
 
 echo "[3/9] gtk build smoke"
 zig build -Denable_gtk=true

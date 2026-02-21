@@ -2700,3 +2700,24 @@
   - M8: UX Phase 4 - add docs cross-link from GTK troubleshooting path to `:icondiag` command.
 
 ---
+## 2026-02-21 (Cycle 129)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - include `:icondiag` path in headless release smoke flow
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - headless smoke now runs `:icondiag` before query checks
+  - Updated `README.md`:
+    - documented icon diagnostics coverage in release smoke flow
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/release_smoke.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - smoke output is slightly noisier due diagnostics printout.
+- Next slice:
+  - M8: UX Phase 4 - add compact docs table for icon-resolution order (metadata -> token -> glyph).
+
+---
