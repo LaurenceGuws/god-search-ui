@@ -307,6 +307,9 @@ pub const Shell = struct {
             appendInfoRow(ctx.list, "No results");
         } else {
             appendGroupedRows(ctx, allocator, rows);
+            if (ranked.len > limit) {
+                appendInfoRow(ctx.list, "Showing top 20 results");
+            }
         }
         if (ctx.service.last_query_used_stale_cache) {
             setStatus(ctx, "Refresh scheduled");

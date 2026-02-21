@@ -117,3 +117,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - add lightweight searching status during debounced updates.
 - [x] M8: UX Phase 3 - keep selected actionable row visible in scrolled viewport.
 - [x] M8: UX Phase 3 - tune per-kind chip contrast and title emphasis for faster scanning.
+- [x] M8: UX Phase 3 - show result-limit indicator when top 20 truncation applies.

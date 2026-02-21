@@ -2226,3 +2226,22 @@
   - M8: UX Phase 3 - add explicit result limit indicator when list is truncated.
 
 ---
+## 2026-02-21 (Cycle 106)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - show result-limit indicator when top 20 truncation applies
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - when ranked results exceed render cap, append informational row `Showing top 20 results`
+    - keeps existing grouped rendering and actionable selection behavior unchanged
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - fixed text assumes current cap of 20; should be parameterized if cap becomes configurable.
+- Next slice:
+  - M8: UX Phase 3 - add quick provider-route hint row for one-character prefix queries.
+
+---
