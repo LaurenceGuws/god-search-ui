@@ -139,3 +139,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - extend optional GTK runtime smoke to exercise app icon render path.
 - [x] M8: UX Phase 4 - add icon-theme preflight diagnostics to release smoke checks.
 - [x] M8: UX Phase 4 - add startup status notice when app icon glyph fallback is active.
+- [x] M8: UX Phase 4 - add headless icon diagnostics command for metadata/fallback stats.

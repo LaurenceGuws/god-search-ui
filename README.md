@@ -25,6 +25,7 @@ zig build run -- --ui
 In headless mode, type queries and press Enter. Commands:
 - `:q` to exit
 - `:refresh` to invalidate + prewarm provider snapshot cache
+- `:icondiag` to print app icon metadata/fallback diagnostics
 
 GTK4 shell (requires GTK4 dev libraries):
 ```bash

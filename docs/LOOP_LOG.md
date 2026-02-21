@@ -2657,3 +2657,28 @@
   - M8: UX Phase 4 - add headless diagnostics command to print icon metadata/fallback stats.
 
 ---
+## 2026-02-21 (Cycle 127)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add headless icon diagnostics command for metadata/fallback stats
+- Changes:
+  - Updated `src/ui/stub_shell.zig`:
+    - added `:icondiag` command in headless mode
+    - prints app icon diagnostics (metadata count, token fallback count, likely glyph fallback count)
+    - added shared action-token parsing helper and command list banner
+  - Updated `README.md`:
+    - documented `:icondiag` headless command
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added icon diagnostics command in missing-icon triage steps
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf ':icondiag\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - diagnostics are based on candidate snapshot and token heuristics, not GTK theme render introspection.
+- Next slice:
+  - M8: UX Phase 4 - add GTK status copy hint pointing to `:icondiag` when fallback warning is shown.
+
+---
