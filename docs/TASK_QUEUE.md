@@ -58,3 +58,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M7: Add optional Arch package smoke helper script.
 - [x] M7: Add release tag flow helper script (dry-run + apply modes).
 - [x] M7: Make release-tag dry-run mode side-effect free (no generated files).
+- [x] M7: Execute local RC tag cut (`v0.1.0-rc1`) with release preflight.

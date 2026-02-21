@@ -968,3 +968,24 @@
   - M7: run real `v0.1.0-rc1` cut on maintainer command.
 
 ---
+## 2026-02-21 (Cycle 45)
+- Milestone: M7 Release Hardening
+- Task slice: Execute local RC tag cut (`v0.1.0-rc1`) with release preflight
+- Changes:
+  - Ran `scripts/cut_release_tag.sh --version v0.1.0-rc1 --apply`.
+  - Preflight passed (`scripts/release_smoke.sh`).
+  - Created local annotated tag `v0.1.0-rc1` at commit `9859dfe`.
+  - Generated draft notes file:
+    - `docs/release-notes-v0.1.0-rc1.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git show v0.1.0-rc1 --no-patch --oneline`
+  - `git tag -l`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Tag not pushed; remote publish requires explicit `--push` path.
+- Next slice:
+  - M7: decide publish action (`--push`) or iterate RC fixes.
+
+---
