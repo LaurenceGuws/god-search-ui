@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_mod = @import("../app/mod.zig");
+const providers_mod = @import("../providers/mod.zig");
 const c = @cImport({
     @cInclude("gtk/gtk.h");
 });
@@ -64,6 +65,7 @@ pub const Shell = struct {
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
         c.gtk_widget_add_controller(window, @ptrCast(key_controller));
         _ = c.g_signal_connect_data(entry, "search-changed", c.G_CALLBACK(onSearchChanged), ctx, null, 0);
+        _ = c.g_signal_connect_data(list, "row-activated", c.G_CALLBACK(onRowActivated), ctx, null, 0);
         _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(onDestroy), ctx, null, 0);
 
         c.gtk_box_append(@ptrCast(root_box), entry);
@@ -124,6 +126,19 @@ pub const Shell = struct {
         populateResults(ctx, query);
     }
 
+    fn onRowActivated(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {
+        if (row == null or user_data == null) return;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+
+        const kind_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind");
+        const action_ptr = c.g_object_get_data(@ptrCast(row), "gs-action");
+        if (kind_ptr == null or action_ptr == null) return;
+
+        const kind = std.mem.span(@as([*:0]const u8, @ptrCast(kind_ptr)));
+        const action = std.mem.span(@as([*:0]const u8, @ptrCast(action_ptr)));
+        executeSelected(ctx, kind, action);
+    }
+
     fn selectOffset(list: *c.GtkListBox, delta: i32) void {
         const selected = c.gtk_list_box_get_selected_row(list);
         var idx: i32 = 0;
@@ -149,7 +164,18 @@ pub const Shell = struct {
 
             const label = c.gtk_label_new(text.ptr);
             c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-            c.gtk_list_box_append(@ptrCast(ctx.list), label);
+            const list_row = c.gtk_list_box_row_new();
+            c.gtk_list_box_row_set_child(@ptrCast(list_row), label);
+
+            const kind = kindTag(row.candidate.kind);
+            const kind_c = std.fmt.allocPrintZ(allocator, "{s}", .{kind}) catch continue;
+            defer allocator.free(kind_c);
+            const action_c = std.fmt.allocPrintZ(allocator, "{s}", .{row.candidate.action}) catch continue;
+            defer allocator.free(action_c);
+
+            c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_c.ptr), c.g_free);
+            c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_c.ptr), c.g_free);
+            c.gtk_list_box_append(@ptrCast(ctx.list), list_row);
         }
 
         const first = c.gtk_list_box_get_row_at_index(ctx.list, 0);
@@ -163,5 +189,55 @@ pub const Shell = struct {
             c.gtk_list_box_remove(list, child);
             child = next;
         }
+    }
+
+    fn executeSelected(ctx: *UiContext, kind: []const u8, action: []const u8) void {
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+
+        ctx.service.recordSelection(allocator, action) catch {};
+
+        if (std.mem.eql(u8, kind, "action")) {
+            providers_mod.executeAction(action, runShellCommand) catch {};
+            return;
+        }
+        if (std.mem.eql(u8, kind, "app")) {
+            if (!std.mem.eql(u8, action, "__drun__")) runShellCommand(action) catch {};
+            return;
+        }
+        if (std.mem.eql(u8, kind, "dir")) {
+            const cmd = std.fmt.allocPrint(allocator, "xdg-open \"{s}\"", .{action}) catch return;
+            defer allocator.free(cmd);
+            runShellCommand(cmd) catch {};
+            return;
+        }
+        if (std.mem.eql(u8, kind, "window")) {
+            const cmd = std.fmt.allocPrint(allocator, "hyprctl dispatch focuswindow \"address:{s}\"", .{action}) catch return;
+            defer allocator.free(cmd);
+            runShellCommand(cmd) catch {};
+            return;
+        }
+    }
+
+    fn runShellCommand(command: []const u8) !void {
+        const result = try std.process.Child.run(.{
+            .allocator = std.heap.page_allocator,
+            .argv = &.{ "sh", "-lc", command },
+        });
+        defer {
+            std.heap.page_allocator.free(result.stdout);
+            std.heap.page_allocator.free(result.stderr);
+        }
+        if (result.term != .Exited or result.term.Exited != 0) return error.CommandFailed;
+    }
+
+    fn kindTag(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
+        return switch (kind) {
+            .app => "app",
+            .window => "window",
+            .dir => "dir",
+            .action => "action",
+            .hint => "hint",
+        };
     }
 };

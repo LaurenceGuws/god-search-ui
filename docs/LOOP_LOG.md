@@ -402,3 +402,27 @@
   - M3: Add action execution hook for selected result (`Enter`).
 
 ---
+## 2026-02-21 (Cycle 20)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add action execution hook for selected result (`Enter`)
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - attached candidate metadata (`kind`, `action`) to list rows
+    - wired `row-activated` callback to execute selected result
+    - implemented per-kind execution routing:
+      - `action` via `providers.executeAction`
+      - `app` via shell command
+      - `dir` via `xdg-open`
+      - `window` via `hyprctl focuswindow`
+    - records selection into history before execution
+  - Updated queue to close current M3 action hook item.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Command execution currently uses blocking `sh -lc`; async dispatch can be added later.
+- Next slice:
+  - M3: Add row-level icon/chip styling in GTK list renderer.
+
+---
