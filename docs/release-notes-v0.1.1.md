@@ -3,40 +3,50 @@
 ## Release
 - Version: v0.1.1
 - Date: 2026-02-21
-- Milestone Scope:
+- Milestone Scope: M8 Patch Release Cadence
 
 ## Highlights
-- 
-- 
-- 
+- Release automation hardened with helper guard checks and matrix validation.
+- GTK search UX improved with explicit empty/error rows and clearer empty-query guidance.
+- Post-release patch cadence documented (plan, triage template/log, execution checklist).
 
 ## New Features
-- 
+- `scripts/check_release_matrix.sh` validates release-matrix script references and command anchors.
+- `scripts/release_smoke.sh --with-gtk-runtime` adds optional GTK runtime launch smoke.
+- New operational references: `docs/RELEASE_SCRIPT_MATRIX.md`, `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`, `docs/TRIAGE_LOG.md`.
 
 ## Improvements
-- 
+- `scripts/publish_release_tag.sh` supports explicit `--remote` selection.
+- Release runbook now includes SSH preflight guidance before first publish.
+- Release helper CLI contract checks are integrated into release smoke flow.
 
 ## Fixes
-- 
+- Corrected publish-helper help text to match `--remote` behavior.
+- Removed ambiguous GTK empty state by rendering a clear “No results” row.
+- Search errors in GTK now render visible status rows instead of silent empty list.
 
 ## Breaking / Behavior Changes
-- 
+- None.
 
 ## Migration Notes
-- 
+- No config migration required from `v0.1.0`.
+- Existing release scripts remain compatible; optional flags (`--with-gtk-runtime`, `--remote`) are additive.
 
 ## Verification Summary
-- `scripts/dev.sh check`: pass/fail
-- GTK build (`zig build -Denable_gtk=true`): pass/fail
+- `scripts/dev.sh check`: pass
+- GTK build (`zig build -Denable_gtk=true`): pass
 - Smoke test command(s):
-  - 
+  - `scripts/release_smoke.sh` (pass)
+  - `scripts/release_smoke.sh --with-gtk-runtime` (pass)
+  - `scripts/check_release_helpers.sh` (pass)
+  - `scripts/check_release_matrix.sh` (pass)
 
 ## Rollback Notes
-- Fallback keybind path:
-- Previous known-good commit/tag:
+- Fallback keybind path: retain existing shell launcher binding on separate key.
+- Previous known-good commit/tag: `v0.1.0`
 
 ## Known Issues
-- 
+- SSH environment setup can still fail on first publish if private-key permissions are incorrect.
 
 ## Draft Commit Digest
 

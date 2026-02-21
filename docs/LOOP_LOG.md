@@ -1426,3 +1426,22 @@
   - M8: tighten release notes with concrete filled sections for v0.1.1.
 
 ---
+## 2026-02-21 (Cycle 67)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Fill concrete highlights/fixes in `v0.1.1` release notes
+- Changes:
+  - Updated `docs/release-notes-v0.1.1.md`:
+    - filled highlights/new features/improvements/fixes
+    - filled verification summary and rollback baseline
+    - added known issue from triage log
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - release notes still reflect current local scope and should be refreshed if additional patch commits land.
+- Next slice:
+  - M8: add quick checklist script for v0.1.1 pre-cut readiness gate.
+
+---
