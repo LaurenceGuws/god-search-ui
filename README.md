@@ -55,6 +55,11 @@ Release smoke checks:
 scripts/release_smoke.sh
 ```
 
+Arch package smoke helper:
+```bash
+scripts/arch_package_smoke.sh
+```
+
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`
 - systemd user unit template: `packaging/systemd/god-search-ui.service`

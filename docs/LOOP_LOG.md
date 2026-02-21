@@ -900,3 +900,25 @@
   - M7: automate packaged smoke into optional helper script.
 
 ---
+## 2026-02-21 (Cycle 42)
+- Milestone: M7 Release Hardening
+- Task slice: Add optional Arch package smoke helper script
+- Changes:
+  - Added `scripts/arch_package_smoke.sh`:
+    - default path: build package + inspect package archive contents
+    - optional path: install/uninstall checks via `--install --uninstall`
+  - Linked helper usage in:
+    - `README.md`
+    - `docs/PACKAGED_INSTALL_SMOKE.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/arch_package_smoke.sh --help`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Full install/uninstall path requires Arch host with sudo/pacman.
+- Next slice:
+  - M7: release candidate cut (`v0.1.0-rc1`) using runbook flow.
+
+---

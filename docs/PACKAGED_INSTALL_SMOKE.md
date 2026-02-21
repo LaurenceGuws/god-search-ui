@@ -2,6 +2,17 @@
 
 Validate package install and launcher integration end-to-end.
 
+## Fast Path
+Automated helper:
+```bash
+scripts/arch_package_smoke.sh
+```
+
+With install/uninstall checks:
+```bash
+scripts/arch_package_smoke.sh --install --uninstall
+```
+
 ## Prerequisites
 - Arch-based system with `makepkg`
 - Build deps installed (`zig`, `git`)

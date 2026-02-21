@@ -55,3 +55,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M7: Add release smoke-test script for headless + GTK build verification.
 - [x] M7: Add release tagging/rollback runbook with exact command sequence.
 - [x] M7: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check).
+- [x] M7: Add optional Arch package smoke helper script.
