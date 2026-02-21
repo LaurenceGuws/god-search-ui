@@ -9,7 +9,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [ ] (empty)
 
 ## Blocked
-- [ ] (empty)
+- [ ] M7: Publish `v0.1.0-rc2` (`scripts/publish_release_tag.sh --version v0.1.0-rc2 --apply`) - blocked: no configured/writable git remote in current workspace.
 
 ## Done
 - [x] M0: baseline dev loop + CI + deterministic starter

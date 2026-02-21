@@ -1103,3 +1103,20 @@
   - M7: publish RC once chosen remote is configured.
 
 ---
+## 2026-02-21 (Cycle 51)
+- Milestone: M7 Release Hardening
+- Task slice: Record publish blocker in queue
+- Changes:
+  - Updated `docs/TASK_QUEUE.md` blocked section with explicit publish blocker:
+    - missing configured/writable git remote for `v0.1.0-rc2` publish step
+- Verification:
+  - `git remote -v`
+  - `scripts/publish_release_tag.sh --version v0.1.0-rc2`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - publish step cannot complete in current workspace until remote is configured.
+- Next slice:
+  - unblock by configuring remote and rerun publish helper with `--apply`.
+
+---
