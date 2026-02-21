@@ -57,6 +57,7 @@ pub const Shell = struct {
         c.gtk_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
         const status = c.gtk_label_new("Esc to close, Ctrl+R to refresh");
         c.gtk_label_set_xalign(@ptrCast(status), 0.0);
+        c.gtk_widget_set_margin_bottom(status, 4);
 
         const list = c.gtk_list_box_new();
         c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
@@ -468,9 +469,23 @@ pub const Shell = struct {
     }
 
     fn setStatus(ctx: *UiContext, message: []const u8) void {
-        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
-        defer std.heap.page_allocator.free(msg_z);
-        c.gtk_label_set_text(ctx.status, msg_z.ptr);
+        if (message.len == 0) {
+            c.gtk_label_set_text(ctx.status, "");
+            return;
+        }
+        const msg_escaped = c.g_markup_escape_text(message.ptr, @intCast(message.len));
+        if (msg_escaped == null) return;
+        defer c.g_free(msg_escaped);
+
+        const markup = std.fmt.allocPrint(
+            std.heap.page_allocator,
+            "<span foreground='#8b93a8'>{s}</span>",
+            .{std.mem.span(@as([*:0]const u8, @ptrCast(msg_escaped)))},
+        ) catch return;
+        defer std.heap.page_allocator.free(markup);
+        const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
+        defer std.heap.page_allocator.free(markup_z);
+        c.gtk_label_set_markup(ctx.status, markup_z.ptr);
     }
 
     fn runShellCommand(command: []const u8) !void {

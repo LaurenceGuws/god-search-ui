@@ -101,3 +101,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 1 - add debounce for GTK `search-changed` updates.
 - [x] M8: UX Phase 1 - add visible launch feedback row for async command dispatch.
 - [x] M8: UX Phase 2 - replace placeholder status text with dedicated status line.
+- [x] M8: UX Phase 2 - style and spacing polish for GTK status line.

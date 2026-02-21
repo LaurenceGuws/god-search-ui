@@ -1913,3 +1913,23 @@
   - M8: UX Phase 2 - add status line visual styling and spacing polish.
 
 ---
+## 2026-02-21 (Cycle 90)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - style and spacing polish for GTK status line
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added bottom margin to status line widget for clearer spacing
+    - switched status rendering to muted markup style
+    - kept empty status line truly empty when no message is active
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status line color is currently hardcoded and should move to theme styling later.
+- Next slice:
+  - M8: UX Phase 2 - remove hardcoded row/chip colors into CSS/theme layer.
+
+---
