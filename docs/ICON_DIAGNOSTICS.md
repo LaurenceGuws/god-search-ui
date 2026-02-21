@@ -29,3 +29,13 @@ Single-line JSON object fields:
 - investigate fallback: `glyph_fallback_pct > 5%`
 
 These thresholds are heuristics, not hard failures.
+
+## Threshold Gate Script
+
+Use:
+```bash
+MAX_GLYPH_FALLBACK_PCT=5 scripts/check_icondiag_threshold.sh
+```
+
+- exits `0` when `glyph_fallback_pct <= MAX_GLYPH_FALLBACK_PCT`
+- exits non-zero when threshold is exceeded

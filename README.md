@@ -83,6 +83,10 @@ Icon diagnostics JSON schema check:
 ```bash
 scripts/check_icondiag_json.sh
 ```
+Icon diagnostics threshold gate (fails when fallback ratio exceeds limit):
+```bash
+MAX_GLYPH_FALLBACK_PCT=5 scripts/check_icondiag_threshold.sh
+```
 Release script-matrix checks:
 ```bash
 scripts/check_release_matrix.sh

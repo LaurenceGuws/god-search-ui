@@ -146,3 +146,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add icon metadata coverage ratio + fallback samples to `:icondiag`.
 - [x] M8: UX Phase 4 - add JSON mode for headless icon diagnostics (`:icondiag --json`).
 - [x] M8: UX Phase 4 - add icon diagnostics JSON schema doc and smoke validator script.
+- [x] M8: UX Phase 4 - add configurable glyph-fallback threshold guard script for CI gates.

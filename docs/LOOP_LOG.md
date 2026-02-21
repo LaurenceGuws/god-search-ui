@@ -2804,3 +2804,31 @@
   - M8: UX Phase 4 - add helper script to fail CI when glyph fallback ratio exceeds configurable threshold.
 
 ---
+## 2026-02-21 (Cycle 133)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - configurable glyph-fallback threshold guard for CI
+- Changes:
+  - Added `scripts/check_icondiag_threshold.sh`:
+    - reads `:icondiag --json` output
+    - fails when `glyph_fallback_pct` exceeds `MAX_GLYPH_FALLBACK_PCT` (default `5`)
+  - Updated `scripts/release_smoke.sh`:
+    - added threshold smoke step
+    - updated smoke step numbering
+  - Updated `README.md`:
+    - documented threshold gate command usage
+  - Updated `docs/ICON_DIAGNOSTICS.md`:
+    - documented threshold script behavior and exit semantics
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_icondiag_threshold.sh`
+  - `scripts/release_smoke.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - threshold gating depends on runtime candidate snapshot and should be calibrated per environment.
+- Next slice:
+  - M8: UX Phase 4 - add release-smoke switch to enable strict icon threshold mode for CI.
+
+---
