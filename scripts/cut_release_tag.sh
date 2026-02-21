@@ -106,8 +106,12 @@ if git rev-parse "$VERSION" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[preflight] running release smoke"
-scripts/release_smoke.sh
+if [[ "${CUT_RELEASE_SKIP_PREFLIGHT:-0}" == "1" ]]; then
+  echo "[preflight] skipped (CUT_RELEASE_SKIP_PREFLIGHT=1)"
+else
+  echo "[preflight] running release smoke"
+  scripts/release_smoke.sh
+fi
 
 NOTES_PATH="docs/release-notes-${VERSION}.md"
 NOTES_MODE="regen"

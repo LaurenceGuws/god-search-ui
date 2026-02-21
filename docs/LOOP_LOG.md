@@ -1741,3 +1741,24 @@
   - M8: execute `v0.1.2` dry-run cut and record outcome.
 
 ---
+## 2026-02-21 (Cycle 82)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Prevent recursive preflight in cut dry-run assertion checks
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - supports `CUT_RELEASE_SKIP_PREFLIGHT=1` for internal checks
+  - Updated `scripts/check_cut_dryrun_default_safe.sh`:
+    - calls cut helper with `CUT_RELEASE_SKIP_PREFLIGHT=1`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/check_cut_dryrun_default_safe.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - preflight skip hook is intended for internal validation contexts only.
+- Next slice:
+  - M8: execute `v0.1.2` dry-run cut and record outcome.
+
+---

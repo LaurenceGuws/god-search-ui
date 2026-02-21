@@ -17,7 +17,7 @@ if [[ ! -f "$NOTES_REUSE" ]]; then
   echo "error: expected notes file for reuse case: $NOTES_REUSE" >&2
   exit 1
 fi
-OUT_REUSE="$(scripts/cut_release_tag.sh --version "$VERSION_REUSE" 2>&1)"
+OUT_REUSE="$(CUT_RELEASE_SKIP_PREFLIGHT=1 scripts/cut_release_tag.sh --version "$VERSION_REUSE" 2>&1)"
 echo "$OUT_REUSE" | rg -q --fixed-strings "[dry-run] would reuse: $NOTES_REUSE"
 
 # Case B: notes file missing -> dry-run should choose generation path.
@@ -27,7 +27,7 @@ if [[ -f "$NOTES_REGEN" ]]; then
   echo "error: expected missing notes file for regenerate case: $NOTES_REGEN" >&2
   exit 1
 fi
-OUT_REGEN="$(scripts/cut_release_tag.sh --version "$VERSION_REGEN" 2>&1)"
+OUT_REGEN="$(CUT_RELEASE_SKIP_PREFLIGHT=1 scripts/cut_release_tag.sh --version "$VERSION_REGEN" 2>&1)"
 echo "$OUT_REGEN" | rg -q --fixed-strings "[dry-run] would run: scripts/gen_release_notes.sh $VERSION_REGEN $NOTES_REGEN"
 
 echo "cut dry-run default-safe checks passed"
