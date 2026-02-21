@@ -597,7 +597,7 @@ pub const Shell = struct {
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
         clearLaunchFeedbackRows(ctx.list);
         appendLaunchFeedbackRow(ctx.list, message);
-        setStatus(ctx, message);
+        setStatus(ctx, postLaunchStatus(message));
         selectFirstActionableRow(ctx);
     }
 
@@ -680,6 +680,14 @@ pub const Shell = struct {
         if (std.mem.eql(u8, kind, "action")) return "action";
         if (std.mem.eql(u8, kind, "hint")) return "hint";
         return "item";
+    }
+
+    fn postLaunchStatus(message: []const u8) []const u8 {
+        if (std.mem.eql(u8, message, "Action launched")) return "Action launched | Enter repeats selected action";
+        if (std.mem.eql(u8, message, "App launched")) return "App launched | Enter repeats selected app";
+        if (std.mem.eql(u8, message, "Directory opened")) return "Directory opened | Enter repeats selected item";
+        if (std.mem.eql(u8, message, "Window focused")) return "Window focused | Enter repeats selected window";
+        return message;
     }
 
     fn runShellCommand(command: []const u8) !void {

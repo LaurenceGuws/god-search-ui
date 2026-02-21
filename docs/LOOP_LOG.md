@@ -2341,3 +2341,22 @@
   - M8: UX Phase 3 - add concise post-launch status guidance for repeated Enter behavior.
 
 ---
+## 2026-02-21 (Cycle 112)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add concise post-launch status guidance for repeated Enter behavior
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - post-launch footer status now includes repeat-Enter guidance for successful launches
+    - added helper for consistent launch-status phrasing by launch outcome type
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - repeated-Enter hint is shown only for successful launch feedback messages.
+- Next slice:
+  - M8: UX Phase 3 - compact empty-query info row copy to reduce visual duplication with status line.
+
+---
