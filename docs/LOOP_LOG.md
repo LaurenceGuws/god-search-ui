@@ -1665,3 +1665,21 @@
   - M8: add explicit migration note in release-notes curation checklist for v0.1.2.
 
 ---
+## 2026-02-21 (Cycle 78)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add migration note for default-safe notes mode in curation checklist
+- Changes:
+  - Updated `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`:
+    - documented v0.1.2+ default-safe notes behavior
+    - clarified when to use `--regen-notes`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - maintainers should align personal release aliases/scripts with new default behavior.
+- Next slice:
+  - M8: add quick dry-run example for default-safe mode in release matrix.
+
+---

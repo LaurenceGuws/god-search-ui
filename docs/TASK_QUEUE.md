@@ -90,3 +90,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add post-`v0.1.1` maintenance checklist entry in docs.
 - [x] M8: Queue first `v0.1.2` candidate from triage findings.
 - [x] M8: Implement v0.1.2 candidate - default-safe notes mode in `cut_release_tag.sh`.
+- [x] M8: Add migration note for default-safe notes mode in curation checklist.

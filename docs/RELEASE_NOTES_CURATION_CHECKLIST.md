@@ -20,3 +20,7 @@ Use before any non-dry-run patch cut.
 
 ## Guardrail
 Avoid cutting with template-only text such as blank bullets or `pass/fail` placeholders.
+
+## v0.1.2+ Workflow Note
+- `scripts/cut_release_tag.sh` apply mode now defaults to reusing existing notes when the target file exists.
+- Use `--regen-notes` only when you intentionally want to replace curated notes with a fresh draft.
