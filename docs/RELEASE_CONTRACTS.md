@@ -30,3 +30,13 @@ Release contracts are guard scripts that keep release automation CLI/docs behavi
   - `scripts/check_release_validate_ci.sh`
 
 This is included by default in `scripts/check_release_contracts.sh` (unless `--docs-only` is used).
+
+## Local Dirty-Worktree Quick Smoke
+
+During active local iteration (before committing), use:
+
+```bash
+RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_contracts.sh
+```
+
+This preserves contract coverage while bypassing clean-worktree enforcement for local dev loops.

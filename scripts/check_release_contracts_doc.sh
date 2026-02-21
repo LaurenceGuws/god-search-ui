@@ -11,10 +11,12 @@ rg -q --fixed-strings "# Release Contracts" "$DOC"
 rg -q --fixed-strings "## Primary Entry Points" "$DOC"
 rg -q --fixed-strings "## Contract Layers" "$DOC"
 rg -q --fixed-strings "## CI Guard" "$DOC"
+rg -q --fixed-strings "## Local Dirty-Worktree Quick Smoke" "$DOC"
 
 rg -q --fixed-strings "scripts/check_release_contracts.sh" "$DOC"
 rg -q --fixed-strings "scripts/check_release_docs_contracts.sh" "$DOC"
 rg -q --fixed-strings "scripts/check_release_validate_ci.sh" "$DOC"
 rg -q --fixed-strings "scripts/check_release_contracts_contract.sh" "$DOC"
+rg -q --fixed-strings "RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_contracts.sh" "$DOC"
 
 echo "release contracts doc checks passed"

@@ -3319,3 +3319,26 @@
   - M8: UX Phase 4 - add quick smoke command in release-contracts doc for local dirty-override workflow.
 
 ---
+## 2026-02-21 (Cycle 152)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add local dirty-worktree quick-smoke guidance for release contracts
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added explicit local dirty-worktree quick-smoke command
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates quick-smoke section/header and command string presence
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dirty-worktree override is explicitly documented for local iteration only.
+- Next slice:
+  - M8: UX Phase 4 - add explicit warning banner in release-contracts doc for dirty override non-CI usage.
+
+---
