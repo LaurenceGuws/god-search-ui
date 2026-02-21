@@ -3,7 +3,7 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] (empty)
+- [ ] M8: Execute `v0.1.2` apply cut and publish to `origin`.
 
 ## In Progress
 - [ ] (empty)
