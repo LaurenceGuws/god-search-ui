@@ -36,8 +36,17 @@ echo "[8/8] apps cache format smoke"
 scripts/check_apps_cache_format.sh
 
 if [[ $RUN_GTK_RUNTIME -eq 1 ]]; then
-  echo "[optional] gtk runtime launch smoke"
-  timeout 3s zig build run -Denable_gtk=true -- --ui >/dev/null 2>&1 || true
+  echo "[optional] gtk runtime launch smoke (with icon-cache fixture)"
+  TMP_HOME="$(mktemp -d)"
+  trap 'rm -rf "$TMP_HOME"' EXIT
+  mkdir -p "$TMP_HOME/.cache/waybar" "$TMP_HOME/.local/state/god-search-ui"
+  cat > "$TMP_HOME/.cache/waybar/wofi-app-launcher.tsv" <<'EOF'
+Utilities	Kitty	kitty	kitty
+Internet	Firefox	firefox	firefox
+EOF
+  HOME="$TMP_HOME" timeout 3s zig build run -Denable_gtk=true -- --ui >/dev/null 2>&1 || true
+  rm -rf "$TMP_HOME"
+  trap - EXIT
 fi
 
 echo "release smoke checks passed"

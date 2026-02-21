@@ -2591,3 +2591,24 @@
   - M8: UX Phase 4 - add GTK runtime smoke option that validates app icon rendering path does not crash.
 
 ---
+## 2026-02-21 (Cycle 124)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - extend optional GTK runtime smoke to exercise app icon rendering path
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - optional GTK runtime mode now provisions a temporary HOME with a 4-column apps cache fixture
+    - runtime launch smoke now exercises app icon render path under realistic startup data
+  - Updated `README.md`:
+    - documented that optional GTK runtime smoke validates icon render path with fixture data
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - runtime smoke remains timeout-based and non-interactive by design.
+- Next slice:
+  - M8: UX Phase 4 - add tiny release-smoke preflight for icon theme availability diagnostics.
+
+---

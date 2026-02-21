@@ -62,6 +62,7 @@ Optional GTK runtime launch smoke:
 ```bash
 scripts/release_smoke.sh --with-gtk-runtime
 ```
+This optional mode uses a temporary `HOME` with a 4-column apps cache fixture to exercise app icon render paths.
 Release-helper CLI contract checks:
 ```bash
 scripts/check_release_helpers.sh
