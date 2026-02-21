@@ -10,8 +10,26 @@ ICON_THRESHOLD="${MAX_GLYPH_FALLBACK_PCT:-100}"
 SKIP_GTK_BUILD=0
 CI_PRESET=0
 
+usage() {
+  cat <<'EOF'
+Usage: scripts/release_smoke.sh [options]
+
+Options:
+  --ci                     CI preset: skip GTK build + strict icon threshold (default 5%)
+  --with-gtk-runtime       Run optional short GTK runtime launch smoke
+  --strict-icon-threshold  Enable strict icon threshold mode (default threshold 5%)
+  --icon-threshold=N       Override icon fallback threshold percentage
+  --skip-gtk-build         Skip GTK compile smoke step
+  --help                   Show this help
+EOF
+}
+
 for arg in "$@"; do
   case "$arg" in
+    --help)
+      usage
+      exit 0
+      ;;
     --with-gtk-runtime)
       RUN_GTK_RUNTIME=1
       ;;

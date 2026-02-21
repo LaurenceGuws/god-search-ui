@@ -149,3 +149,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add configurable glyph-fallback threshold guard script for CI gates.
 - [x] M8: UX Phase 4 - add release-smoke strict icon-threshold mode and CI workflow integration.
 - [x] M8: UX Phase 4 - add `release_smoke --ci` preset alias for stable CI flags.
+- [x] M8: UX Phase 4 - add release-smoke mode reference table and `--help` CLI output.

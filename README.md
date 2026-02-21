@@ -70,6 +70,8 @@ CI/minimal-host mode without GTK dev packages:
 ```bash
 scripts/release_smoke.sh --ci
 ```
+Release smoke mode reference:
+- `docs/RELEASE_SMOKE_MODES.md`
 Optional GTK runtime launch smoke:
 ```bash
 scripts/release_smoke.sh --with-gtk-runtime

@@ -2889,3 +2889,27 @@
   - M8: UX Phase 4 - add docs table for release-smoke modes (`default`, `--ci`, `--with-gtk-runtime`).
 
 ---
+## 2026-02-21 (Cycle 136)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - release-smoke mode docs table + `--help` CLI support
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - added `--help` output with option descriptions
+  - Added `docs/RELEASE_SMOKE_MODES.md`:
+    - documented default/CI/strict/runtime smoke modes and usage patterns
+  - Updated `README.md`:
+    - linked dedicated release-smoke modes reference doc
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/release_smoke.sh --help`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - smoke mode docs assume current script behavior and should be updated with future CLI option changes.
+- Next slice:
+  - M8: UX Phase 4 - add guard script that checks release-smoke docs and `--help` stay in sync.
+
+---
