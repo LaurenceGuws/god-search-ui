@@ -275,3 +275,23 @@
   - M2: Add history persistence store (file-backed) for recency reuse across launches.
 
 ---
+## 2026-02-21 (Cycle 14)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Add history persistence store (file-backed) for recency reuse across launches
+- Changes:
+  - Extended `src/app/search_service.zig` with:
+    - configurable history file path
+    - `loadHistory` and `saveHistory` methods
+    - absolute/relative path-safe file IO helpers
+  - Added roundtrip persistence test using temp directory fixtures.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Persisted history is plain newline-separated action keys.
+- Next slice:
+  - M3: Add minimal GTK4 window shell (search entry + list placeholder).
+
+---

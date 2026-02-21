@@ -3,9 +3,9 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M2: Add history persistence store (file-backed) for recency reuse across launches.
 - [ ] M3: Add minimal GTK4 window shell (search entry + list placeholder).
 - [ ] M3: Wire search service into UI update loop (query -> ranked rows).
+- [ ] M3: Add fallback headless renderer mode for environments without GTK libs.
 
 ## In Progress
 - [ ] (empty)
@@ -27,3 +27,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M2: Implement baseline blended ranking (exact/prefix/source weights).
 - [x] M2: Add recency boost from action history.
 - [x] M2: Wire query parser + ranking into a search service that consumes provider registry.
+- [x] M2: Add history persistence store (file-backed) for recency reuse across launches.
