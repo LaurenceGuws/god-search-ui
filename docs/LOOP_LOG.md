@@ -1832,3 +1832,22 @@
   - M8: UX Phase 1 - add non-blocking action execution path.
 
 ---
+## 2026-02-21 (Cycle 86)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 1 - switch GTK action execution to non-blocking spawn
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced synchronous `std.process.Child.run` action execution
+    - now uses GLib async spawn (`g_spawn_command_line_async`)
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - async spawn confirms launch dispatch, not child process exit status.
+- Next slice:
+  - M8: UX Phase 1 - add debounce for `search-changed`.
+
+---

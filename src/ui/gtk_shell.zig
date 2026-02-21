@@ -427,15 +427,15 @@ pub const Shell = struct {
     }
 
     fn runShellCommand(command: []const u8) !void {
-        const result = try std.process.Child.run(.{
-            .allocator = std.heap.page_allocator,
-            .argv = &.{ "sh", "-lc", command },
-        });
-        defer {
-            std.heap.page_allocator.free(result.stdout);
-            std.heap.page_allocator.free(result.stderr);
+        const command_z = try std.heap.page_allocator.dupeZ(u8, command);
+        defer std.heap.page_allocator.free(command_z);
+
+        var gerr: ?*c.GError = null;
+        const ok = c.g_spawn_command_line_async(command_z.ptr, &gerr);
+        if (ok == 0) {
+            if (gerr != null) c.g_error_free(gerr);
+            return error.CommandFailed;
         }
-        if (result.term != .Exited or result.term.Exited != 0) return error.CommandFailed;
     }
 
     fn armPowerConfirmation(ctx: *UiContext) void {
