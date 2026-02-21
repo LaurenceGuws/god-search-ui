@@ -3583,3 +3583,24 @@
   - M8: UX Phase 4 - add README onboarding phrase assertion to release contracts alias checker.
 
 ---
+## 2026-02-21 (Cycle 164)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce README release onboarding phrase in contracts alias checker
+- Changes:
+  - Updated `scripts/check_release_contracts_contract.sh`:
+    - added assertion for README release onboarding phrase in `Next` section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now couples README onboarding wording to contract expectations.
+- Next slice:
+  - M8: UX Phase 4 - add concise release contract command order to release matrix notes section.
+
+---
