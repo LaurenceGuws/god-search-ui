@@ -1893,3 +1893,23 @@
   - M8: UX Phase 2 - replace placeholder-based status with dedicated status line widget.
 
 ---
+## 2026-02-21 (Cycle 89)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - replace placeholder status with dedicated status line
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added dedicated status label under search entry
+    - replaced placeholder-based refresh/confirmation/status messaging with status line updates
+    - status line now reflects refresh hints and launch feedback
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status label text is currently plain; no theme-class styling yet.
+- Next slice:
+  - M8: UX Phase 2 - add status line visual styling and spacing polish.
+
+---

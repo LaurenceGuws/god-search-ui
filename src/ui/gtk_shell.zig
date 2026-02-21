@@ -17,6 +17,7 @@ const LaunchContext = struct {
 const UiContext = extern struct {
     window: *c.GtkWidget,
     entry: *c.GtkSearchEntry,
+    status: *c.GtkLabel,
     list: *c.GtkListBox,
     allocator: *anyopaque,
     service: *app_mod.SearchService,
@@ -54,6 +55,8 @@ pub const Shell = struct {
 
         const entry = c.gtk_search_entry_new();
         c.gtk_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
+        const status = c.gtk_label_new("Esc to close, Ctrl+R to refresh");
+        c.gtk_label_set_xalign(@ptrCast(status), 0.0);
 
         const list = c.gtk_list_box_new();
         c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
@@ -65,6 +68,7 @@ pub const Shell = struct {
         const ctx: *UiContext = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(UiContext))));
         ctx.window = @ptrCast(window);
         ctx.entry = @ptrCast(entry);
+        ctx.status = @ptrCast(status);
         ctx.list = @ptrCast(list);
         ctx.allocator = @ptrCast(@constCast(&launch.allocator));
         ctx.service = launch.service;
@@ -80,6 +84,7 @@ pub const Shell = struct {
         _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(onDestroy), ctx, null, 0);
 
         c.gtk_box_append(@ptrCast(root_box), entry);
+        c.gtk_box_append(@ptrCast(root_box), status);
         c.gtk_box_append(@ptrCast(root_box), scroller);
         c.gtk_window_set_child(@ptrCast(window), root_box);
         c.gtk_window_present(@ptrCast(window));
@@ -232,13 +237,13 @@ pub const Shell = struct {
             appendGroupedRows(ctx, allocator, rows);
         }
         if (ctx.service.last_query_used_stale_cache) {
-            c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (refresh scheduled)");
+            setStatus(ctx, "Refresh scheduled");
         } else if (ctx.service.last_query_refreshed_cache) {
-            c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (snapshot refreshed)");
+            setStatus(ctx, "Snapshot refreshed");
         } else if (query_trimmed.len == 0 and ctx.pending_power_confirm == GFALSE) {
-            c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (Esc to close, Ctrl+R to refresh)");
+            setStatus(ctx, "Esc to close, Ctrl+R to refresh");
         } else if (ctx.pending_power_confirm == GFALSE) {
-            c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search...");
+            setStatus(ctx, "");
         }
 
         _ = ctx.service.drainScheduledRefresh(allocator) catch false;
@@ -458,7 +463,14 @@ pub const Shell = struct {
 
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
         appendInfoRow(ctx.list, message);
+        setStatus(ctx, message);
         selectFirstActionableRow(ctx.list);
+    }
+
+    fn setStatus(ctx: *UiContext, message: []const u8) void {
+        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
+        defer std.heap.page_allocator.free(msg_z);
+        c.gtk_label_set_text(ctx.status, msg_z.ptr);
     }
 
     fn runShellCommand(command: []const u8) !void {
@@ -475,13 +487,13 @@ pub const Shell = struct {
 
     fn armPowerConfirmation(ctx: *UiContext) void {
         ctx.pending_power_confirm = GTRUE;
-        c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Press Enter again to confirm Power menu");
+        setStatus(ctx, "Press Enter again to confirm Power menu");
     }
 
     fn clearPowerConfirmation(ctx: *UiContext) void {
         if (ctx.pending_power_confirm == GFALSE) return;
         ctx.pending_power_confirm = GFALSE;
-        c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search...");
+        setStatus(ctx, "");
     }
 
     fn emitTelemetry(ctx: *UiContext, kind: []const u8, action: []const u8, status: []const u8, detail: []const u8) void {
