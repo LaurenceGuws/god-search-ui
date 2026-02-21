@@ -1409,3 +1409,20 @@
   - M8: add patch-release notes draft (`v0.1.1`) from current commits.
 
 ---
+## 2026-02-21 (Cycle 66)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add patch release notes draft for `v0.1.1`
+- Changes:
+  - Generated `docs/release-notes-v0.1.1.md` via:
+    - `scripts/gen_release_notes.sh v0.1.1 docs/release-notes-v0.1.1.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - highlights/fixes sections still need editorial fill-in before publish.
+- Next slice:
+  - M8: tighten release notes with concrete filled sections for v0.1.1.
+
+---
