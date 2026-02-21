@@ -2264,3 +2264,22 @@
   - M8: UX Phase 3 - add explicit zero-results guidance with route suggestions for unmatched queries.
 
 ---
+## 2026-02-21 (Cycle 108)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add explicit zero-results guidance with route suggestions
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - kept `No results` message for unmatched non-empty queries
+    - added follow-up route suggestion row (`@ # ~ > = ?`) for immediate recovery path
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - route suggestion text is condensed and may need line-wrap-aware formatting on narrow layouts.
+- Next slice:
+  - M8: UX Phase 3 - add explicit selected-row status summary in footer.
+
+---

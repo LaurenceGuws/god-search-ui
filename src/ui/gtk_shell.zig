@@ -309,6 +309,7 @@ pub const Shell = struct {
         }
         if (rows.len == 0 and !empty_query and route_hint == null) {
             appendInfoRow(ctx.list, "No results");
+            appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  > run  = calc  ? web");
         } else {
             appendGroupedRows(ctx, allocator, rows);
             if (ranked.len > limit) {
