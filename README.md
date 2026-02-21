@@ -219,4 +219,5 @@ scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.
 - Implement provider contract (apps/windows/dirs/actions).
+- For release operations, start with `scripts/check_release_contracts.sh --docs-only` then `scripts/release_validate.sh --ci --require-clean`.
 - Add ranked blended results model.

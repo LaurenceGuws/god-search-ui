@@ -3563,3 +3563,23 @@
   - M8: UX Phase 4 - add short release contracts onboarding note to README "Next" section.
 
 ---
+## 2026-02-21 (Cycle 163)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts onboarding note in README Next section
+- Changes:
+  - Updated `README.md`:
+    - added concise release-ops onboarding sequence in `Next` section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - README `Next` now mixes roadmap and operational onboarding by design for discoverability.
+- Next slice:
+  - M8: UX Phase 4 - add README onboarding phrase assertion to release contracts alias checker.
+
+---
