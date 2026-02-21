@@ -22,6 +22,7 @@ const UiContext = extern struct {
     service: *app_mod.SearchService,
     telemetry: *app_mod.TelemetrySink,
     pending_power_confirm: c.gboolean,
+    search_debounce_id: c.guint,
 };
 
 pub const Shell = struct {
@@ -69,6 +70,7 @@ pub const Shell = struct {
         ctx.service = launch.service;
         ctx.telemetry = launch.telemetry;
         ctx.pending_power_confirm = GFALSE;
+        ctx.search_debounce_id = 0;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -87,6 +89,11 @@ pub const Shell = struct {
 
     fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
         if (user_data == null) return;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        if (ctx.search_debounce_id != 0) {
+            _ = c.g_source_remove(ctx.search_debounce_id);
+            ctx.search_debounce_id = 0;
+        }
         c.g_free(user_data);
     }
 
@@ -134,13 +141,27 @@ pub const Shell = struct {
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
         clearPowerConfirmation(ctx);
+
+        if (ctx.search_debounce_id != 0) {
+            _ = c.g_source_remove(ctx.search_debounce_id);
+            ctx.search_debounce_id = 0;
+        }
+        ctx.search_debounce_id = c.g_timeout_add(90, onSearchDebounced, ctx);
+    }
+
+    fn onSearchDebounced(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        ctx.search_debounce_id = 0;
+
         const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
         if (text_ptr == null) {
             populateResults(ctx, "");
-            return;
+            return GFALSE;
         }
         const query = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
         populateResults(ctx, query);
+        return GFALSE;
     }
 
     fn onRowActivated(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {

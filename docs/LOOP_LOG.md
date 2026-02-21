@@ -1851,3 +1851,24 @@
   - M8: UX Phase 1 - add debounce for `search-changed`.
 
 ---
+## 2026-02-21 (Cycle 87)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 1 - add debounce for GTK `search-changed`
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added `search_debounce_id` state to UI context
+    - changed `onSearchChanged` to schedule single-shot timeout (90ms)
+    - added `onSearchDebounced` callback to run search/render
+    - clears pending timeout in `onDestroy`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - debounce adds slight intentional delay to result updates.
+- Next slice:
+  - M8: UX Phase 1 - add visible launch feedback row for async command dispatch.
+
+---
