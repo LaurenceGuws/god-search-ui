@@ -74,6 +74,10 @@ One-pass operator validation wrapper:
 ```bash
 scripts/release_validate.sh --ci
 ```
+CI non-interactive guard:
+```bash
+scripts/check_release_validate_ci.sh
+```
 Release smoke mode reference:
 - `docs/RELEASE_SMOKE_MODES.md`
 Optional GTK runtime launch smoke:

@@ -25,5 +25,5 @@ jobs:
       - name: Test
         run: zig build test
 
-      - name: Icon Threshold Smoke (CI mode)
-        run: scripts/release_smoke.sh --ci
+      - name: Release Validate CI Guard
+        run: scripts/check_release_validate_ci.sh

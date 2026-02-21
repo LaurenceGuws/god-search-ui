@@ -154,3 +154,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - update release matrix docs/checks for new icon diagnostics guard scripts.
 - [x] M8: UX Phase 4 - add meta release-docs contract guard and wire it into smoke.
 - [x] M8: UX Phase 4 - add one-pass `release_validate.sh` wrapper for operator preflight.
+- [x] M8: UX Phase 4 - add CI guard ensuring `release_validate.sh --ci` stays non-interactive.

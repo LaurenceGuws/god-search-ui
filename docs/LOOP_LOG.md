@@ -3024,3 +3024,33 @@
   - M8: UX Phase 4 - add lightweight CI guard to ensure `release_validate.sh --ci` remains non-interactive.
 
 ---
+## 2026-02-21 (Cycle 141)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add CI non-interactive guard for `release_validate --ci`
+- Changes:
+  - Added `scripts/check_release_validate_ci.sh`:
+    - runs `release_validate.sh --ci` under timeout guard
+    - fails on timeout or non-zero exit
+  - Updated `.github/workflows/ci.yml`:
+    - switched CI release validation step to `check_release_validate_ci.sh`
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added CI guard script row
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates CI guard script presence/reference
+  - Updated `README.md`:
+    - documented CI non-interactive guard command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/check_release_validate_ci.sh`
+  - `scripts/release_validate.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - timeout default (`300s`) is conservative and can be tuned with `RELEASE_VALIDATE_TIMEOUT_SECS`.
+- Next slice:
+  - M8: UX Phase 4 - add release-validation preset docs in runbook with expected output markers.
+
+---
