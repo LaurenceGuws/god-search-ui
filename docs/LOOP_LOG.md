@@ -2207,3 +2207,22 @@
   - M8: UX Phase 3 - add light per-kind glyph contrast tuning for faster scanning.
 
 ---
+## 2026-02-21 (Cycle 105)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - tune per-kind chip contrast and title emphasis for faster scanning
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - made kind chips color-coded by source type
+    - fixed primary row emphasis so result title is bolded, not the chip
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - inline chip colors are static and may need theme-aware variants later.
+- Next slice:
+  - M8: UX Phase 3 - add explicit result limit indicator when list is truncated.
+
+---

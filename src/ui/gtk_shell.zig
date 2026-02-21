@@ -431,13 +431,13 @@ pub const Shell = struct {
         defer c.g_free(subtitle_escaped);
 
         const icon = kindIcon(row.candidate.kind);
-        const chip = kindChip(row.candidate.kind);
+        const chip_markup = kindChipMarkup(row.candidate.kind);
         const primary_markup = std.fmt.allocPrint(
             allocator,
-            "{s}  <b>{s}</b>  {s}",
+            "{s}  {s}  <b>{s}</b>",
             .{
                 icon,
-                chip,
+                chip_markup,
                 std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))),
             },
         ) catch return;
@@ -676,13 +676,13 @@ pub const Shell = struct {
         };
     }
 
-    fn kindChip(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
+    fn kindChipMarkup(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
         return switch (kind) {
-            .app => "APP",
-            .window => "WIN",
-            .dir => "DIR",
-            .action => "ACT",
-            .hint => "TIP",
+            .app => "<span foreground=\"#7fb0ff\">APP</span>",
+            .window => "<span foreground=\"#78d2c7\">WIN</span>",
+            .dir => "<span foreground=\"#ddb26f\">DIR</span>",
+            .action => "<span foreground=\"#f18cb6\">ACT</span>",
+            .hint => "<span foreground=\"#9aa1b5\">TIP</span>",
         };
     }
 };
