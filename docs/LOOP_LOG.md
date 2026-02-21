@@ -2379,3 +2379,23 @@
   - M8: UX Phase 3 - add subtle status color emphasis for success vs error launch feedback.
 
 ---
+## 2026-02-21 (Cycle 114)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add subtle status color emphasis for success vs error launch feedback
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added status tone helper with success/error/neutral modes
+    - launch feedback now applies success or error tone automatically from message content
+    - introduced `gs-status-success` and `gs-status-error` CSS classes
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - tone mapping currently relies on launch feedback wording.
+- Next slice:
+  - M8: UX Phase 3 - add transient timeout to clear success/error status back to neutral hints.
+
+---

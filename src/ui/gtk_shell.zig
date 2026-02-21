@@ -597,7 +597,7 @@ pub const Shell = struct {
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
         clearLaunchFeedbackRows(ctx.list);
         appendLaunchFeedbackRow(ctx.list, message);
-        setStatus(ctx, postLaunchStatus(message));
+        setStatusWithTone(ctx, postLaunchStatus(message), launchStatusTone(message));
         selectFirstActionableRow(ctx);
     }
 
@@ -629,6 +629,24 @@ pub const Shell = struct {
     }
 
     fn setStatus(ctx: *UiContext, message: []const u8) void {
+        setStatusWithTone(ctx, message, .neutral);
+    }
+
+    const StatusTone = enum {
+        neutral,
+        success,
+        failure,
+    };
+
+    fn setStatusWithTone(ctx: *UiContext, message: []const u8, tone: StatusTone) void {
+        const status_widget: *c.GtkWidget = @ptrCast(@alignCast(ctx.status));
+        c.gtk_widget_remove_css_class(status_widget, "gs-status-success");
+        c.gtk_widget_remove_css_class(status_widget, "gs-status-failure");
+        switch (tone) {
+            .success => c.gtk_widget_add_css_class(status_widget, "gs-status-success"),
+            .failure => c.gtk_widget_add_css_class(status_widget, "gs-status-failure"),
+            .neutral => {},
+        }
         const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
         defer std.heap.page_allocator.free(msg_z);
         c.gtk_label_set_text(ctx.status, msg_z.ptr);
@@ -637,6 +655,8 @@ pub const Shell = struct {
     fn installCss(window: *c.GtkWidget) void {
         const css =
             ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
+            ".gs-status-success { color: #87c97f; }\n" ++
+            ".gs-status-failure { color: #e58a8a; }\n" ++
             ".gs-header { color: #8b93a8; }\n" ++
             ".gs-info { color: #9aa1b5; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
@@ -688,6 +708,14 @@ pub const Shell = struct {
         if (std.mem.eql(u8, message, "Directory opened")) return "Directory opened | Enter repeats selected item";
         if (std.mem.eql(u8, message, "Window focused")) return "Window focused | Enter repeats selected window";
         return message;
+    }
+
+    fn launchStatusTone(message: []const u8) StatusTone {
+        if (std.mem.indexOf(u8, message, "failed") != null) return .failure;
+        if (std.mem.indexOf(u8, message, "launched") != null) return .success;
+        if (std.mem.indexOf(u8, message, "opened") != null) return .success;
+        if (std.mem.indexOf(u8, message, "focused") != null) return .success;
+        return .neutral;
     }
 
     fn runShellCommand(command: []const u8) !void {
