@@ -1543,3 +1543,21 @@
   - M8: add post-cut note about `--reuse-notes` in v0.1.1 release notes.
 
 ---
+## 2026-02-21 (Cycle 72)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add `--reuse-notes` workflow note in `v0.1.1` release notes
+- Changes:
+  - Updated `docs/release-notes-v0.1.1.md` migration notes with:
+    - `--reuse-notes` patch-cut workflow
+    - rationale to preserve curated notes content
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - release notes remain template-heavy from apply regeneration and may need manual curation.
+- Next slice:
+  - M8: add release-notes curation checklist to avoid template-only patch notes.
+
+---

@@ -23,7 +23,9 @@
 - 
 
 ## Migration Notes
-- 
+- Future patch cut workflow:
+  - `scripts/cut_release_tag.sh --version <tag> --apply --commit-notes --reuse-notes --push`
+  - Use `--reuse-notes` to preserve curated release-note content.
 
 ## Verification Summary
 - `scripts/dev.sh check`: pass/fail
