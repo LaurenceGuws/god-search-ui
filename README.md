@@ -66,6 +66,10 @@ Release script-matrix checks:
 ```bash
 scripts/check_release_matrix.sh
 ```
+Default-safe cut dry-run checks:
+```bash
+scripts/check_cut_dryrun_default_safe.sh
+```
 v0.1.1 pre-cut readiness gate:
 ```bash
 scripts/precut_v0_1_1.sh

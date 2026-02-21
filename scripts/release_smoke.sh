@@ -26,8 +26,11 @@ rm -f "$TMP_NOTES"
 echo "[5/6] release helper CLI contract smoke"
 scripts/check_release_helpers.sh
 
-echo "[6/6] release matrix reference smoke"
+echo "[6/7] release matrix reference smoke"
 scripts/check_release_matrix.sh
+
+echo "[7/7] cut dry-run default-safe smoke"
+scripts/check_cut_dryrun_default_safe.sh
 
 if [[ $RUN_GTK_RUNTIME -eq 1 ]]; then
   echo "[optional] gtk runtime launch smoke"

@@ -1701,3 +1701,27 @@
   - M8: add automated dry-run assertion to verify default-safe output branch.
 
 ---
+## 2026-02-21 (Cycle 80)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add automated dry-run assertion for default-safe notes branch
+- Changes:
+  - Added `scripts/check_cut_dryrun_default_safe.sh`:
+    - verifies dry-run chooses reuse branch for `v0.1.2` when notes file exists
+    - verifies dry-run chooses regenerate branch for a missing-version notes file
+    - skips assertion in dirty worktrees (release/CI clean trees still execute assertion)
+  - Integrated script in `scripts/release_smoke.sh`.
+  - Linked script usage in `README.md`.
+  - Added `docs/release-notes-v0.1.2.md` draft to provide stable reuse-path fixture.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/check_cut_dryrun_default_safe.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - assertion runs fully only on clean worktrees.
+- Next slice:
+  - M8: add explicit `v0.1.2` queue item for applying/publishing this candidate set.
+
+---
