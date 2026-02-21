@@ -31,6 +31,9 @@ scripts/release_smoke.sh
 scripts/release_validate.sh --ci --require-clean
 ```
 
+Reference:
+- `docs/RELEASE_CONTRACTS.md`
+
 Working tree must be clean before tagging.
 
 Expected success markers from `scripts/release_validate.sh --ci`:

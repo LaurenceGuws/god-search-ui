@@ -170,3 +170,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add operator quick-order release flow in release-contracts docs.
 - [x] M8: UX Phase 4 - add cross-links from release-contracts doc to runbook/smoke/validate refs.
 - [x] M8: UX Phase 4 - add concise "when to run which script" table to release-contracts docs.
+- [x] M8: UX Phase 4 - add release-contracts doc pointer in rollback runbook preflight.
