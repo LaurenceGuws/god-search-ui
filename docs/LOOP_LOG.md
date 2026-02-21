@@ -2187,3 +2187,23 @@
   - M8: UX Phase 3 - keep selected actionable row visible in scroll viewport.
 
 ---
+## 2026-02-21 (Cycle 104)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - keep selected actionable row visible in scrolled viewport
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added `GtkScrolledWindow` handle to UI context
+    - scrolls viewport to keep selected actionable row visible during up/down navigation
+    - applied same visibility behavior to initial actionable-row auto-selection
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - visibility tracking uses a fixed estimated row height; can be refined with measured allocations later.
+- Next slice:
+  - M8: UX Phase 3 - add light per-kind glyph contrast tuning for faster scanning.
+
+---

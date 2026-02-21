@@ -19,6 +19,7 @@ const UiContext = extern struct {
     entry: *c.GtkSearchEntry,
     status: *c.GtkLabel,
     list: *c.GtkListBox,
+    scroller: *c.GtkScrolledWindow,
     allocator: *anyopaque,
     service: *app_mod.SearchService,
     telemetry: *app_mod.TelemetrySink,
@@ -74,6 +75,7 @@ pub const Shell = struct {
         ctx.entry = @ptrCast(entry);
         ctx.status = @ptrCast(status);
         ctx.list = @ptrCast(list);
+        ctx.scroller = @ptrCast(scroller);
         ctx.allocator = @ptrCast(@constCast(&launch.allocator));
         ctx.service = launch.service;
         ctx.telemetry = launch.telemetry;
@@ -162,11 +164,11 @@ pub const Shell = struct {
                 return GFALSE;
             },
             c.GDK_KEY_Down => {
-                selectOffset(ctx.list, 1);
+                selectOffset(ctx, 1);
                 return GTRUE;
             },
             c.GDK_KEY_Up => {
-                selectOffset(ctx.list, -1);
+                selectOffset(ctx, -1);
                 return GTRUE;
             },
             c.GDK_KEY_Return, c.GDK_KEY_KP_Enter => {
@@ -222,10 +224,10 @@ pub const Shell = struct {
         executeSelected(ctx, kind, action);
     }
 
-    fn selectOffset(list: *c.GtkListBox, delta: i32) void {
-        const selected = c.gtk_list_box_get_selected_row(list);
+    fn selectOffset(ctx: *UiContext, delta: i32) void {
+        const selected = c.gtk_list_box_get_selected_row(ctx.list);
         if (selected == null) {
-            selectFirstActionableRow(list);
+            selectFirstActionableRow(ctx);
             return;
         }
 
@@ -233,26 +235,51 @@ pub const Shell = struct {
         if (idx < 0) return;
 
         while (idx >= 0) : (idx += delta) {
-            const target = c.gtk_list_box_get_row_at_index(list, idx);
+            const target = c.gtk_list_box_get_row_at_index(ctx.list, idx);
             if (target == null) return;
             if (c.g_object_get_data(@ptrCast(target), "gs-action") != null) {
-                c.gtk_list_box_select_row(list, target);
+                c.gtk_list_box_select_row(ctx.list, target);
+                ensureSelectedRowVisible(ctx);
                 return;
             }
         }
     }
 
-    fn selectFirstActionableRow(list: *c.GtkListBox) void {
+    fn selectFirstActionableRow(ctx: *UiContext) void {
         var idx: i32 = 0;
         while (true) : (idx += 1) {
-            const row = c.gtk_list_box_get_row_at_index(list, idx);
+            const row = c.gtk_list_box_get_row_at_index(ctx.list, idx);
             if (row == null) break;
             if (c.g_object_get_data(@ptrCast(row), "gs-action") != null) {
-                c.gtk_list_box_select_row(list, row);
+                c.gtk_list_box_select_row(ctx.list, row);
+                ensureSelectedRowVisible(ctx);
                 return;
             }
         }
-        c.gtk_list_box_select_row(list, null);
+        c.gtk_list_box_select_row(ctx.list, null);
+    }
+
+    fn ensureSelectedRowVisible(ctx: *UiContext) void {
+        const row = c.gtk_list_box_get_selected_row(ctx.list);
+        if (row == null) return;
+
+        const adjustment = c.gtk_scrolled_window_get_vadjustment(ctx.scroller);
+        if (adjustment == null) return;
+
+        const row_index = c.gtk_list_box_row_get_index(row);
+        if (row_index < 0) return;
+
+        const row_height: f64 = 44.0;
+        const top = @as(f64, @floatFromInt(row_index)) * row_height;
+        const bottom = top + row_height;
+        const value = c.gtk_adjustment_get_value(adjustment);
+        const page_size = c.gtk_adjustment_get_page_size(adjustment);
+
+        if (top < value) {
+            c.gtk_adjustment_set_value(adjustment, top);
+        } else if (bottom > (value + page_size)) {
+            c.gtk_adjustment_set_value(adjustment, bottom - page_size);
+        }
     }
 
     fn populateResults(ctx: *UiContext, query: []const u8) void {
@@ -292,7 +319,7 @@ pub const Shell = struct {
         }
 
         _ = ctx.service.drainScheduledRefresh(allocator) catch false;
-        selectFirstActionableRow(ctx.list);
+        selectFirstActionableRow(ctx);
     }
 
     fn appendInfoRow(list: *c.GtkListBox, message: []const u8) void {
@@ -539,7 +566,7 @@ pub const Shell = struct {
         clearLaunchFeedbackRows(ctx.list);
         appendLaunchFeedbackRow(ctx.list, message);
         setStatus(ctx, message);
-        selectFirstActionableRow(ctx.list);
+        selectFirstActionableRow(ctx);
     }
 
     fn clearLaunchFeedbackRows(list: *c.GtkListBox) void {
