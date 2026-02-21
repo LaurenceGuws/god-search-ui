@@ -54,6 +54,10 @@ Release smoke checks:
 ```bash
 scripts/release_smoke.sh
 ```
+Release-helper CLI contract checks:
+```bash
+scripts/check_release_helpers.sh
+```
 
 Arch package smoke helper:
 ```bash

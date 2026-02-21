@@ -1205,3 +1205,25 @@
   - M8: add guard test script for release-helper CLI docs/output consistency.
 
 ---
+## 2026-02-21 (Cycle 56)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add guard script for release-helper CLI docs/output consistency
+- Changes:
+  - Added `scripts/check_release_helpers.sh` to validate help/usage contract for:
+    - `scripts/cut_release_tag.sh`
+    - `scripts/publish_release_tag.sh`
+  - Integrated helper contract check into `scripts/release_smoke.sh`.
+  - Linked helper check in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/check_release_helpers.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - contract checks are text-based and intentionally lightweight.
+- Next slice:
+  - M8: add runbook note for post-release patch checklist execution order.
+
+---

@@ -13,9 +13,12 @@ printf ':refresh\nkitty\n:q\n' | zig build run -- --ui
 echo "[3/4] gtk build smoke"
 zig build -Denable_gtk=true
 
-echo "[4/4] release notes draft smoke"
+echo "[4/5] release notes draft smoke"
 TMP_NOTES="$(mktemp)"
 scripts/gen_release_notes.sh "SMOKE" "$TMP_NOTES" >/dev/null
 rm -f "$TMP_NOTES"
+
+echo "[5/5] release helper CLI contract smoke"
+scripts/check_release_helpers.sh
 
 echo "release smoke checks passed"
