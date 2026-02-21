@@ -26,6 +26,9 @@ pub const Shell = struct {
             defer allocator.free(ranked);
             const ms = @as(f64, @floatFromInt(service.last_query_elapsed_ns)) / 1_000_000.0;
             try stdout.print("  (query time: {d:.2} ms)\n", .{ms});
+            if (service.last_query_refreshed_cache) {
+                try stdout.print("  (snapshot auto-refreshed)\n", .{});
+            }
             try printTopResults(stdout, ranked, 5);
 
             if (ranked.len > 0) {

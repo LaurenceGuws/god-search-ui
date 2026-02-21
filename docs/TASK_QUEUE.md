@@ -3,8 +3,8 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M5: Add stale-cache indicator in UI when snapshot is auto-refreshed.
 - [ ] M6: Add rollout checklist for migrating from shell launcher to GTK launcher.
+- [ ] M5: Add background refresh strategy to avoid synchronous cache refresh on query path.
 
 ## In Progress
 - [ ] (empty)
@@ -42,5 +42,6 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M5: Add provider snapshot cache prewarm for faster first query.
 - [x] M5: Add cache invalidation strategy for provider snapshot refresh.
 - [x] M5: Add explicit refresh trigger command/path in UI layer.
+- [x] M5: Add stale-cache indicator in UI when snapshot is auto-refreshed.
 - [x] M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
 - [x] M6: Add install/service integration docs for Hypr/Waybar bindings.

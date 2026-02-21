@@ -639,3 +639,24 @@
   - M5: Add stale-cache indicator in UI when snapshot is auto-refreshed.
 
 ---
+## 2026-02-21 (Cycle 31)
+- Milestone: M5 Performance + Stability
+- Task slice: Add stale-cache indicator in UI when snapshot is auto-refreshed
+- Changes:
+  - Added `last_query_refreshed_cache` tracking in `SearchService`.
+  - Cache refresh path now returns whether an auto-refresh occurred.
+  - Added test coverage for auto-refresh indicator behavior.
+  - Added headless indicator line when auto-refresh occurs.
+  - Added GTK placeholder hint when snapshot is auto-refreshed.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf ':refresh\\nkitty\\n:q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Indicator currently reports only automatic TTL refresh events, not manual refreshes.
+- Next slice:
+  - M6: Add rollout checklist for migrating from shell launcher to GTK launcher.
+
+---
