@@ -7,11 +7,6 @@ const c = @cImport({
 const CandidateKind = @import("../search/mod.zig").CandidateKind;
 const GTRUE: c.gboolean = 1;
 const GFALSE: c.gboolean = 0;
-const COLOR_STATUS = "#8b93a8";
-const COLOR_HEADER = "#8b93a8";
-const COLOR_CHIP = "#9fb2ff";
-const COLOR_TITLE = "#e8ecf7";
-const COLOR_SUBTITLE = "#9aa1b5";
 
 const LaunchContext = struct {
     allocator: std.mem.Allocator,
@@ -51,6 +46,7 @@ pub const Shell = struct {
         const window = c.gtk_application_window_new(gtk_app);
         c.gtk_window_set_title(@ptrCast(window), "God Search");
         c.gtk_window_set_default_size(@ptrCast(window), 900, 560);
+        installCss(window);
 
         const root_box = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 8);
         c.gtk_widget_set_margin_top(root_box, 12);
@@ -63,6 +59,7 @@ pub const Shell = struct {
         const status = c.gtk_label_new("Esc to close, Ctrl+R to refresh");
         c.gtk_label_set_xalign(@ptrCast(status), 0.0);
         c.gtk_widget_set_margin_bottom(status, 4);
+        c.gtk_widget_add_css_class(status, "gs-status");
 
         const list = c.gtk_list_box_new();
         c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
@@ -257,22 +254,13 @@ pub const Shell = struct {
     }
 
     fn appendInfoRow(list: *c.GtkListBox, message: []const u8) void {
-        const msg_escaped = c.g_markup_escape_text(message.ptr, @intCast(message.len));
-        if (msg_escaped == null) return;
-        defer c.g_free(msg_escaped);
-
-        const markup = std.fmt.allocPrint(
-            std.heap.page_allocator,
-            "<span foreground='{s}'>{s}</span>",
-            .{ COLOR_SUBTITLE, std.mem.span(@as([*:0]const u8, @ptrCast(msg_escaped))) },
-        ) catch return;
-        defer std.heap.page_allocator.free(markup);
-        const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
-        defer std.heap.page_allocator.free(markup_z);
+        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
+        defer std.heap.page_allocator.free(msg_z);
 
         const label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
+        c.gtk_label_set_text(@ptrCast(label), msg_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+        c.gtk_widget_add_css_class(label, "gs-info");
 
         const row = c.gtk_list_box_row_new();
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
@@ -332,7 +320,7 @@ pub const Shell = struct {
         if (title_escaped == null) return;
         defer c.g_free(title_escaped);
 
-        const markup = std.fmt.allocPrint(std.heap.page_allocator, "<span foreground='{s}' weight='bold'>{s}</span>", .{ COLOR_HEADER, std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))) }) catch return;
+        const markup = std.fmt.allocPrint(std.heap.page_allocator, "<b>{s}</b>", .{std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped)))}) catch return;
         defer std.heap.page_allocator.free(markup);
         const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
         defer std.heap.page_allocator.free(markup_z);
@@ -340,6 +328,7 @@ pub const Shell = struct {
         const label = c.gtk_label_new(null);
         c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+        c.gtk_widget_add_css_class(label, "gs-header");
 
         const row = c.gtk_list_box_row_new();
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
@@ -360,14 +349,11 @@ pub const Shell = struct {
         const chip = kindChip(row.candidate.kind);
         const markup = std.fmt.allocPrint(
             allocator,
-            "{s}  <span foreground='{s}' weight='bold'>{s}</span>  <span foreground='{s}'>{s}</span>  <span foreground='{s}'>{s}</span>",
+            "{s}  <b>{s}</b>  {s} - {s}",
             .{
                 icon,
-                COLOR_CHIP,
                 chip,
-                COLOR_TITLE,
                 std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))),
-                COLOR_SUBTITLE,
                 std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped))),
             },
         ) catch return;
@@ -378,6 +364,7 @@ pub const Shell = struct {
         const label = c.gtk_label_new(null);
         c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+        c.gtk_widget_add_css_class(label, "gs-candidate");
         const list_row = c.gtk_list_box_row_new();
         c.gtk_list_box_row_set_child(@ptrCast(list_row), label);
 
@@ -482,23 +469,30 @@ pub const Shell = struct {
     }
 
     fn setStatus(ctx: *UiContext, message: []const u8) void {
-        if (message.len == 0) {
-            c.gtk_label_set_text(ctx.status, "");
-            return;
-        }
-        const msg_escaped = c.g_markup_escape_text(message.ptr, @intCast(message.len));
-        if (msg_escaped == null) return;
-        defer c.g_free(msg_escaped);
+        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
+        defer std.heap.page_allocator.free(msg_z);
+        c.gtk_label_set_text(ctx.status, msg_z.ptr);
+    }
 
-        const markup = std.fmt.allocPrint(
-            std.heap.page_allocator,
-            "<span foreground='{s}'>{s}</span>",
-            .{ COLOR_STATUS, std.mem.span(@as([*:0]const u8, @ptrCast(msg_escaped))) },
-        ) catch return;
-        defer std.heap.page_allocator.free(markup);
-        const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
-        defer std.heap.page_allocator.free(markup_z);
-        c.gtk_label_set_markup(ctx.status, markup_z.ptr);
+    fn installCss(window: *c.GtkWidget) void {
+        const css =
+            ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
+            ".gs-header { color: #8b93a8; }\n" ++
+            ".gs-info { color: #9aa1b5; }\n" ++
+            ".gs-candidate { color: #e8ecf7; }\n";
+
+        const provider = c.gtk_css_provider_new();
+        defer c.g_object_unref(provider);
+        c.gtk_css_provider_load_from_data(provider, css.ptr, @intCast(css.len));
+
+        const display = c.gtk_widget_get_display(window);
+        if (display != null) {
+            c.gtk_style_context_add_provider_for_display(
+                display,
+                @ptrCast(provider),
+                c.GTK_STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
+        }
     }
 
     fn runShellCommand(command: []const u8) !void {

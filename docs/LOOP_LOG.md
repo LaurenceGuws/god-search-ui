@@ -1952,3 +1952,23 @@
   - M8: UX Phase 2 - move markup style strings to minimal GTK CSS provider.
 
 ---
+## 2026-02-21 (Cycle 92)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - move GTK row/status styling to minimal CSS provider
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added `installCss` to register app CSS provider
+    - moved status/header/info/candidate color styling to CSS classes
+    - simplified label markup to reduce inline color attributes
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - candidate line now uses simplified inline formatting (`-` separator) pending richer layout pass.
+- Next slice:
+  - M8: UX Phase 2 - replace single-line candidate markup with structured row layout.
+
+---
