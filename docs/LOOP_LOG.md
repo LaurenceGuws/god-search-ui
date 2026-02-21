@@ -3521,3 +3521,23 @@
   - M8: UX Phase 4 - add release contracts section link to top-level README docs list for discoverability.
 
 ---
+## 2026-02-21 (Cycle 161)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts doc link to top-level README docs list
+- Changes:
+  - Updated `README.md`:
+    - added `docs/RELEASE_CONTRACTS.md` link in top-level docs list for discoverability
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - README now references release contracts doc in both release section and top-level docs list by design.
+- Next slice:
+  - M8: UX Phase 4 - add release-contracts top-level docs-link assertion to contracts alias checker.
+
+---

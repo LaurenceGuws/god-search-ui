@@ -210,6 +210,7 @@ scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
 - Release notes curation checklist: `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`
 - Release tagging/rollback runbook: `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
 - Release script matrix: `docs/RELEASE_SCRIPT_MATRIX.md`
+- Release contracts reference: `docs/RELEASE_CONTRACTS.md`
 - v0.1.1 patch plan: `docs/V0_1_1_PATCH_PLAN.md`
 - Post-release triage template: `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`
 - Triage log: `docs/TRIAGE_LOG.md`
