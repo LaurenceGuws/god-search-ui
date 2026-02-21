@@ -405,13 +405,16 @@ pub const Shell = struct {
             }
             const cmd = providers_mod.resolveActionCommand(action) orelse {
                 emitTelemetry(ctx, "action", action, "error", "unknown-action");
+                showLaunchFeedback(ctx, "Action failed: unknown action");
                 return;
             };
             runShellCommand(cmd) catch {
                 emitTelemetry(ctx, "action", action, "error", "command-failed");
+                showLaunchFeedback(ctx, "Action failed to launch");
                 return;
             };
             emitTelemetry(ctx, "action", action, "ok", cmd);
+            showLaunchFeedback(ctx, "Action launched");
             return;
         }
         clearPowerConfirmation(ctx);
@@ -419,9 +422,11 @@ pub const Shell = struct {
             if (!std.mem.eql(u8, action, "__drun__")) {
                 runShellCommand(action) catch {
                     emitTelemetry(ctx, "app", action, "error", "command-failed");
+                    showLaunchFeedback(ctx, "App failed to launch");
                     return;
                 };
                 emitTelemetry(ctx, "app", action, "ok", action);
+                showLaunchFeedback(ctx, "App launched");
             }
             return;
         }
@@ -430,9 +435,11 @@ pub const Shell = struct {
             defer allocator.free(cmd);
             runShellCommand(cmd) catch {
                 emitTelemetry(ctx, "dir", action, "error", "command-failed");
+                showLaunchFeedback(ctx, "Directory open failed");
                 return;
             };
             emitTelemetry(ctx, "dir", action, "ok", cmd);
+            showLaunchFeedback(ctx, "Directory opened");
             return;
         }
         if (std.mem.eql(u8, kind, "window")) {
@@ -440,11 +447,18 @@ pub const Shell = struct {
             defer allocator.free(cmd);
             runShellCommand(cmd) catch {
                 emitTelemetry(ctx, "window", action, "error", "command-failed");
+                showLaunchFeedback(ctx, "Window focus failed");
                 return;
             };
             emitTelemetry(ctx, "window", action, "ok", cmd);
+            showLaunchFeedback(ctx, "Window focused");
             return;
         }
+    }
+
+    fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
+        appendInfoRow(ctx.list, message);
+        selectFirstActionableRow(ctx.list);
     }
 
     fn runShellCommand(command: []const u8) !void {

@@ -1872,3 +1872,24 @@
   - M8: UX Phase 1 - add visible launch feedback row for async command dispatch.
 
 ---
+## 2026-02-21 (Cycle 88)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 1 - add visible launch feedback row for async command dispatch
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added `showLaunchFeedback` helper
+    - append non-actionable info rows after launch/focus/open attempts
+    - show success/failure feedback for app/action/dir/window dispatch paths
+    - preserve actionable row selection after feedback row append
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - feedback rows accumulate until next query refresh, by design for now.
+- Next slice:
+  - M8: UX Phase 2 - replace placeholder-based status with dedicated status line widget.
+
+---
