@@ -922,3 +922,29 @@
   - M7: release candidate cut (`v0.1.0-rc1`) using runbook flow.
 
 ---
+## 2026-02-21 (Cycle 43)
+- Milestone: M7 Release Hardening
+- Task slice: Add release tag flow helper script (dry-run + apply modes)
+- Changes:
+  - Added `scripts/cut_release_tag.sh` with:
+    - required `--version`
+    - dry-run default
+    - `--apply` to create annotated tag
+    - optional `--push` (requires `--apply`)
+    - clean-tree and existing-tag guards
+    - preflight: `scripts/release_smoke.sh`
+  - Linked helper usage in:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --help`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--apply` generates release notes draft file under `docs/`.
+- Next slice:
+  - M7: run real `v0.1.0-rc1` cut on maintainer command.
+
+---

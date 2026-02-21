@@ -60,6 +60,11 @@ Arch package smoke helper:
 scripts/arch_package_smoke.sh
 ```
 
+Release tag flow helper (dry-run by default):
+```bash
+scripts/cut_release_tag.sh --version v0.1.0
+```
+
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`
 - systemd user unit template: `packaging/systemd/god-search-ui.service`

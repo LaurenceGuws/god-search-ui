@@ -2,6 +2,11 @@
 
 Use this runbook for local release cutovers.
 
+Automation helper (dry-run by default):
+```bash
+scripts/cut_release_tag.sh --version v0.1.0
+```
+
 ## Inputs
 - `VERSION` (example: `v0.1.0`)
 - `PREV_REF` previous known-good tag/commit

@@ -56,3 +56,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M7: Add release tagging/rollback runbook with exact command sequence.
 - [x] M7: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check).
 - [x] M7: Add optional Arch package smoke helper script.
+- [x] M7: Add release tag flow helper script (dry-run + apply modes).
