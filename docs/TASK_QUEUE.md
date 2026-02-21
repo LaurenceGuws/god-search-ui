@@ -3,7 +3,7 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] (empty)
+- [ ] M7: Promote stable `v0.1.0` tag from current main and publish to `origin`.
 
 ## In Progress
 - [ ] (empty)
