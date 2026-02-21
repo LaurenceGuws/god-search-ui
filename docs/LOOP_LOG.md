@@ -3477,3 +3477,23 @@
   - M8: UX Phase 4 - add short release-contracts cheat sheet block in README release section.
 
 ---
+## 2026-02-21 (Cycle 159)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts cheat sheet block to README
+- Changes:
+  - Updated `README.md`:
+    - added concise release-contracts quick command block in release section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - README cheat sheet is intentionally minimal and defers details to docs references.
+- Next slice:
+  - M8: UX Phase 4 - add release-contracts README contract check for cheat-sheet command presence.
+
+---

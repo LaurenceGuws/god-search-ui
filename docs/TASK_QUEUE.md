@@ -172,3 +172,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add concise "when to run which script" table to release-contracts docs.
 - [x] M8: UX Phase 4 - add release-contracts doc pointer in rollback runbook preflight.
 - [x] M8: UX Phase 4 - enforce rollback-runbook backlink presence in release-contracts doc checker.
+- [x] M8: UX Phase 4 - add release-contracts cheat sheet block to README release section.
