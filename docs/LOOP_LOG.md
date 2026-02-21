@@ -2399,3 +2399,23 @@
   - M8: UX Phase 3 - add transient timeout to clear success/error status back to neutral hints.
 
 ---
+## 2026-02-21 (Cycle 115)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add transient timeout to clear status emphasis back to neutral hints
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added status reset timer tracking in UI context
+    - launch feedback now schedules timed status reset to neutral idle hint/state
+    - added timer cleanup on window destroy to avoid stale callback execution
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - reset timeout value is fixed and may need tuning after live UX testing.
+- Next slice:
+  - M8: UX Phase 3 - reduce status jitter by avoiding redundant status text updates.
+
+---

@@ -25,6 +25,7 @@ const UiContext = extern struct {
     telemetry: *app_mod.TelemetrySink,
     pending_power_confirm: c.gboolean,
     search_debounce_id: c.guint,
+    status_reset_id: c.guint,
 };
 
 pub const Shell = struct {
@@ -81,6 +82,7 @@ pub const Shell = struct {
         ctx.telemetry = launch.telemetry;
         ctx.pending_power_confirm = GFALSE;
         ctx.search_debounce_id = 0;
+        ctx.status_reset_id = 0;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -138,6 +140,10 @@ pub const Shell = struct {
         if (ctx.search_debounce_id != 0) {
             _ = c.g_source_remove(ctx.search_debounce_id);
             ctx.search_debounce_id = 0;
+        }
+        if (ctx.status_reset_id != 0) {
+            _ = c.g_source_remove(ctx.status_reset_id);
+            ctx.status_reset_id = 0;
         }
         c.g_free(user_data);
     }
@@ -598,7 +604,33 @@ pub const Shell = struct {
         clearLaunchFeedbackRows(ctx.list);
         appendLaunchFeedbackRow(ctx.list, message);
         setStatusWithTone(ctx, postLaunchStatus(message), launchStatusTone(message));
+        scheduleStatusReset(ctx);
         selectFirstActionableRow(ctx);
+    }
+
+    fn scheduleStatusReset(ctx: *UiContext) void {
+        if (ctx.status_reset_id != 0) {
+            _ = c.g_source_remove(ctx.status_reset_id);
+            ctx.status_reset_id = 0;
+        }
+        ctx.status_reset_id = c.g_timeout_add(1700, onStatusReset, ctx);
+    }
+
+    fn onStatusReset(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        ctx.status_reset_id = 0;
+        if (ctx.pending_power_confirm == GTRUE) return GFALSE;
+
+        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
+        if (query_trimmed.len == 0) {
+            setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs > run = calc ? web");
+        } else {
+            setStatus(ctx, "");
+        }
+        return GFALSE;
     }
 
     fn clearLaunchFeedbackRows(list: *c.GtkListBox) void {

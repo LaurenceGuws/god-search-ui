@@ -126,3 +126,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - add concise post-launch status guidance for repeated Enter behavior.
 - [x] M8: UX Phase 3 - compact empty-query info row copy to reduce status-line duplication.
 - [x] M8: UX Phase 3 - add subtle status color emphasis for success vs error launch feedback.
+- [x] M8: UX Phase 3 - add transient timeout to clear status emphasis back to neutral hints.
