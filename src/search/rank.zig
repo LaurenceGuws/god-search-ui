@@ -75,8 +75,20 @@ fn candidateScore(needle: []const u8, candidate: types.Candidate, recent_actions
     {
         return 0;
     }
+    score += shortQueryBias(needle.len, candidate.kind);
     score += recencyBoost(candidate.action, recent_actions);
     return score;
+}
+
+fn shortQueryBias(needle_len: usize, kind: types.CandidateKind) i32 {
+    if (needle_len == 0 or needle_len > 2) return 0;
+    return switch (kind) {
+        .action => 50,
+        .app => 0,
+        .window => -5,
+        .dir => -10,
+        .hint => 0,
+    };
 }
 
 fn recencyBoost(action: []const u8, recent_actions: []const []const u8) i32 {
@@ -139,4 +151,19 @@ test "recency history boosts repeated action candidates" {
 
     try std.testing.expectEqual(@as(usize, 1), ranked.len);
     try std.testing.expectEqualStrings("Power menu", ranked[0].candidate.title);
+}
+
+test "short blended query prefers actions over broad app matches" {
+    const candidates = [_]types.Candidate{
+        .init(.app, "Redis Desktop Manager", "Database GUI", "redis-desktop"),
+        .init(.action, "Restart Waybar", "Session", "waybar-restart"),
+    };
+
+    const query = query_mod.parse("re");
+    const ranked = try rankCandidates(std.testing.allocator, query, &candidates);
+    defer std.testing.allocator.free(ranked);
+
+    try std.testing.expectEqual(@as(usize, 2), ranked.len);
+    try std.testing.expectEqual(types.CandidateKind.action, ranked[0].candidate.kind);
+    try std.testing.expectEqualStrings("Restart Waybar", ranked[0].candidate.title);
 }

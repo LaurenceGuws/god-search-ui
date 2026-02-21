@@ -2148,3 +2148,23 @@
   - M8: UX Phase 3 - tune blended ranking to keep action results near top for short queries.
 
 ---
+## 2026-02-21 (Cycle 102)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - tune blended short-query ranking to surface action intents earlier
+- Changes:
+  - Updated `src/search/rank.zig`:
+    - added short-query kind bias (`len <= 2`) that boosts action candidates
+    - reduced short-query noise from windows/directories in blended results
+    - added regression test for `re` query ordering between app and action intent
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - short-query bias values are heuristic and may need telemetry-driven retuning.
+- Next slice:
+  - M8: UX Phase 3 - add lightweight loading status while search debounce is pending.
+
+---
