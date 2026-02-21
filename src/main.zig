@@ -13,6 +13,7 @@ pub fn main() !void {
     if (args.len > 1 and std.mem.eql(u8, args[1], "--ui")) {
         var runtime = try setupRuntime(allocator);
         defer runtime.deinit(allocator);
+        runtime.rebindProviderContexts();
         try runtime.service.loadHistory(allocator);
         defer runtime.service.saveHistory(allocator) catch {};
         try god_search_ui.ui.Shell.run(allocator, &runtime.service);
@@ -40,6 +41,18 @@ const Runtime = struct {
         allocator.free(self.app_cache_path);
         allocator.free(self.history_path);
     }
+
+    fn rebindProviderContexts(self: *Runtime) void {
+        self.provider_list = .{
+            self.actions.provider(),
+            self.apps.provider(),
+            self.windows.provider(),
+            self.dirs.provider(),
+        };
+        const registry = god_search_ui.providers.ProviderRegistry.init(&self.provider_list);
+        self.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, self.history_path);
+        self.service.max_history = 64;
+    }
 };
 
 fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
@@ -51,30 +64,27 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
     const history_path = try std.fmt.allocPrint(allocator, "{s}/.local/state/god-search-ui/history.log", .{home});
     errdefer allocator.free(history_path);
 
-    var apps = god_search_ui.providers.AppsProvider.init(app_cache);
-    var windows = god_search_ui.providers.WindowsProvider{};
-    var dirs = god_search_ui.providers.DirsProvider{};
-    var actions = god_search_ui.providers.ActionsProvider{};
-
-    const provider_list = [4]god_search_ui.search.Provider{
-        actions.provider(),
-        apps.provider(),
-        windows.provider(),
-        dirs.provider(),
-    };
-
-    const registry = god_search_ui.providers.ProviderRegistry.init(&provider_list);
-    var service = god_search_ui.app.SearchService.initWithHistoryPath(registry, history_path);
-    service.max_history = 64;
-
-    return .{
+    var runtime = Runtime{
         .app_cache_path = app_cache,
         .history_path = history_path,
-        .actions = actions,
-        .apps = apps,
-        .windows = windows,
-        .dirs = dirs,
-        .provider_list = provider_list,
-        .service = service,
+        .actions = .{},
+        .apps = god_search_ui.providers.AppsProvider.init(app_cache),
+        .windows = .{},
+        .dirs = .{},
+        .provider_list = undefined,
+        .service = undefined,
     };
+
+    runtime.provider_list = .{
+        runtime.actions.provider(),
+        runtime.apps.provider(),
+        runtime.windows.provider(),
+        runtime.dirs.provider(),
+    };
+
+    const registry = god_search_ui.providers.ProviderRegistry.init(&runtime.provider_list);
+    runtime.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, history_path);
+    runtime.service.max_history = 64;
+
+    return runtime;
 }
