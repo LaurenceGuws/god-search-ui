@@ -369,9 +369,14 @@ pub const Shell = struct {
         defer allocator.free(subtitle_text_z);
         const secondary_label = c.gtk_label_new(subtitle_text_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
+        c.gtk_label_set_ellipsize(@ptrCast(secondary_label), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_single_line_mode(@ptrCast(secondary_label), GTRUE);
+        c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
         c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
 
         const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_widget_set_margin_top(content, 2);
+        c.gtk_widget_set_margin_bottom(content, 2);
         c.gtk_box_append(@ptrCast(content), primary_label);
         c.gtk_box_append(@ptrCast(content), secondary_label);
 

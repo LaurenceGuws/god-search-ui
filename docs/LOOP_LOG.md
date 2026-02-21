@@ -1993,3 +1993,23 @@
   - M8: UX Phase 2 - tighten candidate row spacing and secondary text truncation.
 
 ---
+## 2026-02-21 (Cycle 94)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - tighten candidate row spacing and subtitle truncation
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - enabled ellipsize/truncation for secondary subtitle label
+    - constrained secondary label width for long paths/titles
+    - added compact vertical margins for candidate row content
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - max-width char count may need tuning for different DPI/font setups.
+- Next slice:
+  - M8: UX Phase 2 - add keyboard shortcut hint row when query is empty.
+
+---
