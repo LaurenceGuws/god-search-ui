@@ -3673,3 +3673,25 @@
   - M8: UX Phase 4 - add runbook quick-command presence assertion to release-validate contract checker.
 
 ---
+## 2026-02-21 (Cycle 168)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce rollback runbook quick-command presence in release-validate checker
+- Changes:
+  - Updated `scripts/check_release_validate_contract.sh`:
+    - now validates rollback runbook exists
+    - now validates rollback runbook includes release-validate clean command and CI guard command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_validate_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now enforces consistency between validate docs and rollback runbook command snippets.
+- Next slice:
+  - M8: UX Phase 4 - add release-validate contract check summary line to release-contracts docs.
+
+---
