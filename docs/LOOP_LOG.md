@@ -446,3 +446,26 @@
   - M3: Add grouped sections in GTK list (apps/windows/dirs/actions).
 
 ---
+## 2026-02-21 (Cycle 22)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add grouped sections in GTK list (apps/windows/dirs/actions)
+- Changes:
+  - Updated GTK list population to render grouped sections with headers:
+    - Apps
+    - Windows
+    - Directories
+    - Actions
+    - Hints
+  - Added non-selectable/non-activatable group header rows.
+  - Refactored candidate row rendering into dedicated helper.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Grouped order is fixed by kind priority, not adaptive to query intent.
+- Next slice:
+  - M4: Add confirmation mode for sensitive actions (`power`).
+
+---

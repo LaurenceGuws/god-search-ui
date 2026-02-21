@@ -4,6 +4,7 @@ const providers_mod = @import("../providers/mod.zig");
 const c = @cImport({
     @cInclude("gtk/gtk.h");
 });
+const CandidateKind = @import("../search/mod.zig").CandidateKind;
 
 const LaunchContext = struct {
     allocator: std.mem.Allocator,
@@ -158,42 +159,95 @@ pub const Shell = struct {
         defer allocator.free(ranked);
 
         const limit = @min(ranked.len, 20);
-        for (ranked[0..limit]) |row| {
-            const title_escaped = c.g_markup_escape_text(row.candidate.title.ptr, @intCast(row.candidate.title.len));
-            if (title_escaped == null) continue;
-            defer c.g_free(title_escaped);
-            const subtitle_escaped = c.g_markup_escape_text(row.candidate.subtitle.ptr, @intCast(row.candidate.subtitle.len));
-            if (subtitle_escaped == null) continue;
-            defer c.g_free(subtitle_escaped);
-
-            const icon = kindIcon(row.candidate.kind);
-            const chip = kindChip(row.candidate.kind);
-            const markup = std.fmt.allocPrintZ(
-                allocator,
-                "{s}  <span foreground='#9fb2ff' weight='bold'>{s}</span>  <span foreground='#e8ecf7'>{s}</span>  <span foreground='#9aa1b5'>{s}</span>",
-                .{ icon, chip, std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))), std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped))) },
-            ) catch continue;
-            defer allocator.free(markup);
-
-            const label = c.gtk_label_new(null);
-            c.gtk_label_set_markup(@ptrCast(label), markup.ptr);
-            c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-            const list_row = c.gtk_list_box_row_new();
-            c.gtk_list_box_row_set_child(@ptrCast(list_row), label);
-
-            const kind = kindTag(row.candidate.kind);
-            const kind_c = std.fmt.allocPrintZ(allocator, "{s}", .{kind}) catch continue;
-            defer allocator.free(kind_c);
-            const action_c = std.fmt.allocPrintZ(allocator, "{s}", .{row.candidate.action}) catch continue;
-            defer allocator.free(action_c);
-
-            c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_c.ptr), c.g_free);
-            c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_c.ptr), c.g_free);
-            c.gtk_list_box_append(@ptrCast(ctx.list), list_row);
-        }
+        const rows = ranked[0..limit];
+        appendGroupedRows(ctx, allocator, rows);
 
         const first = c.gtk_list_box_get_row_at_index(ctx.list, 0);
         if (first != null) c.gtk_list_box_select_row(ctx.list, first);
+    }
+
+    fn appendGroupedRows(ctx: *UiContext, allocator: std.mem.Allocator, rows: []const @import("../search/mod.zig").ScoredCandidate) void {
+        appendGroup(ctx, allocator, rows, .app, "Apps");
+        appendGroup(ctx, allocator, rows, .window, "Windows");
+        appendGroup(ctx, allocator, rows, .dir, "Directories");
+        appendGroup(ctx, allocator, rows, .action, "Actions");
+        appendGroup(ctx, allocator, rows, .hint, "Hints");
+    }
+
+    fn appendGroup(
+        ctx: *UiContext,
+        allocator: std.mem.Allocator,
+        rows: []const @import("../search/mod.zig").ScoredCandidate,
+        kind: CandidateKind,
+        title: []const u8,
+    ) void {
+        var has_any = false;
+        for (rows) |row| {
+            if (row.candidate.kind == kind) {
+                has_any = true;
+                break;
+            }
+        }
+        if (!has_any) return;
+
+        appendHeaderRow(ctx.list, title);
+        for (rows) |row| {
+            if (row.candidate.kind != kind) continue;
+            appendCandidateRow(ctx.list, allocator, row);
+        }
+    }
+
+    fn appendHeaderRow(list: *c.GtkListBox, title: []const u8) void {
+        const title_escaped = c.g_markup_escape_text(title.ptr, @intCast(title.len));
+        if (title_escaped == null) return;
+        defer c.g_free(title_escaped);
+
+        const markup = std.fmt.allocPrintZ(std.heap.page_allocator, "<span foreground='#8b93a8' weight='bold'>{s}</span>", .{std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped)))}) catch return;
+        defer std.heap.page_allocator.free(markup);
+
+        const label = c.gtk_label_new(null);
+        c.gtk_label_set_markup(@ptrCast(label), markup.ptr);
+        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_list_box_row_set_child(@ptrCast(row), label);
+        c.gtk_list_box_row_set_selectable(@ptrCast(row), c.FALSE);
+        c.gtk_list_box_row_set_activatable(@ptrCast(row), c.FALSE);
+        c.gtk_list_box_append(@ptrCast(list), row);
+    }
+
+    fn appendCandidateRow(list: *c.GtkListBox, allocator: std.mem.Allocator, row: @import("../search/mod.zig").ScoredCandidate) void {
+        const title_escaped = c.g_markup_escape_text(row.candidate.title.ptr, @intCast(row.candidate.title.len));
+        if (title_escaped == null) return;
+        defer c.g_free(title_escaped);
+        const subtitle_escaped = c.g_markup_escape_text(row.candidate.subtitle.ptr, @intCast(row.candidate.subtitle.len));
+        if (subtitle_escaped == null) return;
+        defer c.g_free(subtitle_escaped);
+
+        const icon = kindIcon(row.candidate.kind);
+        const chip = kindChip(row.candidate.kind);
+        const markup = std.fmt.allocPrintZ(
+            allocator,
+            "{s}  <span foreground='#9fb2ff' weight='bold'>{s}</span>  <span foreground='#e8ecf7'>{s}</span>  <span foreground='#9aa1b5'>{s}</span>",
+            .{ icon, chip, std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))), std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped))) },
+        ) catch return;
+        defer allocator.free(markup);
+
+        const label = c.gtk_label_new(null);
+        c.gtk_label_set_markup(@ptrCast(label), markup.ptr);
+        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+        const list_row = c.gtk_list_box_row_new();
+        c.gtk_list_box_row_set_child(@ptrCast(list_row), label);
+
+        const kind = kindTag(row.candidate.kind);
+        const kind_c = std.fmt.allocPrintZ(allocator, "{s}", .{kind}) catch return;
+        defer allocator.free(kind_c);
+        const action_c = std.fmt.allocPrintZ(allocator, "{s}", .{row.candidate.action}) catch return;
+        defer allocator.free(action_c);
+
+        c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_c.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_c.ptr), c.g_free);
+        c.gtk_list_box_append(@ptrCast(list), list_row);
     }
 
     fn clearList(list: *c.GtkListBox) void {
