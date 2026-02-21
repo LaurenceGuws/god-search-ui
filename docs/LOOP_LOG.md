@@ -1324,3 +1324,21 @@
   - M8: add runbook note for SSH key preflight check before publish.
 
 ---
+## 2026-02-21 (Cycle 62)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add SSH key preflight check to release publish runbook
+- Changes:
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`:
+    - added `ssh -T git@github.com` preflight step
+    - added note on key path/permission checks for failed auth
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - host-specific SSH setup can still vary; runbook step is advisory.
+- Next slice:
+  - M8: add GTK runtime smoke command to release smoke script (optional mode).
+
+---

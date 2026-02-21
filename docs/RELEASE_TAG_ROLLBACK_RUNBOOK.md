@@ -27,6 +27,12 @@ scripts/release_smoke.sh
 
 Working tree must be clean before tagging.
 
+SSH preflight (before first push in a workspace):
+```bash
+ssh -T git@github.com
+```
+If auth fails, verify SSH identity path and key permissions (`chmod 600` on private key).
+
 ## 2. Generate Draft Notes
 ```bash
 scripts/gen_release_notes.sh v0.1.0 docs/release-notes-v0.1.0.md

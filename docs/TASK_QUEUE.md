@@ -74,3 +74,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add GTK placeholder guidance for empty-query state.
 - [x] M8: Add post-release issue triage template for v0.1.1 planning.
 - [x] M8: Add first concrete triage entry from release publish session.
+- [x] M8: Add SSH key preflight check step to release publish runbook.
