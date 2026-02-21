@@ -2071,3 +2071,22 @@
   - M8: UX Phase 2 - adaptive GTK window sizing for improved small-screen behavior.
 
 ---
+## 2026-02-21 (Cycle 98)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - adaptive GTK window sizing and minimum constraints
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced fixed startup size with monitor-aware default sizing
+    - added minimum size constraints to keep entry/list/status usable on smaller displays
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - currently uses first monitor geometry; multi-monitor-targeted positioning can be refined later.
+- Next slice:
+  - M8: UX Phase 2 - remove startup placeholder/status flicker on first paint.
+
+---

@@ -109,3 +109,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 2 - add keyboard shortcut hint row for empty query state.
 - [x] M8: UX Phase 2 - bound launch feedback rows to avoid accumulation.
 - [x] M8: UX Phase 2 - add lightweight visual separator between populated sections.
+- [x] M8: UX Phase 2 - adaptive GTK window sizing and minimum constraints.
