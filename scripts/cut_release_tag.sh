@@ -6,11 +6,12 @@ cd "$ROOT_DIR"
 
 DRY_RUN=1
 PUSH=0
+COMMIT_NOTES=0
 VERSION=""
 
 usage() {
   cat <<'EOF'
-Usage: scripts/cut_release_tag.sh --version vX.Y.Z [--apply] [--push]
+Usage: scripts/cut_release_tag.sh --version vX.Y.Z [--apply] [--push] [--commit-notes]
 
 Default mode is dry-run and prints planned actions.
 
@@ -18,6 +19,7 @@ Options:
   --version   tag/version to cut (required)
   --apply     execute tag creation (otherwise dry-run)
   --push      push main + tag after creation (requires --apply)
+  --commit-notes  commit generated release notes before tag creation (requires --apply)
 EOF
 }
 
@@ -33,6 +35,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --push)
       PUSH=1
+      shift
+      ;;
+    --commit-notes)
+      COMMIT_NOTES=1
       shift
       ;;
     -h|--help)
@@ -58,6 +64,11 @@ if [[ $PUSH -eq 1 && $DRY_RUN -eq 1 ]]; then
   exit 1
 fi
 
+if [[ $COMMIT_NOTES -eq 1 && $DRY_RUN -eq 1 ]]; then
+  echo "error: --commit-notes requires --apply" >&2
+  exit 1
+fi
+
 if [[ -n "$(git status --short)" ]]; then
   echo "error: working tree is not clean" >&2
   exit 1
@@ -73,6 +84,10 @@ scripts/release_smoke.sh
 
 if [[ $DRY_RUN -eq 1 ]]; then
   echo "[dry-run] would run: scripts/gen_release_notes.sh $VERSION docs/release-notes-${VERSION}.md"
+  if [[ $COMMIT_NOTES -eq 1 ]]; then
+    echo "[dry-run] would run: git add docs/release-notes-${VERSION}.md"
+    echo "[dry-run] would run: git commit -m \"Add release notes draft for $VERSION\""
+  fi
   echo "[dry-run] would run: git tag -a $VERSION -m \"god-search-ui $VERSION\""
   if [[ $PUSH -eq 1 ]]; then
     echo "[dry-run] would run: git push origin main"
@@ -83,6 +98,12 @@ fi
 
 echo "[apply] generating release notes draft"
 scripts/gen_release_notes.sh "$VERSION" "docs/release-notes-${VERSION}.md"
+
+if [[ $COMMIT_NOTES -eq 1 ]]; then
+  echo "[apply] committing release notes draft"
+  git add "docs/release-notes-${VERSION}.md"
+  git commit -m "Add release notes draft for ${VERSION}"
+fi
 
 echo "[apply] creating annotated tag"
 git tag -a "$VERSION" -m "god-search-ui $VERSION"

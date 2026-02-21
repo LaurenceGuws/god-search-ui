@@ -10,6 +10,7 @@ scripts/cut_release_tag.sh --version v0.1.0
 Notes:
 - Dry-run mode performs preflight checks and prints planned commands only.
 - Release notes draft file is generated only with `--apply`.
+- Use `--commit-notes` if tag should point to the commit that contains release notes.
 
 ## Inputs
 - `VERSION` (example: `v0.1.0`)

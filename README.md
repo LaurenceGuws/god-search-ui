@@ -64,6 +64,10 @@ Release tag flow helper (dry-run by default):
 ```bash
 scripts/cut_release_tag.sh --version v0.1.0
 ```
+To include release notes in the tagged commit:
+```bash
+scripts/cut_release_tag.sh --version v0.1.0 --apply --commit-notes
+```
 
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`

@@ -989,3 +989,26 @@
   - M7: decide publish action (`--push`) or iterate RC fixes.
 
 ---
+## 2026-02-21 (Cycle 46)
+- Milestone: M7 Release Hardening
+- Task slice: Add `--commit-notes` option to release tag helper
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - new `--commit-notes` flag (requires `--apply`)
+    - optional commit step for generated `docs/release-notes-<version>.md` before tagging
+    - dry-run output includes commit plan when applicable
+  - Updated usage references in:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --help`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--commit-notes` creates an additional commit before tag creation.
+- Next slice:
+  - M7: decide whether to re-cut RC tag to include notes commit.
+
+---
