@@ -1120,3 +1120,24 @@
   - unblock by configuring remote and rerun publish helper with `--apply`.
 
 ---
+## 2026-02-21 (Cycle 52)
+- Milestone: M7 Release Hardening
+- Task slice: Publish `v0.1.0-rc2` tag to `origin`
+- Changes:
+  - Ran:
+    - `scripts/publish_release_tag.sh --version v0.1.0-rc2 --apply`
+  - Results:
+    - `main` already up to date on `origin`
+    - tag pushed: `v0.1.0-rc2 -> origin`
+  - Cleared blocked publish item in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git remote -v`
+  - publish helper output confirms tag push
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Earlier SSH key warning suggests key-path config should be reviewed, although push now succeeds.
+- Next slice:
+  - M7: decide whether to promote RC to `v0.1.0` tag.
+
+---
