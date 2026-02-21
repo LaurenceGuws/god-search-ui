@@ -3,7 +3,7 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] (empty)
+- [ ] M8: Run `v0.1.1` release cut dry-run and record outcome.
 
 ## In Progress
 - [ ] (empty)
