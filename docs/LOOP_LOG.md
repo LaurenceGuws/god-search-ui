@@ -705,3 +705,25 @@
   - M6: Add operator troubleshooting runbook for common failures.
 
 ---
+## 2026-02-21 (Cycle 34)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add operator troubleshooting runbook for common failures
+- Changes:
+  - Added `docs/TROUBLESHOOTING_RUNBOOK.md` covering:
+    - baseline health checks
+    - GTK build/link failures
+    - crash triage
+    - empty results/action failures/history issues
+    - rollback + escalation checklist
+  - Linked runbook from `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Runbook assumes local paths under `~/.local/state/god-search-ui`.
+- Next slice:
+  - M5: Add async thread-based refresh worker (optional advanced path).
+
+---
