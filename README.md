@@ -26,6 +26,7 @@ In headless mode, type queries and press Enter. Commands:
 - `:q` to exit
 - `:refresh` to invalidate + prewarm provider snapshot cache
 - `:icondiag` to print app icon metadata/fallback diagnostics
+- `:icondiag --json` for machine-readable icon diagnostics output
 
 GTK4 shell (requires GTK4 dev libraries):
 ```bash
@@ -77,6 +78,10 @@ scripts/check_apps_cache_format.sh
 Icon theme environment preflight:
 ```bash
 scripts/check_icon_theme_env.sh
+```
+Icon diagnostics JSON schema check:
+```bash
+scripts/check_icondiag_json.sh
 ```
 Release script-matrix checks:
 ```bash
@@ -143,6 +148,7 @@ scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
 - v0.1.1 patch plan: `docs/V0_1_1_PATCH_PLAN.md`
 - Post-release triage template: `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`
 - Triage log: `docs/TRIAGE_LOG.md`
+- Icon diagnostics reference: `docs/ICON_DIAGNOSTICS.md`
 
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.

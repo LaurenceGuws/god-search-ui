@@ -2741,3 +2741,66 @@
   - M8: UX Phase 4 - add provider-level metric output in `:icondiag` for icon metadata coverage ratio.
 
 ---
+## 2026-02-21 (Cycle 131)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - expand icon diagnostics metrics + JSON mode and smoke coverage
+- Changes:
+  - Updated `src/ui/stub_shell.zig`:
+    - added coverage ratios (`metadata coverage`, `glyph fallback ratio`) to `:icondiag`
+    - added up to 5 fallback sample rows in text mode
+    - added machine-readable `:icondiag --json` mode
+    - updated headless command banner
+  - Updated `scripts/release_smoke.sh`:
+    - headless smoke now exercises both `:icondiag` and `:icondiag --json`
+  - Updated `README.md`:
+    - documented `:icondiag --json` command
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added GTK fallback-status cross-link to headless diagnostics
+    - added JSON diagnostics command for automation workflows
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf ':icondiag\n:icondiag --json\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - fallback sample output uses candidate/action strings and may vary with provider cache content.
+- Next slice:
+  - M8: UX Phase 4 - add docs for icon diagnostics JSON schema and thresholds.
+
+---
+## 2026-02-21 (Cycle 132)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - icon diagnostics JSON schema docs + automated smoke validation
+- Changes:
+  - Updated `src/ui/stub_shell.zig`:
+    - expanded `:icondiag` with coverage ratios and fallback samples
+    - added `:icondiag --json` output mode
+  - Added `docs/ICON_DIAGNOSTICS.md`:
+    - documented diagnostics fields, interpretation, and suggested thresholds
+  - Added `scripts/check_icondiag_json.sh`:
+    - validates diagnostics JSON output presence and expected key set
+  - Updated `scripts/release_smoke.sh`:
+    - added `icondiag` JSON schema smoke step
+    - updated smoke step numbering
+  - Updated `README.md`:
+    - documented JSON diagnostics command and new smoke script
+    - linked icon diagnostics reference doc
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added JSON diagnostics usage for automation
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf ':icondiag\n:icondiag --json\n:q\n' | zig build run -- --ui`
+  - `scripts/check_icondiag_json.sh`
+  - `scripts/release_smoke.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - JSON validation currently checks schema keys, not numeric threshold policy.
+- Next slice:
+  - M8: UX Phase 4 - add helper script to fail CI when glyph fallback ratio exceeds configurable threshold.
+
+---

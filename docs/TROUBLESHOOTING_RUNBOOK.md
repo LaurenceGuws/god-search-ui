@@ -69,9 +69,14 @@ If app icons are missing but apps still launch:
 1. Confirm cache has a 4th icon column for affected rows.
 2. Use icon names that exist in current icon theme.
 3. Rebuild cache and trigger refresh (`Ctrl+R` in GTK or `:refresh` in headless).
+   - If GTK shows fallback warning in status line, run headless diagnostics next.
 4. Run headless icon diagnostics:
    ```bash
    printf ':icondiag\n:q\n' | zig build run -- --ui
+   ```
+5. For automation/alerts, use JSON diagnostics:
+   ```bash
+   printf ':icondiag --json\n:q\n' | zig build run -- --ui
    ```
 
 ### D. Action execution fails
