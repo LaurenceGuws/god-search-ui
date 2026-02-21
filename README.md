@@ -61,6 +61,7 @@ scripts/release_smoke.sh
 - desktop entry template: `packaging/desktop/god-search-ui.desktop`
 - icon asset: `assets/icons/god-search-ui.svg`
 - Notes: `docs/ARCH_PACKAGING.md`
+- Arch packaged install smoke: `docs/PACKAGED_INSTALL_SMOKE.md`
 - Hypr/Waybar integration: `docs/HYPR_WAYBAR_INTEGRATION.md`
 - GTK rollout checklist: `docs/GTK_ROLLOUT_CHECKLIST.md`
 - Troubleshooting runbook: `docs/TROUBLESHOOTING_RUNBOOK.md`

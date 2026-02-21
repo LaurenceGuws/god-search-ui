@@ -32,6 +32,9 @@ You may also need runtime deps such as:
 god-search-ui --ui
 ```
 
+For full package-build/install/uninstall validation, run:
+- `docs/PACKAGED_INSTALL_SMOKE.md`
+
 ## Release notes draft helper
 Generate a notes draft from the release template + recent commits:
 ```bash

@@ -876,3 +876,27 @@
   - M7: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check).
 
 ---
+## 2026-02-21 (Cycle 41)
+- Milestone: M7 Release Hardening
+- Task slice: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check)
+- Changes:
+  - Added `docs/PACKAGED_INSTALL_SMOKE.md` with explicit smoke flow:
+    - `makepkg` build
+    - package install/uninstall
+    - desktop entry + icon path checks
+    - desktop file validation
+    - runtime smoke
+  - Linked smoke doc in:
+    - `README.md`
+    - `docs/ARCH_PACKAGING.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Install/uninstall commands require a real Arch host and sudo privileges.
+- Next slice:
+  - M7: automate packaged smoke into optional helper script.
+
+---
