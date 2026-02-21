@@ -120,3 +120,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - show result-limit indicator when top 20 truncation applies.
 - [x] M8: UX Phase 3 - add quick provider-route hint row for one-character prefix queries.
 - [x] M8: UX Phase 3 - add explicit zero-results guidance with route suggestions.
+- [x] M8: UX Phase 3 - add explicit selected-row status summary in footer.

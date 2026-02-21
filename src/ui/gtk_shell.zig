@@ -87,6 +87,7 @@ pub const Shell = struct {
         c.gtk_widget_add_controller(window, @ptrCast(key_controller));
         _ = c.g_signal_connect_data(entry, "search-changed", c.G_CALLBACK(onSearchChanged), ctx, null, 0);
         _ = c.g_signal_connect_data(list, "row-activated", c.G_CALLBACK(onRowActivated), ctx, null, 0);
+        _ = c.g_signal_connect_data(list, "row-selected", c.G_CALLBACK(onRowSelected), ctx, null, 0);
         _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(onDestroy), ctx, null, 0);
 
         c.gtk_box_append(@ptrCast(root_box), entry);
@@ -222,6 +223,21 @@ pub const Shell = struct {
         const kind = std.mem.span(@as([*:0]const u8, @ptrCast(kind_ptr)));
         const action = std.mem.span(@as([*:0]const u8, @ptrCast(action_ptr)));
         executeSelected(ctx, kind, action);
+    }
+
+    fn onRowSelected(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {
+        if (row == null or user_data == null) return;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        if (ctx.pending_power_confirm == GTRUE) return;
+        if (ctx.service.last_query_used_stale_cache or ctx.service.last_query_refreshed_cache) return;
+
+        const title_ptr = c.g_object_get_data(@ptrCast(row), "gs-title");
+        if (title_ptr == null) return;
+        const title = std.mem.span(@as([*:0]const u8, @ptrCast(title_ptr)));
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const msg = std.fmt.allocPrint(allocator_ptr.*, "Enter launch: {s}", .{title}) catch return;
+        defer allocator_ptr.*.free(msg);
+        setStatus(ctx, msg);
     }
 
     fn selectOffset(ctx: *UiContext, delta: i32) void {
@@ -481,13 +497,18 @@ pub const Shell = struct {
         defer allocator.free(kind_c);
         const action_c = std.fmt.allocPrint(allocator, "{s}", .{row.candidate.action}) catch return;
         defer allocator.free(action_c);
+        const title_c = std.fmt.allocPrint(allocator, "{s}", .{row.candidate.title}) catch return;
+        defer allocator.free(title_c);
         const kind_z = allocator.dupeZ(u8, kind_c) catch return;
         defer allocator.free(kind_z);
         const action_z = allocator.dupeZ(u8, action_c) catch return;
         defer allocator.free(action_z);
+        const title_z = allocator.dupeZ(u8, title_c) catch return;
+        defer allocator.free(title_z);
 
         c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
         c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(list_row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
         c.gtk_list_box_append(@ptrCast(list), list_row);
     }
 

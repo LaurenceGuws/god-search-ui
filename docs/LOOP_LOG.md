@@ -2283,3 +2283,23 @@
   - M8: UX Phase 3 - add explicit selected-row status summary in footer.
 
 ---
+## 2026-02-21 (Cycle 109)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add explicit selected-row status summary in footer
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - wired `row-selected` callback for GTK list
+    - candidate rows now carry title metadata (`gs-title`)
+    - footer status shows `Enter launch: <title>` for actionable selected rows
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status summary intentionally yields to refresh/confirmation statuses.
+- Next slice:
+  - M8: UX Phase 3 - adjust status copy to include selected candidate source kind.
+
+---
