@@ -854,3 +854,25 @@
   - M7: Add release tagging/rollback runbook with exact command sequence.
 
 ---
+## 2026-02-21 (Cycle 40)
+- Milestone: M7 Release Hardening
+- Task slice: Add release tagging/rollback runbook with exact command sequence
+- Changes:
+  - Added `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md` with explicit command flow for:
+    - preflight checks
+    - release notes draft generation
+    - annotated tagging and push
+    - tag-only rollback
+    - code rollback (revert-first, hard reset as emergency path)
+  - Linked runbook in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Hard reset/force push path remains emergency-only and requires maintainer coordination.
+- Next slice:
+  - M7: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check).
+
+---

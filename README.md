@@ -65,6 +65,7 @@ scripts/release_smoke.sh
 - GTK rollout checklist: `docs/GTK_ROLLOUT_CHECKLIST.md`
 - Troubleshooting runbook: `docs/TROUBLESHOOTING_RUNBOOK.md`
 - Release notes template: `docs/RELEASE_NOTES_TEMPLATE.md`
+- Release tagging/rollback runbook: `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
 
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.

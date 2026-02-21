@@ -3,7 +3,6 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M7: Add release tagging/rollback runbook with exact command sequence.
 - [ ] M7: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check).
 
 ## In Progress
@@ -54,3 +53,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M6: Add changelog generation script for release notes draft.
 - [x] M6: Add desktop file + icon assets for launcher integration.
 - [x] M7: Add release smoke-test script for headless + GTK build verification.
+- [x] M7: Add release tagging/rollback runbook with exact command sequence.
