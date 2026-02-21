@@ -37,6 +37,10 @@ scripts/dev.sh build
 scripts/dev.sh test
 ```
 
+## Packaging
+- Arch skeleton: `packaging/arch/PKGBUILD`
+- Notes: `docs/ARCH_PACKAGING.md`
+
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.
 - Implement provider contract (apps/windows/dirs/actions).

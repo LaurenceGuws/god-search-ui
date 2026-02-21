@@ -1,0 +1,37 @@
+# Maintainer: Your Name <you@example.com>
+pkgname=god-search-ui-git
+pkgver=0.1.0.r0.g0000000
+pkgrel=1
+pkgdesc="Spotlight-style launcher UI for Hyprland"
+arch=('x86_64')
+url="https://example.local/god-search-ui"
+license=('MIT')
+depends=('glibc')
+makedepends=('zig' 'git')
+optdepends=('gtk4: enable GTK UI shell at build time')
+provides=('god-search-ui')
+conflicts=('god-search-ui')
+source=("$pkgname::git+file:///home/home/personal/god-search-ui")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$srcdir/$pkgname"
+  printf "0.1.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd "$srcdir/$pkgname"
+  # Default package build keeps GTK disabled for maximal portability.
+  zig build -Doptimize=ReleaseSafe
+}
+
+check() {
+  cd "$srcdir/$pkgname"
+  zig build test -Doptimize=ReleaseSafe
+}
+
+package() {
+  cd "$srcdir/$pkgname"
+  install -Dm755 "zig-out/bin/god_search_ui" "$pkgdir/usr/bin/god-search-ui"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

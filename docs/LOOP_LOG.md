@@ -556,3 +556,21 @@
   - M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
 
 ---
+## 2026-02-21 (Cycle 27)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add Arch packaging skeleton (`PKGBUILD` + install notes)
+- Changes:
+  - Added `packaging/arch/PKGBUILD` skeleton for `god-search-ui-git`.
+  - Added `docs/ARCH_PACKAGING.md` with build/install guidance and GTK variant notes.
+  - Updated `README.md` packaging section.
+  - Updated queue status with next follow-up items.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Source URL is local `file://` for workspace packaging; update for remote distribution.
+- Next slice:
+  - M6: Add install/service integration docs for Hypr/Waybar bindings.
+
+---

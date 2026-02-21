@@ -3,7 +3,8 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
+- [ ] M6: Add install/service integration docs for Hypr/Waybar bindings.
+- [ ] M5: Add cache invalidation strategy for provider snapshot refresh.
 
 ## In Progress
 - [ ] (empty)
@@ -39,3 +40,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M4: Add telemetry event sink for action execution results.
 - [x] M5: Add startup/query timing instrumentation.
 - [x] M5: Add provider snapshot cache prewarm for faster first query.
+- [x] M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
