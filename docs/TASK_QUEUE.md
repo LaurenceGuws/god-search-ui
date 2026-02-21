@@ -3,8 +3,8 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M6: Add rollout checklist for migrating from shell launcher to GTK launcher.
 - [ ] M5: Add background refresh strategy to avoid synchronous cache refresh on query path.
+- [ ] M6: Add operator troubleshooting runbook for common failures.
 
 ## In Progress
 - [ ] (empty)
@@ -45,3 +45,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M5: Add stale-cache indicator in UI when snapshot is auto-refreshed.
 - [x] M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
 - [x] M6: Add install/service integration docs for Hypr/Waybar bindings.
+- [x] M6: Add rollout checklist for migrating from shell launcher to GTK launcher.

@@ -660,3 +660,24 @@
   - M6: Add rollout checklist for migrating from shell launcher to GTK launcher.
 
 ---
+## 2026-02-21 (Cycle 32)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add rollout checklist for migrating from shell launcher to GTK launcher
+- Changes:
+  - Added `docs/GTK_ROLLOUT_CHECKLIST.md` with:
+    - phased migration path (parallel run -> cutover -> decommission)
+    - go/no-go gates
+    - rollback plan
+    - burn-in recommendation
+  - Linked checklist from `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Checklist assumes existing shell fallback keybind is still available.
+- Next slice:
+  - M5: Add background refresh strategy to avoid synchronous cache refresh on query path.
+
+---

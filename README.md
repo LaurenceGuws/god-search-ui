@@ -44,6 +44,7 @@ scripts/dev.sh test
 - Arch skeleton: `packaging/arch/PKGBUILD`
 - Notes: `docs/ARCH_PACKAGING.md`
 - Hypr/Waybar integration: `docs/HYPR_WAYBAR_INTEGRATION.md`
+- GTK rollout checklist: `docs/GTK_ROLLOUT_CHECKLIST.md`
 
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.
