@@ -5,6 +5,8 @@ const c = @cImport({
     @cInclude("gtk/gtk.h");
 });
 const CandidateKind = @import("../search/mod.zig").CandidateKind;
+const GTRUE: c.gboolean = 1;
+const GFALSE: c.gboolean = 0;
 
 const LaunchContext = struct {
     allocator: std.mem.Allocator,
@@ -66,7 +68,7 @@ pub const Shell = struct {
         ctx.allocator = @ptrCast(@constCast(&launch.allocator));
         ctx.service = launch.service;
         ctx.telemetry = launch.telemetry;
-        ctx.pending_power_confirm = c.FALSE;
+        ctx.pending_power_confirm = GFALSE;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -95,28 +97,28 @@ pub const Shell = struct {
         _: c.GdkModifierType,
         user_data: ?*anyopaque,
     ) callconv(.c) c.gboolean {
-        if (user_data == null) return c.FALSE;
+        if (user_data == null) return GFALSE;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
 
         switch (keyval) {
             c.GDK_KEY_Escape => {
                 c.gtk_window_close(@ptrCast(ctx.window));
-                return c.TRUE;
+                return GTRUE;
             },
             c.GDK_KEY_Down => {
                 selectOffset(ctx.list, 1);
-                return c.TRUE;
+                return GTRUE;
             },
             c.GDK_KEY_Up => {
                 selectOffset(ctx.list, -1);
-                return c.TRUE;
+                return GTRUE;
             },
             c.GDK_KEY_Return, c.GDK_KEY_KP_Enter => {
                 const row = c.gtk_list_box_get_selected_row(ctx.list);
-                if (row != null) c.gtk_list_box_row_activate(row);
-                return c.TRUE;
+                if (row != null) c.g_signal_emit_by_name(ctx.list, "row-activated", row);
+                return GTRUE;
             },
-            else => return c.FALSE,
+            else => return GFALSE,
         }
     }
 
@@ -209,17 +211,19 @@ pub const Shell = struct {
         if (title_escaped == null) return;
         defer c.g_free(title_escaped);
 
-        const markup = std.fmt.allocPrintZ(std.heap.page_allocator, "<span foreground='#8b93a8' weight='bold'>{s}</span>", .{std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped)))}) catch return;
+        const markup = std.fmt.allocPrint(std.heap.page_allocator, "<span foreground='#8b93a8' weight='bold'>{s}</span>", .{std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped)))}) catch return;
         defer std.heap.page_allocator.free(markup);
+        const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
+        defer std.heap.page_allocator.free(markup_z);
 
         const label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(label), markup.ptr);
+        c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(label), 0.0);
 
         const row = c.gtk_list_box_row_new();
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
-        c.gtk_list_box_row_set_selectable(@ptrCast(row), c.FALSE);
-        c.gtk_list_box_row_set_activatable(@ptrCast(row), c.FALSE);
+        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
         c.gtk_list_box_append(@ptrCast(list), row);
     }
 
@@ -233,32 +237,38 @@ pub const Shell = struct {
 
         const icon = kindIcon(row.candidate.kind);
         const chip = kindChip(row.candidate.kind);
-        const markup = std.fmt.allocPrintZ(
+        const markup = std.fmt.allocPrint(
             allocator,
             "{s}  <span foreground='#9fb2ff' weight='bold'>{s}</span>  <span foreground='#e8ecf7'>{s}</span>  <span foreground='#9aa1b5'>{s}</span>",
             .{ icon, chip, std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))), std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped))) },
         ) catch return;
         defer allocator.free(markup);
+        const markup_z = allocator.dupeZ(u8, markup) catch return;
+        defer allocator.free(markup_z);
 
         const label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(label), markup.ptr);
+        c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(label), 0.0);
         const list_row = c.gtk_list_box_row_new();
         c.gtk_list_box_row_set_child(@ptrCast(list_row), label);
 
         const kind = kindTag(row.candidate.kind);
-        const kind_c = std.fmt.allocPrintZ(allocator, "{s}", .{kind}) catch return;
+        const kind_c = std.fmt.allocPrint(allocator, "{s}", .{kind}) catch return;
         defer allocator.free(kind_c);
-        const action_c = std.fmt.allocPrintZ(allocator, "{s}", .{row.candidate.action}) catch return;
+        const action_c = std.fmt.allocPrint(allocator, "{s}", .{row.candidate.action}) catch return;
         defer allocator.free(action_c);
+        const kind_z = allocator.dupeZ(u8, kind_c) catch return;
+        defer allocator.free(kind_z);
+        const action_z = allocator.dupeZ(u8, action_c) catch return;
+        defer allocator.free(action_z);
 
-        c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_c.ptr), c.g_free);
-        c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_c.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
         c.gtk_list_box_append(@ptrCast(list), list_row);
     }
 
     fn clearList(list: *c.GtkListBox) void {
-        var child = c.gtk_widget_get_first_child(@ptrCast(list));
+        var child = c.gtk_widget_get_first_child(@ptrCast(@alignCast(list)));
         while (child != null) {
             const next = c.gtk_widget_get_next_sibling(child);
             c.gtk_list_box_remove(list, child);
@@ -274,7 +284,7 @@ pub const Shell = struct {
 
         if (std.mem.eql(u8, kind, "action")) {
             if (providers_mod.requiresConfirmation(action)) {
-                if (ctx.pending_power_confirm == c.FALSE) {
+                if (ctx.pending_power_confirm == GFALSE) {
                     armPowerConfirmation(ctx);
                     emitTelemetry(ctx, "action", action, "guarded", "await-confirm");
                     return;
@@ -340,14 +350,14 @@ pub const Shell = struct {
     }
 
     fn armPowerConfirmation(ctx: *UiContext) void {
-        ctx.pending_power_confirm = c.TRUE;
-        c.gtk_entry_set_placeholder_text(@ptrCast(ctx.entry), "Press Enter again to confirm Power menu");
+        ctx.pending_power_confirm = GTRUE;
+        c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Press Enter again to confirm Power menu");
     }
 
     fn clearPowerConfirmation(ctx: *UiContext) void {
-        if (ctx.pending_power_confirm == c.FALSE) return;
-        ctx.pending_power_confirm = c.FALSE;
-        c.gtk_entry_set_placeholder_text(@ptrCast(ctx.entry), "Type to search...");
+        if (ctx.pending_power_confirm == GFALSE) return;
+        ctx.pending_power_confirm = GFALSE;
+        c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search...");
     }
 
     fn emitTelemetry(ctx: *UiContext, kind: []const u8, action: []const u8, status: []const u8, detail: []const u8) void {

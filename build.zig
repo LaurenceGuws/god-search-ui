@@ -90,6 +90,11 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    if (enable_gtk) {
+        exe.linkLibC();
+        exe.root_module.linkSystemLibrary("gtk4", .{ .use_pkg_config = .force });
+    }
+
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
     // step). By default the install prefix is `zig-out/` but can be overridden
@@ -128,6 +133,10 @@ pub fn build(b: *std.Build) void {
     const mod_tests = b.addTest(.{
         .root_module = mod,
     });
+    if (enable_gtk) {
+        mod_tests.linkLibC();
+        mod_tests.root_module.linkSystemLibrary("gtk4", .{ .use_pkg_config = .force });
+    }
 
     // A run step that will run the test executable.
     const run_mod_tests = b.addRunArtifact(mod_tests);
@@ -138,6 +147,10 @@ pub fn build(b: *std.Build) void {
     const exe_tests = b.addTest(.{
         .root_module = exe.root_module,
     });
+    if (enable_gtk) {
+        exe_tests.linkLibC();
+        exe_tests.root_module.linkSystemLibrary("gtk4", .{ .use_pkg_config = .force });
+    }
 
     // A run step that will run the second test executable.
     const run_exe_tests = b.addRunArtifact(exe_tests);
