@@ -44,7 +44,7 @@ pub const Shell = struct {
         c.gtk_widget_set_margin_end(root_box, 12);
 
         const entry = c.gtk_search_entry_new();
-        c.gtk_editable_set_text(@ptrCast(entry), "Type to search...");
+        c.gtk_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
 
         const list = c.gtk_list_box_new();
         c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
@@ -63,6 +63,7 @@ pub const Shell = struct {
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
         c.gtk_widget_add_controller(window, @ptrCast(key_controller));
+        _ = c.g_signal_connect_data(entry, "search-changed", c.G_CALLBACK(onSearchChanged), ctx, null, 0);
         _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(onDestroy), ctx, null, 0);
 
         c.gtk_box_append(@ptrCast(root_box), entry);
@@ -108,6 +109,19 @@ pub const Shell = struct {
             },
             else => return c.FALSE,
         }
+    }
+
+    fn onSearchChanged(entry: ?*c.GtkSearchEntry, user_data: ?*anyopaque) callconv(.c) void {
+        _ = entry;
+        if (user_data == null) return;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+        if (text_ptr == null) {
+            populateResults(ctx, "");
+            return;
+        }
+        const query = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
+        populateResults(ctx, query);
     }
 
     fn selectOffset(list: *c.GtkListBox, delta: i32) void {

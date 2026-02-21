@@ -383,3 +383,22 @@
   - M3: Connect GTK search entry changes to `SearchService.searchQuery`.
 
 ---
+## 2026-02-21 (Cycle 19)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Connect GTK search entry changes to `SearchService.searchQuery`
+- Changes:
+  - Added GTK `search-changed` signal wiring in `src/ui/gtk_shell.zig`.
+  - On every entry update, query text now re-runs `SearchService.searchQuery`.
+  - Result list refreshes live from current ranked output.
+  - Switched entry prompt to placeholder text.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Current refresh strategy fully rebuilds list per change; can optimize later.
+- Next slice:
+  - M3: Add action execution hook for selected result (`Enter`).
+
+---
