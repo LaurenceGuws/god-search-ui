@@ -3455,3 +3455,25 @@
   - M8: UX Phase 4 - add release-contracts doc contract check for rollback-runbook backlink presence.
 
 ---
+## 2026-02-21 (Cycle 158)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce rollback-runbook backlink in release-contracts doc checker
+- Changes:
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - now validates rollback runbook exists
+    - now validates rollback runbook references `docs/RELEASE_CONTRACTS.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now enforces a two-way docs linkage contract between contracts doc and rollback runbook.
+- Next slice:
+  - M8: UX Phase 4 - add short release-contracts cheat sheet block in README release section.
+
+---

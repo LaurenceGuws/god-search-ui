@@ -5,7 +5,9 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 DOC="docs/RELEASE_CONTRACTS.md"
+RUNBOOK="docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md"
 test -f "$DOC"
+test -f "$RUNBOOK"
 
 rg -q --fixed-strings "# Release Contracts" "$DOC"
 rg -q --fixed-strings "## Primary Entry Points" "$DOC"
@@ -31,5 +33,6 @@ rg -q --fixed-strings "docs/RELEASE_VALIDATE_MODES.md" "$DOC"
 rg -q --fixed-strings "RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_contracts.sh" "$DOC"
 rg -q --fixed-strings "Do not use dirty-worktree override in CI or release cut/tag workflows." "$DOC"
 rg -q --fixed-strings "scripts/release_validate.sh --ci --require-clean" "$DOC"
+rg -q --fixed-strings "docs/RELEASE_CONTRACTS.md" "$RUNBOOK"
 
 echo "release contracts doc checks passed"
