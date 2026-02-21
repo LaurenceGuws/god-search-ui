@@ -9,7 +9,7 @@ Use this loop for each autonomous cycle.
 - If blocked > 15 minutes, create `BLOCKED` note and pivot to next queued task.
 
 ## Loop Inputs
-- `TARGET_MILESTONE`: one of `M0..M7`
+- `TARGET_MILESTONE`: one of `M0..M8`
 - `TASK_SLICE`: a single objective that fits in one cycle
 - `TIMEBOX_MIN`: default `45`
 

@@ -66,3 +66,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M7: Add `--remote` option to publish helper (default `origin`).
 - [x] M7: Publish `v0.1.0-rc2` tag to `origin`.
 - [x] M7: Promote stable `v0.1.0` tag from current main and publish to `origin`.
+- [x] M8: Add post-release patch plan for `v0.1.1` (top bugs/polish/risk fixes).

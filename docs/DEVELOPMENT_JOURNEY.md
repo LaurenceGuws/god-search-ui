@@ -98,6 +98,15 @@ Exit criteria:
 - repeatable release checklist can be executed end-to-end
 - rollback path validated against previous known-good commit/tag
 
+### M8: Patch Release Cadence
+- Post-release bugfix triage and prioritized patch scope
+- Lightweight release notes + verification for patch cuts
+- No-regression focus on packaging/release automation
+
+Exit criteria:
+- `v0.1.1` patch plan documented with acceptance checks
+- release scripts/docs validated against at least one real publish cycle
+
 ## Backlog Buckets
 - UX polish (animations, result grouping, inline preview)
 - Search quality (synonyms, typo tolerance tuning)
@@ -109,3 +118,4 @@ Exit criteria:
 - Beta: M4-M5 complete
 - Stable: M6 complete + docs and migration notes
 - Hardened: M7 complete + reproducible release operations
+- Maintained: M8 active with patch cadence

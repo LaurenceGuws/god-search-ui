@@ -1164,3 +1164,26 @@
   - M8: post-release patch planning (v0.1.1 scope).
 
 ---
+## 2026-02-21 (Cycle 54)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add post-release patch plan for `v0.1.1`
+- Changes:
+  - Added `docs/V0_1_1_PATCH_PLAN.md` with:
+    - prioritized scope
+    - acceptance criteria
+    - explicit out-of-scope boundaries
+  - Linked patch plan in `README.md`.
+  - Extended milestone docs to include M8:
+    - `docs/DEVELOPMENT_JOURNEY.md`
+    - `docs/AGENT_ITERATION_LOOP.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - patch-plan priorities may change after first post-release issue batch.
+- Next slice:
+  - M8: queue first `v0.1.1` implementation bugfix item.
+
+---

@@ -1,0 +1,27 @@
+# v0.1.1 Patch Plan
+
+Post-`v0.1.0` patch scope focused on low-risk reliability and UX polish.
+
+## Candidate Scope
+- Fix publish/release script edge cases discovered in real repo setups.
+- Polish GTK empty/loading/error row states for clearer operator feedback.
+- Add one integration smoke path for GTK runtime launch (not just compile).
+- Tighten release docs consistency (`README`, runbook, queue references).
+
+## Priority Order
+1. Release-script reliability fixes.
+2. GTK runtime UX edge-state polish.
+3. Packaging/install verification improvements.
+4. Doc consistency sweep.
+
+## Acceptance Criteria
+- `scripts/dev.sh check` passes.
+- `scripts/release_smoke.sh` passes.
+- One manual GTK run verified:
+  - `zig build run -Denable_gtk=true -- --ui`
+- Patch notes drafted in `docs/release-notes-v0.1.1.md`.
+
+## Out of Scope
+- New provider classes.
+- Large ranking-model changes.
+- UI redesign.
