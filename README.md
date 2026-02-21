@@ -73,6 +73,10 @@ Publish existing local tag helper (dry-run by default):
 ```bash
 scripts/publish_release_tag.sh --version v0.1.0-rc2
 ```
+With custom remote:
+```bash
+scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
+```
 
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`

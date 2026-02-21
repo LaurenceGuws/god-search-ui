@@ -6,15 +6,17 @@ cd "$ROOT_DIR"
 
 APPLY=0
 VERSION=""
+REMOTE="origin"
 
 usage() {
   cat <<'EOF'
-Usage: scripts/publish_release_tag.sh --version vX.Y.Z [--apply]
+Usage: scripts/publish_release_tag.sh --version vX.Y.Z [--remote name] [--apply]
 
 Default mode is dry-run and prints planned push commands.
 
 Options:
   --version   existing local tag to publish (required)
+  --remote    git remote to publish to (default: origin)
   --apply     push main and tag to origin
 EOF
 }
@@ -28,6 +30,10 @@ while [[ $# -gt 0 ]]; do
     --apply)
       APPLY=1
       shift
+      ;;
+    --remote)
+      REMOTE="${2:-}"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -47,6 +53,12 @@ if [[ -z "$VERSION" ]]; then
   exit 1
 fi
 
+if [[ -z "$REMOTE" ]]; then
+  echo "error: --remote must not be empty" >&2
+  usage
+  exit 1
+fi
+
 if [[ -n "$(git status --short)" ]]; then
   echo "error: working tree is not clean" >&2
   exit 1
@@ -58,7 +70,7 @@ if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
 fi
 
 HAS_ORIGIN=1
-if ! git remote get-url origin >/dev/null 2>&1; then
+if ! git remote get-url "$REMOTE" >/dev/null 2>&1; then
   HAS_ORIGIN=0
 fi
 
@@ -67,29 +79,29 @@ git show "$VERSION" --no-patch --oneline
 
 if [[ $APPLY -eq 0 ]]; then
   if [[ $HAS_ORIGIN -eq 0 ]]; then
-    echo "[dry-run] note: remote 'origin' is not configured; push commands may fail until configured"
+    echo "[dry-run] note: remote '$REMOTE' is not configured; push commands may fail until configured"
   else
-    if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
-      echo "[dry-run] note: remote tag already exists on origin: $VERSION"
+    if git ls-remote --exit-code --tags "$REMOTE" "refs/tags/$VERSION" >/dev/null 2>&1; then
+      echo "[dry-run] note: remote tag already exists on $REMOTE: $VERSION"
     fi
   fi
-  echo "[dry-run] would run: git push origin main"
-  echo "[dry-run] would run: git push origin $VERSION"
+  echo "[dry-run] would run: git push $REMOTE main"
+  echo "[dry-run] would run: git push $REMOTE $VERSION"
   exit 0
 fi
 
 if [[ $HAS_ORIGIN -eq 0 ]]; then
-  echo "error: git remote 'origin' is not configured" >&2
+  echo "error: git remote '$REMOTE' is not configured" >&2
   exit 1
 fi
 
-if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
-  echo "error: remote tag already exists on origin: $VERSION" >&2
+if git ls-remote --exit-code --tags "$REMOTE" "refs/tags/$VERSION" >/dev/null 2>&1; then
+  echo "error: remote tag already exists on $REMOTE: $VERSION" >&2
   exit 1
 fi
 
-echo "[apply] pushing main and tag to origin"
-git push origin main
-git push origin "$VERSION"
+echo "[apply] pushing main and tag to $REMOTE"
+git push "$REMOTE" main
+git push "$REMOTE" "$VERSION"
 
 echo "publish complete"

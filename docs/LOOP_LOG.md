@@ -1080,3 +1080,26 @@
   - M7: publish `v0.1.0-rc2` once `origin` is configured.
 
 ---
+## 2026-02-21 (Cycle 50)
+- Milestone: M7 Release Hardening
+- Task slice: Add `--remote` option to publish helper
+- Changes:
+  - Updated `scripts/publish_release_tag.sh`:
+    - added `--remote <name>` (default `origin`)
+    - remote checks and push commands now use selected remote
+  - Updated docs:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/publish_release_tag.sh --help`
+  - `scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - apply mode still requires selected remote to exist and be writable.
+- Next slice:
+  - M7: publish RC once chosen remote is configured.
+
+---

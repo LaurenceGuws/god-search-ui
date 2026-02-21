@@ -47,6 +47,7 @@ Or use helper (dry-run default):
 ```bash
 scripts/publish_release_tag.sh --version v0.1.0
 scripts/publish_release_tag.sh --version v0.1.0 --apply
+scripts/publish_release_tag.sh --version v0.1.0 --remote upstream --apply
 ```
 
 If `origin` is not configured, dry-run still prints planned commands; `--apply` requires a valid `origin`.
