@@ -3497,3 +3497,27 @@
   - M8: UX Phase 4 - add release-contracts README contract check for cheat-sheet command presence.
 
 ---
+## 2026-02-21 (Cycle 160)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce README release-contracts cheat-sheet command presence
+- Changes:
+  - Updated `scripts/check_release_contracts_contract.sh`:
+    - now validates all README cheat-sheet commands for release contracts:
+      - docs-only contracts alias
+      - clean release-validate preset
+      - CI non-interactive guard
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now intentionally couples README cheat-sheet content with contract expectations.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts section link to top-level README docs list for discoverability.
+
+---

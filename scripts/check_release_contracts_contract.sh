@@ -15,6 +15,8 @@ printf '%s\n' "$HELP" | rg -q -- '--docs-only'
 printf '%s\n' "$HELP" | rg -q -- '--help'
 
 rg -q --fixed-strings 'scripts/check_release_contracts.sh --docs-only' "$README"
+rg -q --fixed-strings 'scripts/release_validate.sh --ci --require-clean' "$README"
+rg -q --fixed-strings 'scripts/check_release_validate_ci.sh' "$README"
 rg -q --fixed-strings '`scripts/check_release_contracts.sh --docs-only`' "$MATRIX"
 rg -q --fixed-strings '`scripts/check_release_contracts.sh`' "$MATRIX"
 
