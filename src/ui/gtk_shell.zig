@@ -267,10 +267,11 @@ pub const Shell = struct {
 
         const limit = @min(ranked.len, 20);
         const rows = ranked[0..limit];
-        if (query_trimmed.len == 0) {
+        const empty_query = query_trimmed.len == 0;
+        if (empty_query) {
             appendInfoRow(ctx.list, "Shortcuts: Enter launch | Ctrl+R refresh | Esc close");
         }
-        if (rows.len == 0) {
+        if (rows.len == 0 and !empty_query) {
             appendInfoRow(ctx.list, "No results");
         } else {
             appendGroupedRows(ctx, allocator, rows);
@@ -279,7 +280,7 @@ pub const Shell = struct {
             setStatus(ctx, "Refresh scheduled");
         } else if (ctx.service.last_query_refreshed_cache) {
             setStatus(ctx, "Snapshot refreshed");
-        } else if (query_trimmed.len == 0 and ctx.pending_power_confirm == GFALSE) {
+        } else if (empty_query and ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "Esc to close, Ctrl+R to refresh");
         } else if (ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "");

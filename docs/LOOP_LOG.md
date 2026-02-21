@@ -2090,3 +2090,22 @@
   - M8: UX Phase 2 - remove startup placeholder/status flicker on first paint.
 
 ---
+## 2026-02-21 (Cycle 99)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - remove empty-query startup "No results" flash
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - empty query now shows shortcut guidance without rendering a "No results" row
+    - non-empty queries keep existing explicit "No results" behavior
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - empty-query state is now intentionally guidance-only when providers return no items.
+- Next slice:
+  - M8: UX Phase 3 - improve keyboard selection visibility via focused row styling.
+
+---
