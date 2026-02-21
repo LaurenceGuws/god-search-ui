@@ -19,4 +19,9 @@ Quick reference for release automation scripts.
 Default-safe note mode:
 - if `docs/release-notes-<version>.md` exists, apply mode reuses it.
 - pass `--regen-notes` to intentionally overwrite with a fresh generated draft.
+Quick dry-run example:
+- `scripts/cut_release_tag.sh --version v0.1.2`
+- Expected output includes either:
+  - `[dry-run] would reuse: docs/release-notes-v0.1.2.md`
+  - or regeneration command when notes file does not yet exist.
 4. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`

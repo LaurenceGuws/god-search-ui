@@ -1683,3 +1683,21 @@
   - M8: add quick dry-run example for default-safe mode in release matrix.
 
 ---
+## 2026-02-21 (Cycle 79)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add quick dry-run example for default-safe mode in release matrix
+- Changes:
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md` with:
+    - explicit dry-run command for v0.1.2
+    - expected output patterns for reuse/regenerate paths
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - expected output strings should stay aligned if helper messaging changes.
+- Next slice:
+  - M8: add automated dry-run assertion to verify default-safe output branch.
+
+---
