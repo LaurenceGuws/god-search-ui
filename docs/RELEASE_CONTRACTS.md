@@ -24,6 +24,9 @@ Release contracts are guard scripts that keep release automation CLI/docs behavi
 - Meta docs contracts:
   - `scripts/check_release_docs_contracts.sh`
 
+Release-validate contract summary:
+- run `scripts/check_release_validate_contract.sh` after any docs/CLI updates touching release validate flows.
+
 ## When To Run Which Script
 
 | Situation | Script |

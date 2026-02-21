@@ -3695,3 +3695,26 @@
   - M8: UX Phase 4 - add release-validate contract check summary line to release-contracts docs.
 
 ---
+## 2026-02-21 (Cycle 169)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-validate contract summary line in release contracts doc
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added explicit release-validate contract summary note
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates summary header and release-validate contract command presence
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - summary line intentionally duplicates script mention for operator visibility.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts doc note for `check_release_contracts.sh --docs-only` default local recommendation.
+
+---

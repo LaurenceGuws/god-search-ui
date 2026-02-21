@@ -182,3 +182,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - enforce quick-order parity between release contracts doc and release matrix.
 - [x] M8: UX Phase 4 - add release-contract command block to rollback runbook preflight.
 - [x] M8: UX Phase 4 - enforce rollback runbook quick-command presence in release-validate checker.
+- [x] M8: UX Phase 4 - add release-validate contract check summary line to release-contracts docs.
