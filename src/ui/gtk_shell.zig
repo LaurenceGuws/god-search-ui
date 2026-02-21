@@ -300,10 +300,14 @@ pub const Shell = struct {
         const limit = @min(ranked.len, 20);
         const rows = ranked[0..limit];
         const empty_query = query_trimmed.len == 0;
+        const route_hint = routeHintForQuery(query_trimmed);
         if (empty_query) {
             appendInfoRow(ctx.list, "Shortcuts: Enter launch | Ctrl+R refresh | Esc close");
         }
-        if (rows.len == 0 and !empty_query) {
+        if (route_hint) |hint| {
+            appendInfoRow(ctx.list, hint);
+        }
+        if (rows.len == 0 and !empty_query and route_hint == null) {
             appendInfoRow(ctx.list, "No results");
         } else {
             appendGroupedRows(ctx, allocator, rows);
@@ -629,6 +633,19 @@ pub const Shell = struct {
                 c.GTK_STYLE_PROVIDER_PRIORITY_APPLICATION,
             );
         }
+    }
+
+    fn routeHintForQuery(query_trimmed: []const u8) ?[]const u8 {
+        if (query_trimmed.len != 1) return null;
+        return switch (query_trimmed[0]) {
+            '@' => "Apps route active: type app name after @",
+            '#' => "Windows route active: type window title/class after #",
+            '~' => "Directories route active: type folder name after ~",
+            '>' => "Run route active: type command after >",
+            '=' => "Calc route active: type expression after =",
+            '?' => "Web route active: type search terms after ?",
+            else => null,
+        };
     }
 
     fn runShellCommand(command: []const u8) !void {
