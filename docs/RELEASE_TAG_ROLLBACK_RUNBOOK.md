@@ -49,6 +49,8 @@ scripts/publish_release_tag.sh --version v0.1.0
 scripts/publish_release_tag.sh --version v0.1.0 --apply
 ```
 
+If `origin` is not configured, dry-run still prints planned commands; `--apply` requires a valid `origin`.
+
 ## 5. Verify Tag Targets Expected Commit
 ```bash
 git rev-parse v0.1.0

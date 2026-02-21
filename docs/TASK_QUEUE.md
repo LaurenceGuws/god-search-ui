@@ -62,3 +62,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M7: Add `--commit-notes` option so tags can include release-notes commit.
 - [x] M7: Execute local RC tag cut (`v0.1.0-rc2`) with notes included in tagged commit.
 - [x] M7: Add publish helper for existing local release tags (dry-run + push modes).
+- [x] M7: Allow publish-helper dry-run without configured `origin` remote.

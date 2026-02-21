@@ -1059,3 +1059,24 @@
   - M7: publish `v0.1.0-rc2` on maintainer command.
 
 ---
+## 2026-02-21 (Cycle 49)
+- Milestone: M7 Release Hardening
+- Task slice: Allow publish-helper dry-run without configured `origin`
+- Changes:
+  - Updated `scripts/publish_release_tag.sh`:
+    - dry-run mode now works without `origin`
+    - `--apply` still requires configured `origin`
+    - dry-run emits note when remote/tag checks cannot be enforced
+  - Updated runbook note in `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/publish_release_tag.sh --version v0.1.0-rc2`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Without `origin`, dry-run can only validate local prerequisites.
+- Next slice:
+  - M7: publish `v0.1.0-rc2` once `origin` is configured.
+
+---
