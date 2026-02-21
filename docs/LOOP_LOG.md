@@ -295,3 +295,26 @@
   - M3: Add minimal GTK4 window shell (search entry + list placeholder).
 
 ---
+## 2026-02-21 (Cycle 15)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add minimal GTK4 window shell (search entry + list placeholder)
+- Changes:
+  - Added UI module split:
+    - `src/ui/mod.zig`
+    - `src/ui/stub_shell.zig`
+    - `src/ui/gtk_shell.zig`
+  - Added `--ui` run mode in `src/main.zig`.
+  - Added `enable_gtk` build option in `build.zig` and exposed `build_options`.
+  - Exported UI module from `src/root.zig`.
+  - Updated `README.md` with UI run commands.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK shell compiles only with `-Denable_gtk=true` and system GTK4 headers/libs.
+- Next slice:
+  - M3: Wire search service into UI update loop (query -> ranked rows).
+
+---

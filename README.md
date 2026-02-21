@@ -17,6 +17,17 @@ Scaffold for a Spotlight-style launcher UI on Wayland.
 zig build run
 ```
 
+### UI Shell
+Headless/stub UI:
+```bash
+zig build run -- --ui
+```
+
+GTK4 shell (requires GTK4 dev libraries):
+```bash
+zig build -Denable_gtk=true run -- --ui
+```
+
 ## Dev Loop Commands
 ```bash
 scripts/dev.sh check
