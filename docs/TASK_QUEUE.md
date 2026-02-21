@@ -142,3 +142,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add headless icon diagnostics command for metadata/fallback stats.
 - [x] M8: UX Phase 4 - add GTK fallback warning hint to use headless `:icondiag`.
 - [x] M8: UX Phase 4 - include `:icondiag` path in headless release smoke flow.
+- [x] M8: UX Phase 4 - document icon resolution order (metadata -> token -> glyph fallback).

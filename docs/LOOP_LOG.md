@@ -2721,3 +2721,23 @@
   - M8: UX Phase 4 - add compact docs table for icon-resolution order (metadata -> token -> glyph).
 
 ---
+## 2026-02-21 (Cycle 130)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - document icon resolution order for app rows
+- Changes:
+  - Updated `docs/HYPR_WAYBAR_INTEGRATION.md`:
+    - added compact table for GTK app icon resolution order
+  - Updated `README.md`:
+    - added one-line icon resolution order note near apps cache format section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - docs reflect current runtime behavior; provider-level desktop icon extraction can improve first-priority coverage later.
+- Next slice:
+  - M8: UX Phase 4 - add provider-level metric output in `:icondiag` for icon metadata coverage ratio.
+
+---

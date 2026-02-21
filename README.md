@@ -41,6 +41,7 @@ GOD_SEARCH_ASYNC_REFRESH=1 god-search-ui --ui
 Apps cache supports optional icon metadata:
 - `category<TAB>name<TAB>exec` (legacy)
 - `category<TAB>name<TAB>exec<TAB>icon` (preferred for GTK app icons)
+- icon resolution order: metadata `icon` -> derived `exec` token -> glyph fallback
 
 ## Dev Loop Commands
 ```bash

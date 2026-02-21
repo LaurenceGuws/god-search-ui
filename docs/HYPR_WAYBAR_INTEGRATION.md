@@ -93,3 +93,11 @@ Example:
 Utilities	Kitty	kitty	kitty
 Internet	Firefox	firefox	firefox
 ```
+
+### GTK App Icon Resolution Order
+
+| Priority | Source | Notes |
+|---|---|---|
+| 1 | TSV icon column (`icon`) | Preferred, explicit app icon metadata |
+| 2 | Derived command token (`exec`) | Uses first executable token (for example `firefox`) |
+| 3 | Built-in glyph fallback | Used when no metadata/token icon is available |
