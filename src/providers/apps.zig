@@ -107,6 +107,37 @@ test "apps provider collects rows from cache file" {
     try std.testing.expectEqualStrings("kitty", list.items[0].icon);
 }
 
+test "apps provider accepts legacy three-column rows with empty icon metadata" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.writeFile(.{
+        .sub_path = "apps.tsv",
+        .data =
+        \\Utilities\tKitty\tkitty
+        \\Internet\tFirefox\tfirefox\tfirefox
+        \\
+        ,
+    });
+
+    const cache_path = try tmp.dir.realpathAlloc(std.testing.allocator, "apps.tsv");
+    defer std.testing.allocator.free(cache_path);
+
+    var apps = AppsProvider.init(cache_path);
+    defer apps.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = apps.provider();
+    try provider.collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 2), list.items.len);
+    try std.testing.expectEqualStrings("Kitty", list.items[0].title);
+    try std.testing.expectEqualStrings("", list.items[0].icon);
+    try std.testing.expectEqualStrings("firefox", list.items[1].icon);
+}
+
 test "apps provider falls back when cache is missing" {
     var apps = AppsProvider.init("/tmp/non-existent-app-cache.tsv");
     defer apps.deinit(std.testing.allocator);

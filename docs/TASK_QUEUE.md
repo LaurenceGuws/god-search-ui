@@ -135,3 +135,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add app icon support in GTK candidate rows with glyph fallback.
 - [x] M8: UX Phase 4 - enrich apps cache/provider with explicit icon metadata for GTK rows.
 - [x] M8: UX Phase 4 - document apps-cache icon column format and migration notes.
+- [x] M8: UX Phase 4 - add release smoke assertion for legacy+extended apps-cache compatibility.

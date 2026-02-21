@@ -2567,3 +2567,27 @@
   - M8: UX Phase 4 - add startup smoke assertion for 4-column apps cache compatibility.
 
 ---
+## 2026-02-21 (Cycle 123)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add smoke assertions for legacy/extended apps cache compatibility
+- Changes:
+  - Updated `src/providers/apps.zig`:
+    - added mixed-format compatibility test (3-column + 4-column rows)
+  - Added `scripts/check_apps_cache_format.sh`:
+    - dedicated compatibility smoke command for apps cache parsing
+  - Updated `scripts/release_smoke.sh`:
+    - fixed step numbering and added apps cache format smoke step
+  - Updated `README.md`:
+    - documented apps cache compatibility check command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - compatibility checks validate parser behavior; external cache generation still depends on user environment tooling.
+- Next slice:
+  - M8: UX Phase 4 - add GTK runtime smoke option that validates app icon rendering path does not crash.
+
+---

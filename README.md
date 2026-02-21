@@ -66,6 +66,10 @@ Release-helper CLI contract checks:
 ```bash
 scripts/check_release_helpers.sh
 ```
+Apps cache format compatibility checks:
+```bash
+scripts/check_apps_cache_format.sh
+```
 Release script-matrix checks:
 ```bash
 scripts/check_release_matrix.sh
