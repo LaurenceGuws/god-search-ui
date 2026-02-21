@@ -24,3 +24,6 @@ jobs:
 
       - name: Test
         run: zig build test
+
+      - name: Icon Threshold Smoke (CI mode)
+        run: scripts/release_smoke.sh --skip-gtk-build --strict-icon-threshold --icon-threshold=5

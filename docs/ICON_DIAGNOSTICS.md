@@ -39,3 +39,8 @@ MAX_GLYPH_FALLBACK_PCT=5 scripts/check_icondiag_threshold.sh
 
 - exits `0` when `glyph_fallback_pct <= MAX_GLYPH_FALLBACK_PCT`
 - exits non-zero when threshold is exceeded
+
+You can run the same gate via release smoke strict mode:
+```bash
+scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5
+```

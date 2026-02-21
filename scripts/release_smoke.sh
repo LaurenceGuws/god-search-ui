@@ -5,9 +5,32 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 RUN_GTK_RUNTIME=0
-if [[ "${1:-}" == "--with-gtk-runtime" ]]; then
-  RUN_GTK_RUNTIME=1
-fi
+STRICT_ICON_THRESHOLD=0
+ICON_THRESHOLD="${MAX_GLYPH_FALLBACK_PCT:-100}"
+SKIP_GTK_BUILD=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --with-gtk-runtime)
+      RUN_GTK_RUNTIME=1
+      ;;
+    --strict-icon-threshold)
+      STRICT_ICON_THRESHOLD=1
+      ICON_THRESHOLD="${MAX_GLYPH_FALLBACK_PCT:-5}"
+      ;;
+    --icon-threshold=*)
+      ICON_THRESHOLD="${arg#--icon-threshold=}"
+      ;;
+    --skip-gtk-build)
+      SKIP_GTK_BUILD=1
+      ;;
+    *)
+      echo "unknown argument: $arg"
+      echo "usage: scripts/release_smoke.sh [--with-gtk-runtime] [--strict-icon-threshold] [--icon-threshold=N] [--skip-gtk-build]"
+      exit 1
+      ;;
+  esac
+done
 
 echo "[1/11] full check"
 scripts/dev.sh check
@@ -15,8 +38,12 @@ scripts/dev.sh check
 echo "[2/11] headless smoke"
 printf ':refresh\n:icondiag\n:icondiag --json\nkitty\n:q\n' | zig build run -- --ui
 
-echo "[3/11] gtk build smoke"
-zig build -Denable_gtk=true
+if [[ $SKIP_GTK_BUILD -eq 0 ]]; then
+  echo "[3/11] gtk build smoke"
+  zig build -Denable_gtk=true
+else
+  echo "[3/11] gtk build smoke (skipped)"
+fi
 
 echo "[4/11] release notes draft smoke"
 TMP_NOTES="$(mktemp)"
@@ -42,7 +69,11 @@ echo "[10/11] icondiag json schema smoke"
 scripts/check_icondiag_json.sh
 
 echo "[11/11] icondiag fallback-threshold smoke"
-MAX_GLYPH_FALLBACK_PCT=100 scripts/check_icondiag_threshold.sh
+MAX_GLYPH_FALLBACK_PCT="$ICON_THRESHOLD" scripts/check_icondiag_threshold.sh
+
+if [[ $STRICT_ICON_THRESHOLD -eq 1 ]]; then
+  echo "[strict] icon threshold mode enabled (limit=${ICON_THRESHOLD}%)"
+fi
 
 if [[ $RUN_GTK_RUNTIME -eq 1 ]]; then
   echo "[optional] gtk runtime launch smoke (with icon-cache fixture)"

@@ -62,6 +62,14 @@ Release smoke checks:
 scripts/release_smoke.sh
 ```
 Headless smoke now includes `:icondiag` to validate icon metadata/fallback diagnostics path.
+Strict icon-threshold mode (CI-oriented):
+```bash
+scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5
+```
+CI/minimal-host mode without GTK dev packages:
+```bash
+scripts/release_smoke.sh --skip-gtk-build --strict-icon-threshold --icon-threshold=5
+```
 Optional GTK runtime launch smoke:
 ```bash
 scripts/release_smoke.sh --with-gtk-runtime

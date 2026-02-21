@@ -2832,3 +2832,35 @@
   - M8: UX Phase 4 - add release-smoke switch to enable strict icon threshold mode for CI.
 
 ---
+## 2026-02-21 (Cycle 134)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - strict icon-threshold release-smoke mode + CI wiring
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - added argument parsing for:
+      - `--strict-icon-threshold`
+      - `--icon-threshold=<N>`
+      - `--skip-gtk-build`
+      - `--with-gtk-runtime`
+    - threshold smoke now uses configured icon threshold value
+    - strict mode defaults threshold to `5`
+  - Updated `.github/workflows/ci.yml`:
+    - added CI smoke step using strict icon-threshold mode without GTK build dependency
+  - Updated `README.md`:
+    - documented strict mode and CI/minimal-host invocation
+  - Updated `docs/ICON_DIAGNOSTICS.md`:
+    - documented release-smoke strict-mode usage for threshold gating
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5`
+  - `scripts/release_smoke.sh --skip-gtk-build --strict-icon-threshold --icon-threshold=5`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - CI strict gate currently evaluates fallback ratio from local snapshot content; threshold should remain configurable.
+- Next slice:
+  - M8: UX Phase 4 - add release-smoke `--ci` preset alias to bundle stable CI flags.
+
+---
