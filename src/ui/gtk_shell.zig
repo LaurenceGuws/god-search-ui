@@ -347,26 +347,36 @@ pub const Shell = struct {
 
         const icon = kindIcon(row.candidate.kind);
         const chip = kindChip(row.candidate.kind);
-        const markup = std.fmt.allocPrint(
+        const primary_markup = std.fmt.allocPrint(
             allocator,
-            "{s}  <b>{s}</b>  {s} - {s}",
+            "{s}  <b>{s}</b>  {s}",
             .{
                 icon,
                 chip,
                 std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))),
-                std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped))),
             },
         ) catch return;
-        defer allocator.free(markup);
-        const markup_z = allocator.dupeZ(u8, markup) catch return;
-        defer allocator.free(markup_z);
+        defer allocator.free(primary_markup);
+        const primary_markup_z = allocator.dupeZ(u8, primary_markup) catch return;
+        defer allocator.free(primary_markup_z);
 
-        const label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-        c.gtk_widget_add_css_class(label, "gs-candidate");
+        const primary_label = c.gtk_label_new(null);
+        c.gtk_label_set_markup(@ptrCast(primary_label), primary_markup_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
+        c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
+
+        const subtitle_text_z = allocator.dupeZ(u8, std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped)))) catch return;
+        defer allocator.free(subtitle_text_z);
+        const secondary_label = c.gtk_label_new(subtitle_text_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
+        c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_box_append(@ptrCast(content), primary_label);
+        c.gtk_box_append(@ptrCast(content), secondary_label);
+
         const list_row = c.gtk_list_box_row_new();
-        c.gtk_list_box_row_set_child(@ptrCast(list_row), label);
+        c.gtk_list_box_row_set_child(@ptrCast(list_row), content);
 
         const kind = kindTag(row.candidate.kind);
         const kind_c = std.fmt.allocPrint(allocator, "{s}", .{kind}) catch return;
@@ -479,7 +489,8 @@ pub const Shell = struct {
             ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
             ".gs-header { color: #8b93a8; }\n" ++
             ".gs-info { color: #9aa1b5; }\n" ++
-            ".gs-candidate { color: #e8ecf7; }\n";
+            ".gs-candidate-primary { color: #e8ecf7; }\n" ++
+            ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n";
 
         const provider = c.gtk_css_provider_new();
         defer c.g_object_unref(provider);

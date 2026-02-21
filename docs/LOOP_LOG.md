@@ -1972,3 +1972,24 @@
   - M8: UX Phase 2 - replace single-line candidate markup with structured row layout.
 
 ---
+## 2026-02-21 (Cycle 93)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - replace single-line candidate markup with structured row layout
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - changed candidate rows to two-line layout
+    - primary line: icon + chip + title
+    - secondary line: subtitle
+    - added CSS classes for primary/secondary text styling
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - row height increases; tune spacing further after visual pass.
+- Next slice:
+  - M8: UX Phase 2 - tighten candidate row spacing and secondary text truncation.
+
+---

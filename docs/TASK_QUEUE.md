@@ -104,3 +104,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 2 - style and spacing polish for GTK status line.
 - [x] M8: UX Phase 2 - centralize GTK row/chip/status color tokens for theme extraction.
 - [x] M8: UX Phase 2 - move GTK row/status styling to a minimal CSS provider.
+- [x] M8: UX Phase 2 - replace single-line candidate markup with structured row layout.
