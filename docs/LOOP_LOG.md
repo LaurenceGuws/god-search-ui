@@ -2168,3 +2168,22 @@
   - M8: UX Phase 3 - add lightweight loading status while search debounce is pending.
 
 ---
+## 2026-02-21 (Cycle 103)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add lightweight searching status during debounced updates
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - set status to `Searching...` while debounce timer is active
+    - set status to `Search failed` on search error path to avoid stale loading state
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - brief status flicker can occur with very fast typing; intended as lightweight feedback.
+- Next slice:
+  - M8: UX Phase 3 - keep selected actionable row visible in scroll viewport.
+
+---

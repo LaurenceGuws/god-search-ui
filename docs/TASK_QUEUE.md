@@ -114,3 +114,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - improve keyboard selection visibility in GTK results.
 - [x] M8: UX Phase 3 - add per-section result counts in GTK headers.
 - [x] M8: UX Phase 3 - tune blended short-query ranking to surface action intents earlier.
+- [x] M8: UX Phase 3 - add lightweight searching status during debounced updates.

@@ -188,6 +188,9 @@ pub const Shell = struct {
             _ = c.g_source_remove(ctx.search_debounce_id);
             ctx.search_debounce_id = 0;
         }
+        if (ctx.pending_power_confirm == GFALSE) {
+            setStatus(ctx, "Searching...");
+        }
         ctx.search_debounce_id = c.g_timeout_add(90, onSearchDebounced, ctx);
     }
 
@@ -262,6 +265,7 @@ pub const Shell = struct {
             const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
             defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
             appendInfoRow(ctx.list, msg);
+            setStatus(ctx, "Search failed");
             return;
         };
         defer allocator.free(ranked);
