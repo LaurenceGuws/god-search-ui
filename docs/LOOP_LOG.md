@@ -1386,3 +1386,26 @@
   - M8: add lightweight script to validate matrix links/commands exist.
 
 ---
+## 2026-02-21 (Cycle 65)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add lightweight script to validate release-matrix command references
+- Changes:
+  - Added `scripts/check_release_matrix.sh`:
+    - validates matrix file exists
+    - validates listed script references are present and executable
+    - validates recommended-order commands are present
+  - Integrated matrix validator in `scripts/release_smoke.sh`.
+  - Linked matrix validator in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checks are intentionally static/textual and do not execute apply-mode flows.
+- Next slice:
+  - M8: add patch-release notes draft (`v0.1.1`) from current commits.
+
+---

@@ -62,6 +62,10 @@ Release-helper CLI contract checks:
 ```bash
 scripts/check_release_helpers.sh
 ```
+Release script-matrix checks:
+```bash
+scripts/check_release_matrix.sh
+```
 
 Arch package smoke helper:
 ```bash

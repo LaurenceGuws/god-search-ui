@@ -23,8 +23,11 @@ TMP_NOTES="$(mktemp)"
 scripts/gen_release_notes.sh "SMOKE" "$TMP_NOTES" >/dev/null
 rm -f "$TMP_NOTES"
 
-echo "[5/5] release helper CLI contract smoke"
+echo "[5/6] release helper CLI contract smoke"
 scripts/check_release_helpers.sh
+
+echo "[6/6] release matrix reference smoke"
+scripts/check_release_matrix.sh
 
 if [[ $RUN_GTK_RUNTIME -eq 1 ]]; then
   echo "[optional] gtk runtime launch smoke"
