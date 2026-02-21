@@ -3342,3 +3342,27 @@
   - M8: UX Phase 4 - add explicit warning banner in release-contracts doc for dirty override non-CI usage.
 
 ---
+## 2026-02-21 (Cycle 153)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add explicit warning banner for dirty override non-CI usage
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added warning that dirty override is local-only
+    - added explicit clean-worktree release command reference
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates warning banner and clean-worktree command reference
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - warning language is explicit by design to prevent CI/release misuse.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts “operator quick order” section aligned to runbook steps.
+
+---

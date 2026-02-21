@@ -40,3 +40,7 @@ RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_contracts.sh
 ```
 
 This preserves contract coverage while bypassing clean-worktree enforcement for local dev loops.
+
+Warning:
+- Do not use dirty-worktree override in CI or release cut/tag workflows.
+- For release cutovers, run `scripts/release_validate.sh --ci --require-clean` from a clean worktree.
