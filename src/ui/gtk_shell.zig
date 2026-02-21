@@ -365,7 +365,7 @@ pub const Shell = struct {
         } else if (ctx.service.last_query_refreshed_cache) {
             setStatus(ctx, "Snapshot refreshed");
         } else if (empty_query and has_app_glyph_fallback and ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "App icon fallback active for some entries");
+            setStatus(ctx, "App icon fallback active (headless :icondiag for breakdown)");
         } else if (empty_query and ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs > run = calc ? web");
         } else if (ctx.pending_power_confirm == GFALSE) {

@@ -2682,3 +2682,21 @@
   - M8: UX Phase 4 - add GTK status copy hint pointing to `:icondiag` when fallback warning is shown.
 
 ---
+## 2026-02-21 (Cycle 128)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 - add GTK fallback warning hint for `:icondiag` diagnostics
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - fallback startup warning now points users to headless `:icondiag` for detailed breakdown
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - hint text may truncate on narrow windows due single-line status guard.
+- Next slice:
+  - M8: UX Phase 4 - add docs cross-link from GTK troubleshooting path to `:icondiag` command.
+
+---
