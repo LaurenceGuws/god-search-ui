@@ -2544,3 +2544,26 @@
   - M8: UX Phase 4 - document apps cache icon column and add migration note in troubleshooting docs.
 
 ---
+## 2026-02-21 (Cycle 122)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - document apps-cache icon column and migration notes
+- Changes:
+  - Updated `docs/HYPR_WAYBAR_INTEGRATION.md`:
+    - documented legacy vs extended apps cache TSV formats
+    - added icon-column example for GTK icon rendering
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added cache format checks and icon-specific troubleshooting steps
+  - Updated `README.md`:
+    - added quick note for optional apps cache icon column support
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - docs assume external cache generator can emit 4-column TSV; generator ownership is outside this repo.
+- Next slice:
+  - M8: UX Phase 4 - add startup smoke assertion for 4-column apps cache compatibility.
+
+---

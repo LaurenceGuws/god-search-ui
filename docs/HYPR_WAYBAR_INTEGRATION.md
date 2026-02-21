@@ -79,3 +79,17 @@ systemctl --user enable --now god-search-ui.service
 
 - GTK UI requires building with `-Denable_gtk=true`.
 - If GTK mode is unavailable, headless mode still works for command-line iteration.
+
+## Apps Cache Format (Optional Icon Column)
+
+Apps provider cache supports:
+- legacy: `category<TAB>name<TAB>exec`
+- extended: `category<TAB>name<TAB>exec<TAB>icon`
+
+The 4th `icon` column is optional. When present, GTK rows use it first for app icon lookup.
+
+Example:
+```tsv
+Utilities	Kitty	kitty	kitty
+Internet	Firefox	firefox	firefox
+```

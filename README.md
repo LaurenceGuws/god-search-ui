@@ -37,6 +37,10 @@ Optional advanced refresh mode:
 GOD_SEARCH_ASYNC_REFRESH=1 god-search-ui --ui
 ```
 
+Apps cache supports optional icon metadata:
+- `category<TAB>name<TAB>exec` (legacy)
+- `category<TAB>name<TAB>exec<TAB>icon` (preferred for GTK app icons)
+
 ## Dev Loop Commands
 ```bash
 scripts/dev.sh check

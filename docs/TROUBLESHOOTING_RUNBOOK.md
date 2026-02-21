@@ -58,9 +58,17 @@ Actions:
    - GTK: `Ctrl+R`
 2. Check provider prerequisites:
    - apps cache file exists (`~/.cache/waybar/wofi-app-launcher.tsv`)
+   - apps cache format:
+     - `category<TAB>name<TAB>exec` (legacy)
+     - `category<TAB>name<TAB>exec<TAB>icon` (preferred for app icons)
    - `hyprctl` + `jq` for windows
    - `zoxide` for dirs
 3. Inspect provider health behavior in `src/providers/*`.
+
+If app icons are missing but apps still launch:
+1. Confirm cache has a 4th icon column for affected rows.
+2. Use icon names that exist in current icon theme.
+3. Rebuild cache and trigger refresh (`Ctrl+R` in GTK or `:refresh` in headless).
 
 ### D. Action execution fails
 
