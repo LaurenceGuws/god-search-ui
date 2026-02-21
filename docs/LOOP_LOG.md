@@ -1141,3 +1141,26 @@
   - M7: decide whether to promote RC to `v0.1.0` tag.
 
 ---
+## 2026-02-21 (Cycle 53)
+- Milestone: M7 Release Hardening
+- Task slice: Promote stable `v0.1.0` tag from main and publish
+- Changes:
+  - Ran:
+    - `scripts/cut_release_tag.sh --version v0.1.0 --apply --commit-notes --push`
+  - Results:
+    - generated and committed `docs/release-notes-v0.1.0.md`
+    - created annotated local tag `v0.1.0` at commit `1a9481a`
+    - pushed `main` and `v0.1.0` to `origin`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git tag -l | sort`
+  - `git ls-remote --tags origin | rg "v0.1.0(\\^\\{\\})?$"`
+- Commit(s):
+  - script-created commit: `1a9481a`
+  - pending docs/log commit
+- Risks/notes:
+  - release notes are template-based and may need editorial cleanup.
+- Next slice:
+  - M8: post-release patch planning (v0.1.1 scope).
+
+---

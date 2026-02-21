@@ -3,7 +3,7 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M7: Promote stable `v0.1.0` tag from current main and publish to `origin`.
+- [ ] (empty)
 
 ## In Progress
 - [ ] (empty)
@@ -65,3 +65,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M7: Allow publish-helper dry-run without configured `origin` remote.
 - [x] M7: Add `--remote` option to publish helper (default `origin`).
 - [x] M7: Publish `v0.1.0-rc2` tag to `origin`.
+- [x] M7: Promote stable `v0.1.0` tag from current main and publish to `origin`.
