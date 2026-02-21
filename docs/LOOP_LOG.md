@@ -492,3 +492,27 @@
   - M4: Add telemetry event sink for action execution results.
 
 ---
+## 2026-02-21 (Cycle 24)
+- Milestone: M4 Action Execution + Safety
+- Task slice: Add telemetry event sink for action execution results
+- Changes:
+  - Added `src/app/telemetry.zig` with file-backed telemetry sink.
+  - Exported `TelemetrySink` via `src/app/mod.zig`.
+  - Extended runtime in `src/main.zig` with telemetry path/sink setup.
+  - Updated shell interfaces to accept telemetry sink.
+  - Wired GTK execution paths to emit telemetry events for:
+    - guarded confirmations
+    - successful command execution
+    - execution failures/unknown actions
+  - Updated queue status and next slices in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf ':q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Headless stub currently does not execute commands, so telemetry there is minimal.
+- Next slice:
+  - M5: Add startup/query timing instrumentation.
+
+---

@@ -16,7 +16,7 @@ pub fn main() !void {
         runtime.rebindProviderContexts();
         try runtime.service.loadHistory(allocator);
         defer runtime.service.saveHistory(allocator) catch {};
-        try god_search_ui.ui.Shell.run(allocator, &runtime.service);
+        try god_search_ui.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry);
         return;
     }
 
@@ -26,12 +26,14 @@ pub fn main() !void {
 const Runtime = struct {
     app_cache_path: []u8,
     history_path: []u8,
+    telemetry_path: []u8,
     actions: god_search_ui.providers.ActionsProvider = .{},
     apps: god_search_ui.providers.AppsProvider,
     windows: god_search_ui.providers.WindowsProvider = .{},
     dirs: god_search_ui.providers.DirsProvider = .{},
     provider_list: [4]god_search_ui.search.Provider,
     service: god_search_ui.app.SearchService,
+    telemetry: god_search_ui.app.TelemetrySink,
 
     fn deinit(self: *Runtime, allocator: std.mem.Allocator) void {
         self.apps.deinit(allocator);
@@ -40,6 +42,7 @@ const Runtime = struct {
         self.service.deinit(allocator);
         allocator.free(self.app_cache_path);
         allocator.free(self.history_path);
+        allocator.free(self.telemetry_path);
     }
 
     fn rebindProviderContexts(self: *Runtime) void {
@@ -52,6 +55,7 @@ const Runtime = struct {
         const registry = god_search_ui.providers.ProviderRegistry.init(&self.provider_list);
         self.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, self.history_path);
         self.service.max_history = 64;
+        self.telemetry = god_search_ui.app.TelemetrySink.init(self.telemetry_path);
     }
 };
 
@@ -63,16 +67,20 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
     errdefer allocator.free(app_cache);
     const history_path = try std.fmt.allocPrint(allocator, "{s}/.local/state/god-search-ui/history.log", .{home});
     errdefer allocator.free(history_path);
+    const telemetry_path = try std.fmt.allocPrint(allocator, "{s}/.local/state/god-search-ui/telemetry.log", .{home});
+    errdefer allocator.free(telemetry_path);
 
     var runtime = Runtime{
         .app_cache_path = app_cache,
         .history_path = history_path,
+        .telemetry_path = telemetry_path,
         .actions = .{},
         .apps = god_search_ui.providers.AppsProvider.init(app_cache),
         .windows = .{},
         .dirs = .{},
         .provider_list = undefined,
         .service = undefined,
+        .telemetry = undefined,
     };
 
     runtime.provider_list = .{
@@ -85,6 +93,7 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
     const registry = god_search_ui.providers.ProviderRegistry.init(&runtime.provider_list);
     runtime.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, history_path);
     runtime.service.max_history = 64;
+    runtime.telemetry = god_search_ui.app.TelemetrySink.init(telemetry_path);
 
     return runtime;
 }

@@ -9,6 +9,7 @@ const CandidateKind = @import("../search/mod.zig").CandidateKind;
 const LaunchContext = struct {
     allocator: std.mem.Allocator,
     service: *app_mod.SearchService,
+    telemetry: *app_mod.TelemetrySink,
 };
 
 const UiContext = extern struct {
@@ -17,17 +18,19 @@ const UiContext = extern struct {
     list: *c.GtkListBox,
     allocator: *anyopaque,
     service: *app_mod.SearchService,
+    telemetry: *app_mod.TelemetrySink,
     pending_power_confirm: c.gboolean,
 };
 
 pub const Shell = struct {
-    pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService) !void {
+    pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink) !void {
         const gtk_app = c.gtk_application_new("io.god.search.ui", c.G_APPLICATION_DEFAULT_FLAGS);
         defer c.g_object_unref(gtk_app);
 
         var launch = LaunchContext{
             .allocator = allocator,
             .service = service,
+            .telemetry = telemetry,
         };
         _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), &launch, null, 0);
         _ = c.g_application_run(@ptrCast(gtk_app), 0, null);
@@ -62,6 +65,7 @@ pub const Shell = struct {
         ctx.list = @ptrCast(list);
         ctx.allocator = @ptrCast(@constCast(&launch.allocator));
         ctx.service = launch.service;
+        ctx.telemetry = launch.telemetry;
         ctx.pending_power_confirm = c.FALSE;
 
         const key_controller = c.gtk_event_controller_key_new();
@@ -272,30 +276,53 @@ pub const Shell = struct {
             if (providers_mod.requiresConfirmation(action)) {
                 if (ctx.pending_power_confirm == c.FALSE) {
                     armPowerConfirmation(ctx);
+                    emitTelemetry(ctx, "action", action, "guarded", "await-confirm");
                     return;
                 }
                 clearPowerConfirmation(ctx);
             } else {
                 clearPowerConfirmation(ctx);
             }
-            providers_mod.executeAction(action, runShellCommand) catch {};
+            const cmd = providers_mod.resolveActionCommand(action) orelse {
+                emitTelemetry(ctx, "action", action, "error", "unknown-action");
+                return;
+            };
+            runShellCommand(cmd) catch {
+                emitTelemetry(ctx, "action", action, "error", "command-failed");
+                return;
+            };
+            emitTelemetry(ctx, "action", action, "ok", cmd);
             return;
         }
         clearPowerConfirmation(ctx);
         if (std.mem.eql(u8, kind, "app")) {
-            if (!std.mem.eql(u8, action, "__drun__")) runShellCommand(action) catch {};
+            if (!std.mem.eql(u8, action, "__drun__")) {
+                runShellCommand(action) catch {
+                    emitTelemetry(ctx, "app", action, "error", "command-failed");
+                    return;
+                };
+                emitTelemetry(ctx, "app", action, "ok", action);
+            }
             return;
         }
         if (std.mem.eql(u8, kind, "dir")) {
             const cmd = std.fmt.allocPrint(allocator, "xdg-open \"{s}\"", .{action}) catch return;
             defer allocator.free(cmd);
-            runShellCommand(cmd) catch {};
+            runShellCommand(cmd) catch {
+                emitTelemetry(ctx, "dir", action, "error", "command-failed");
+                return;
+            };
+            emitTelemetry(ctx, "dir", action, "ok", cmd);
             return;
         }
         if (std.mem.eql(u8, kind, "window")) {
             const cmd = std.fmt.allocPrint(allocator, "hyprctl dispatch focuswindow \"address:{s}\"", .{action}) catch return;
             defer allocator.free(cmd);
-            runShellCommand(cmd) catch {};
+            runShellCommand(cmd) catch {
+                emitTelemetry(ctx, "window", action, "error", "command-failed");
+                return;
+            };
+            emitTelemetry(ctx, "window", action, "ok", cmd);
             return;
         }
     }
@@ -321,6 +348,11 @@ pub const Shell = struct {
         if (ctx.pending_power_confirm == c.FALSE) return;
         ctx.pending_power_confirm = c.FALSE;
         c.gtk_entry_set_placeholder_text(@ptrCast(ctx.entry), "Type to search...");
+    }
+
+    fn emitTelemetry(ctx: *UiContext, kind: []const u8, action: []const u8, status: []const u8, detail: []const u8) void {
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        ctx.telemetry.emitActionEvent(allocator_ptr.*, kind, action, status, detail) catch {};
     }
 
     fn kindTag(kind: @import("../search/mod.zig").CandidateKind) []const u8 {

@@ -3,7 +3,9 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M4: Add telemetry event sink for action execution results.
+- [ ] M5: Add startup/query timing instrumentation.
+- [ ] M5: Add provider snapshot cache prewarm for faster first query.
+- [ ] M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
 
 ## In Progress
 - [ ] (empty)
@@ -36,3 +38,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M3: Add row-level icon/chip styling in GTK list renderer.
 - [x] M3: Add grouped sections in GTK list (apps/windows/dirs/actions).
 - [x] M4: Add confirmation mode for sensitive actions (`power`).
+- [x] M4: Add telemetry event sink for action execution results.

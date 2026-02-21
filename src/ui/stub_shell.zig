@@ -3,7 +3,7 @@ const app = @import("../app/mod.zig");
 const search = @import("../search/mod.zig");
 
 pub const Shell = struct {
-    pub fn run(allocator: std.mem.Allocator, service: *app.SearchService) !void {
+    pub fn run(allocator: std.mem.Allocator, service: *app.SearchService, _: *app.TelemetrySink) !void {
         var stdin = std.fs.File.stdin().deprecatedReader();
         var stdout = std.fs.File.stdout().deprecatedWriter();
 
