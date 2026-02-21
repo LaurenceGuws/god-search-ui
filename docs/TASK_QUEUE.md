@@ -191,3 +191,5 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 5 - refactor GTK candidate rows to icon + title + right-aligned kind chip layout.
 - [x] M8: UX Phase 5 - move kind-chip visuals fully into GTK CSS classes (no inline markup colors).
 - [x] M8: UX Phase 5 - expand empty-query hotkey legend for advanced navigation shortcuts.
+- [x] M8: UX Phase 5 - add explicit actionable/meta row CSS classes for clearer UI intent.
+- [x] M8: UX Phase 5 - improve selected-row contrast and readability for actionable candidates.

@@ -3779,3 +3779,26 @@
   - M8: UX Phase 5 - add actionable row focus-ring and contrast pass for improved selection visibility on mixed themes.
 
 ---
+## 2026-02-21 (Cycle 172)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 5 bundle - actionable/meta row styling split and selected-row contrast pass
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - tagged non-actionable rows with `gs-meta-row` class
+    - tagged selectable result rows with `gs-actionable-row` class
+    - strengthened selected actionable row styling:
+      - clearer background and border for keyboard focus
+      - selected-state foreground tuning for title/subtitle readability
+    - tuned hover styling to target actionable rows only
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - selected-row palette still uses explicit app CSS values; a fully theme-derived variant can be added later.
+- Next slice:
+  - M8: UX Phase 5 - add theme-friendly fallback selection profile and reduce hardcoded color reliance.
+
+---

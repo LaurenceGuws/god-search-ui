@@ -435,6 +435,7 @@ pub const Shell = struct {
         c.gtk_widget_add_css_class(label, "gs-info");
 
         const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-meta-row");
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
         c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
         c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
@@ -451,6 +452,7 @@ pub const Shell = struct {
         c.gtk_widget_add_css_class(label, "gs-legend");
 
         const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-meta-row");
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
         c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
         c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
@@ -530,6 +532,7 @@ pub const Shell = struct {
         c.gtk_widget_add_css_class(label, "gs-header");
 
         const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-meta-row");
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
         c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
         c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
@@ -541,6 +544,7 @@ pub const Shell = struct {
         c.gtk_widget_add_css_class(separator, "gs-separator");
 
         const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-meta-row");
         c.gtk_list_box_row_set_child(@ptrCast(row), separator);
         c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
         c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
@@ -604,6 +608,7 @@ pub const Shell = struct {
         c.gtk_box_append(@ptrCast(content), secondary_label);
 
         const list_row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(list_row, "gs-actionable-row");
         c.gtk_list_box_row_set_child(@ptrCast(list_row), content);
 
         const kind = kindTag(row.candidate.kind);
@@ -768,6 +773,7 @@ pub const Shell = struct {
         c.gtk_widget_add_css_class(label, "gs-info");
 
         const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-meta-row");
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
         c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
         c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
@@ -828,8 +834,11 @@ pub const Shell = struct {
             ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
             ".gs-results > row { border-radius: 8px; padding: 4px 8px; }\n" ++
-            ".gs-results > row:selected { background: rgba(140, 170, 235, 0.22); }\n" ++
-            ".gs-results > row:hover { background: rgba(140, 170, 235, 0.12); }\n" ++
+            ".gs-results > row.gs-meta-row { padding-top: 2px; padding-bottom: 2px; }\n" ++
+            ".gs-results > row.gs-actionable-row:selected { background: rgba(140, 170, 235, 0.28); border: 1px solid rgba(164, 192, 255, 0.65); }\n" ++
+            ".gs-results > row.gs-actionable-row:hover { background: rgba(140, 170, 235, 0.14); }\n" ++
+            ".gs-results > row.gs-actionable-row:selected .gs-candidate-primary { color: #f5f8ff; }\n" ++
+            ".gs-results > row.gs-actionable-row:selected .gs-candidate-secondary { color: #d6def1; }\n" ++
             ".gs-kind-icon { color: #a9b1c7; }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n" ++
