@@ -97,6 +97,10 @@ Icon diagnostics threshold gate (fails when fallback ratio exceeds limit):
 ```bash
 MAX_GLYPH_FALLBACK_PCT=5 scripts/check_icondiag_threshold.sh
 ```
+Release smoke help/docs contract check:
+```bash
+scripts/check_release_smoke_contract.sh
+```
 Release script-matrix checks:
 ```bash
 scripts/check_release_matrix.sh

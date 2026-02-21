@@ -2913,3 +2913,30 @@
   - M8: UX Phase 4 - add guard script that checks release-smoke docs and `--help` stay in sync.
 
 ---
+## 2026-02-21 (Cycle 137)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-smoke help/docs contract guard and integrate into smoke flow
+- Changes:
+  - Added `scripts/check_release_smoke_contract.sh`:
+    - validates `scripts/release_smoke.sh --help` includes expected options
+    - validates `docs/RELEASE_SMOKE_MODES.md` includes expected mode commands and notes
+  - Updated `scripts/release_smoke.sh`:
+    - added contract guard step
+    - updated smoke step numbering
+  - Updated `README.md`:
+    - documented `scripts/check_release_smoke_contract.sh`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_smoke_contract.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - contract checks are string-based and should be updated if docs/help phrasing changes intentionally.
+- Next slice:
+  - M8: UX Phase 4 - update release script matrix to include new icon diagnostics guard scripts.
+
+---
