@@ -1035,3 +1035,27 @@
   - M7: optional publish flow (`--push`) after maintainer approval.
 
 ---
+## 2026-02-21 (Cycle 48)
+- Milestone: M7 Release Hardening
+- Task slice: Add publish helper for existing local release tags
+- Changes:
+  - Added `scripts/publish_release_tag.sh`:
+    - dry-run default
+    - `--apply` to push `main` and specified tag
+    - guards for clean tree, local tag presence, `origin` presence, and remote tag non-existence
+  - Linked helper usage in:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/publish_release_tag.sh --help`
+  - `scripts/publish_release_tag.sh --version v0.1.0-rc2`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--apply` requires push permissions on `origin`.
+- Next slice:
+  - M7: publish `v0.1.0-rc2` on maintainer command.
+
+---

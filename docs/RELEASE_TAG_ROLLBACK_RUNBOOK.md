@@ -43,6 +43,12 @@ git push origin main
 git push origin v0.1.0
 ```
 
+Or use helper (dry-run default):
+```bash
+scripts/publish_release_tag.sh --version v0.1.0
+scripts/publish_release_tag.sh --version v0.1.0 --apply
+```
+
 ## 5. Verify Tag Targets Expected Commit
 ```bash
 git rev-parse v0.1.0

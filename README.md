@@ -69,6 +69,11 @@ To include release notes in the tagged commit:
 scripts/cut_release_tag.sh --version v0.1.0 --apply --commit-notes
 ```
 
+Publish existing local tag helper (dry-run by default):
+```bash
+scripts/publish_release_tag.sh --version v0.1.0-rc2
+```
+
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`
 - systemd user unit template: `packaging/systemd/god-search-ui.service`
