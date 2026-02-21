@@ -3,7 +3,7 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M8: Execute `v0.1.1` apply cut and publish to `origin`.
+- [ ] (empty)
 
 ## In Progress
 - [ ] (empty)
@@ -82,3 +82,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Fill concrete highlights/fixes in `docs/release-notes-v0.1.1.md`.
 - [x] M8: Add pre-cut readiness gate script for `v0.1.1`.
 - [x] M8: Run `v0.1.1` release cut dry-run and record outcome.
+- [x] M8: Execute `v0.1.1` apply cut and publish to `origin`.

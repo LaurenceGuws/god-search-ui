@@ -1490,3 +1490,27 @@
   - M8: decide and execute `v0.1.1` apply cut when approved.
 
 ---
+## 2026-02-21 (Cycle 70)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Execute `v0.1.1` apply cut and publish to `origin`
+- Changes:
+  - Ran:
+    - `scripts/precut_v0_1_1.sh`
+    - `scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --push`
+  - Results:
+    - release notes draft commit created: `998e18d`
+    - annotated tag created: `v0.1.1`
+    - pushed `main` and `v0.1.1` to `origin`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git tag -l | sort`
+  - `git ls-remote --tags origin | rg "v0.1.1(\\^\\{\\})?$"`
+- Commit(s):
+  - script-created commit: `998e18d`
+  - pending docs/log commit
+- Risks/notes:
+  - `--commit-notes` regenerated `docs/release-notes-v0.1.1.md`, replacing manually curated sections.
+- Next slice:
+  - M8: add note/workflow to preserve curated release-notes content during apply cuts.
+
+---
