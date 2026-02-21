@@ -3627,3 +3627,26 @@
   - M8: UX Phase 4 - add release contracts quick-order assertion to contracts-doc checker for parity.
 
 ---
+## 2026-02-21 (Cycle 166)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce quick-order parity between release contracts doc and release matrix
+- Changes:
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates quick-order command set in both:
+      - `docs/RELEASE_CONTRACTS.md`
+      - `docs/RELEASE_SCRIPT_MATRIX.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now intentionally duplicates quick-order command assertions for cross-doc parity.
+- Next slice:
+  - M8: UX Phase 4 - add short release contracts command block to rollback runbook for operator continuity.
+
+---
