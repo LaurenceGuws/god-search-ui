@@ -169,6 +169,7 @@ pub const Shell = struct {
     fn populateResults(ctx: *UiContext, query: []const u8) void {
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const allocator = allocator_ptr.*;
+        const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
 
         clearList(ctx.list);
         const ranked = ctx.service.searchQuery(allocator, query) catch |err| {
@@ -190,6 +191,8 @@ pub const Shell = struct {
             c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (refresh scheduled)");
         } else if (ctx.service.last_query_refreshed_cache) {
             c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (snapshot refreshed)");
+        } else if (query_trimmed.len == 0 and ctx.pending_power_confirm == GFALSE) {
+            c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (Esc to close, Ctrl+R to refresh)");
         } else if (ctx.pending_power_confirm == GFALSE) {
             c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search...");
         }

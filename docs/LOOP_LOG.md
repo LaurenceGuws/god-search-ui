@@ -1266,3 +1266,22 @@
   - M8: add GTK placeholder text for empty query guidance.
 
 ---
+## 2026-02-21 (Cycle 59)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add GTK placeholder guidance for empty-query state
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - when query is empty and no refresh/confirmation override is active, show:
+      - `"Type to search... (Esc to close, Ctrl+R to refresh)"`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - placeholder guidance is informational only and does not change key handling logic.
+- Next slice:
+  - M8: add first post-release issue triage template.
+
+---
