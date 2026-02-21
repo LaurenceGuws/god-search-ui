@@ -3140,3 +3140,28 @@
   - M8: UX Phase 4 - add release_validate mode table and options to dedicated docs page.
 
 ---
+## 2026-02-21 (Cycle 145)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add dedicated release-validate modes/options docs page
+- Changes:
+  - Added `docs/RELEASE_VALIDATE_MODES.md`:
+    - mode table for default/CI/clean/allow-dirty flows
+    - option reference and success markers
+  - Updated `README.md`:
+    - linked release-validate modes reference page
+  - Updated `scripts/check_release_validate_contract.sh`:
+    - now validates dedicated release-validate docs coverage
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_validate_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - validate-contract checker now depends on the dedicated docs page; keep it updated with CLI changes.
+- Next slice:
+  - M8: UX Phase 4 - add release_validate docs contract to release script matrix references.
+
+---

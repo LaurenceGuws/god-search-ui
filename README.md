@@ -84,6 +84,8 @@ scripts/check_release_validate_ci.sh
 ```
 Release smoke mode reference:
 - `docs/RELEASE_SMOKE_MODES.md`
+Release validate mode reference:
+- `docs/RELEASE_VALIDATE_MODES.md`
 Optional GTK runtime launch smoke:
 ```bash
 scripts/release_smoke.sh --with-gtk-runtime
