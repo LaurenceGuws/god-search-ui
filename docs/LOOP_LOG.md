@@ -833,3 +833,24 @@
   - M7: release hardening (tagging, packaged install smoke, rollout execution).
 
 ---
+## 2026-02-21 (Cycle 39)
+- Milestone: M7 Release Hardening
+- Task slice: Add release smoke-test script for headless + GTK build verification
+- Changes:
+  - Added `scripts/release_smoke.sh` with end-to-end checks:
+    - `scripts/dev.sh check`
+    - headless UI smoke (`:refresh`, query, quit)
+    - GTK-enabled compile smoke (`zig build -Denable_gtk=true`)
+    - release notes generator smoke using temporary output file
+  - Linked script usage from `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/release_smoke.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK runtime launch is not exercised here; this script validates GTK build path.
+- Next slice:
+  - M7: Add release tagging/rollback runbook with exact command sequence.
+
+---

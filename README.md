@@ -50,6 +50,11 @@ Draft release notes from latest commits:
 scripts/gen_release_notes.sh v0.1.0
 ```
 
+Release smoke checks:
+```bash
+scripts/release_smoke.sh
+```
+
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`
 - systemd user unit template: `packaging/systemd/god-search-ui.service`

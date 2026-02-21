@@ -89,6 +89,15 @@ Exit criteria:
 - install/uninstall documented
 - user config path stable
 
+### M7: Release Hardening
+- Reproducible release smoke checks (headless + GTK build path)
+- Tagging + rollback playbook
+- Packaged install validation for launcher assets
+
+Exit criteria:
+- repeatable release checklist can be executed end-to-end
+- rollback path validated against previous known-good commit/tag
+
 ## Backlog Buckets
 - UX polish (animations, result grouping, inline preview)
 - Search quality (synonyms, typo tolerance tuning)
@@ -99,3 +108,4 @@ Exit criteria:
 - Alpha: M0-M3 complete
 - Beta: M4-M5 complete
 - Stable: M6 complete + docs and migration notes
+- Hardened: M7 complete + reproducible release operations
