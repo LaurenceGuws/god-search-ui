@@ -3,7 +3,7 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M8: Run `v0.1.2` release cut dry-run with default-safe notes mode.
+- [ ] (empty)
 
 ## In Progress
 - [ ] (empty)
@@ -94,3 +94,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add quick dry-run example for default-safe notes mode in release matrix.
 - [x] M8: Add automated dry-run assertion for default-safe notes branch.
 - [x] M8: Prevent recursive preflight in cut dry-run assertion checks.
+- [x] M8: Run `v0.1.2` release cut dry-run with default-safe notes mode.

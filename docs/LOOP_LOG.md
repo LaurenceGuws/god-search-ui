@@ -1762,3 +1762,25 @@
   - M8: execute `v0.1.2` dry-run cut and record outcome.
 
 ---
+## 2026-02-21 (Cycle 83)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Run `v0.1.2` release cut dry-run with default-safe notes mode
+- Changes:
+  - Ran:
+    - `scripts/cut_release_tag.sh --version v0.1.2`
+  - Result:
+    - dry-run preflight passed
+    - output selected reuse path:
+      - `[dry-run] would reuse: docs/release-notes-v0.1.2.md`
+    - output emitted planned tag command for `v0.1.2`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - dry-run output includes reuse branch and `git tag -a v0.1.2 ...`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - final cut/push still requires explicit `--apply --commit-notes --push`.
+- Next slice:
+  - M8: queue/apply `v0.1.2` cut when approved.
+
+---
