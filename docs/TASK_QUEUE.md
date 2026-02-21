@@ -83,3 +83,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add pre-cut readiness gate script for `v0.1.1`.
 - [x] M8: Run `v0.1.1` release cut dry-run and record outcome.
 - [x] M8: Execute `v0.1.1` apply cut and publish to `origin`.
+- [x] M8: Add `--reuse-notes` option to `cut_release_tag.sh` to preserve curated notes.

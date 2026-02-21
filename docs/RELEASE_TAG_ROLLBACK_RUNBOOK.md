@@ -11,6 +11,7 @@ Notes:
 - Dry-run mode performs preflight checks and prints planned commands only.
 - Release notes draft file is generated only with `--apply`.
 - Use `--commit-notes` if tag should point to the commit that contains release notes.
+- Use `--reuse-notes` with `--apply` to avoid overwriting manually edited release notes.
 
 For post-release patch cadence (`v0.1.1` and later), follow execution order in:
 - `docs/V0_1_1_PATCH_PLAN.md`

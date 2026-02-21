@@ -84,6 +84,10 @@ To include release notes in the tagged commit:
 ```bash
 scripts/cut_release_tag.sh --version v0.1.0 --apply --commit-notes
 ```
+To preserve already-edited release notes during apply:
+```bash
+scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --reuse-notes
+```
 
 Publish existing local tag helper (dry-run by default):
 ```bash

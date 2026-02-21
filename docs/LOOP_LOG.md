@@ -1514,3 +1514,32 @@
   - M8: add note/workflow to preserve curated release-notes content during apply cuts.
 
 ---
+## 2026-02-21 (Cycle 71)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add `--reuse-notes` option to preserve curated release notes
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - added `--reuse-notes` flag (requires `--apply`)
+    - apply mode now reuses existing `docs/release-notes-<version>.md` when requested
+    - guards if reuse target is missing
+  - Updated related docs/checks:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+    - `docs/RELEASE_SCRIPT_MATRIX.md`
+    - `scripts/check_release_helpers.sh`
+    - `scripts/check_release_matrix.sh`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --help`
+  - `scripts/check_release_helpers.sh`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--reuse-notes` assumes curated notes already exist and are up to date.
+- Next slice:
+  - M8: add post-cut note about `--reuse-notes` in v0.1.1 release notes.
+
+---

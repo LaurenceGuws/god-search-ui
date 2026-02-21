@@ -24,7 +24,7 @@ done
 
 # Ensure recommended order section exists and includes tag/publish flow.
 rg -q --fixed-strings "## Recommended Order" "$MATRIX"
-rg -q --fixed-strings "scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes" "$MATRIX"
+rg -q --fixed-strings "scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --reuse-notes" "$MATRIX"
 rg -q --fixed-strings "scripts/publish_release_tag.sh --version vX.Y.Z --apply" "$MATRIX"
 
 echo "release matrix checks passed"
