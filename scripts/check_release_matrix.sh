@@ -15,6 +15,11 @@ scripts=(
   "scripts/publish_release_tag.sh"
   "scripts/arch_package_smoke.sh"
   "scripts/check_release_helpers.sh"
+  "scripts/check_release_smoke_contract.sh"
+  "scripts/check_apps_cache_format.sh"
+  "scripts/check_icon_theme_env.sh"
+  "scripts/check_icondiag_json.sh"
+  "scripts/check_icondiag_threshold.sh"
 )
 
 for s in "${scripts[@]}"; do
@@ -24,6 +29,7 @@ done
 
 # Ensure recommended order section exists and includes tag/publish flow.
 rg -q --fixed-strings "## Recommended Order" "$MATRIX"
+rg -q --fixed-strings "scripts/release_smoke.sh --ci" "$MATRIX"
 rg -q --fixed-strings "scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push" "$MATRIX"
 rg -q --fixed-strings -- "--regen-notes" "$MATRIX"
 rg -q --fixed-strings "scripts/publish_release_tag.sh --version vX.Y.Z --apply" "$MATRIX"

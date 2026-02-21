@@ -5,16 +5,23 @@ Quick reference for release automation scripts.
 | Script | Purpose | Safe Default | Apply Mode |
 |---|---|---|---|
 | `scripts/release_smoke.sh` | End-to-end release sanity checks | `scripts/release_smoke.sh` | `scripts/release_smoke.sh --with-gtk-runtime` |
+| `scripts/release_smoke.sh` (CI preset) | CI-friendly smoke preset | `scripts/release_smoke.sh --ci` | `scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5` |
 | `scripts/gen_release_notes.sh` | Draft release notes from template + commits | `scripts/gen_release_notes.sh v0.1.1` | edit generated notes and commit |
 | `scripts/cut_release_tag.sh` | Tag cut flow with preflight | `scripts/cut_release_tag.sh --version v0.1.1` | `scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --push` |
 | `scripts/publish_release_tag.sh` | Publish existing local tag | `scripts/publish_release_tag.sh --version v0.1.1` | `scripts/publish_release_tag.sh --version v0.1.1 --apply` |
 | `scripts/arch_package_smoke.sh` | Arch package build/install smoke | `scripts/arch_package_smoke.sh` | `scripts/arch_package_smoke.sh --install --uninstall` |
 | `scripts/check_release_helpers.sh` | CLI contract checks for helpers | `scripts/check_release_helpers.sh` | (same command) |
+| `scripts/check_release_smoke_contract.sh` | Release-smoke help/docs contract checks | `scripts/check_release_smoke_contract.sh` | (same command) |
+| `scripts/check_apps_cache_format.sh` | Apps cache format compatibility guard | `scripts/check_apps_cache_format.sh` | (same command) |
+| `scripts/check_icon_theme_env.sh` | Icon-theme environment diagnostics | `scripts/check_icon_theme_env.sh` | (same command) |
+| `scripts/check_icondiag_json.sh` | Icon diagnostics JSON schema checks | `scripts/check_icondiag_json.sh` | (same command) |
+| `scripts/check_icondiag_threshold.sh` | Icon fallback threshold gate | `MAX_GLYPH_FALLBACK_PCT=5 scripts/check_icondiag_threshold.sh` | lower threshold to tighten gate |
 
 ## Recommended Order
 1. `scripts/release_smoke.sh`
-2. `scripts/gen_release_notes.sh vX.Y.Z`
-3. `scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push`
+2. `scripts/release_smoke.sh --ci` (for CI/minimal-host parity)
+3. `scripts/gen_release_notes.sh vX.Y.Z`
+4. `scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push`
 
 Default-safe note mode:
 - if `docs/release-notes-<version>.md` exists, apply mode reuses it.
@@ -24,4 +31,4 @@ Quick dry-run example:
 - Expected output includes either:
   - `[dry-run] would reuse: docs/release-notes-v0.1.2.md`
   - or regeneration command when notes file does not yet exist.
-4. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`
+5. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`

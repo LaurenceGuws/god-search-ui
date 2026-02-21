@@ -2940,3 +2940,29 @@
   - M8: UX Phase 4 - update release script matrix to include new icon diagnostics guard scripts.
 
 ---
+## 2026-02-21 (Cycle 138)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - expand release script matrix/checks for icon diagnostics guard scripts
+- Changes:
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added CI preset row for release smoke
+    - added icon diagnostics/contract guard scripts to matrix table
+    - updated recommended order to include `release_smoke.sh --ci`
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates new matrix script entries exist and are executable
+    - validates CI preset presence in recommended order
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - matrix validation is strict by design; any future script additions require matrix updates.
+- Next slice:
+  - M8: UX Phase 4 - add a single meta guard script that runs all release-doc contract checks together.
+
+---
