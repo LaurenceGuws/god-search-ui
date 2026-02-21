@@ -163,3 +163,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add one-command `check_release_contracts.sh` alias for all release contracts.
 - [x] M8: UX Phase 4 - add `check_release_contracts.sh --docs-only` fast path for local iteration.
 - [x] M8: UX Phase 4 - add contract checker for release-contracts alias CLI/docs sync.
+- [x] M8: UX Phase 4 - add dedicated release-contracts docs page and matrix reference.

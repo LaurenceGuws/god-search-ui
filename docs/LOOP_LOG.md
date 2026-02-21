@@ -3266,3 +3266,29 @@
   - M8: UX Phase 4 - add release-contracts alias docs section to matrix related docs.
 
 ---
+## 2026-02-21 (Cycle 150)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add dedicated release-contracts docs page and matrix related-doc reference
+- Changes:
+  - Added `docs/RELEASE_CONTRACTS.md`:
+    - summarized contract layers, primary entry points, and CI guard behavior
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added release contracts reference under related docs
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates release contracts doc reference
+  - Updated `README.md`:
+    - linked release contracts reference
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/check_release_docs_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - release contracts doc is high-level by design; script-specific behavior remains in each script's help output.
+- Next slice:
+  - M8: UX Phase 4 - add release_contracts doc consistency check in release docs meta guard.
+
+---

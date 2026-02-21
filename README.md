@@ -86,6 +86,8 @@ Release smoke mode reference:
 - `docs/RELEASE_SMOKE_MODES.md`
 Release validate mode reference:
 - `docs/RELEASE_VALIDATE_MODES.md`
+Release contracts reference:
+- `docs/RELEASE_CONTRACTS.md`
 Optional GTK runtime launch smoke:
 ```bash
 scripts/release_smoke.sh --with-gtk-runtime

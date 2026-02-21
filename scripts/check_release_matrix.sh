@@ -47,5 +47,6 @@ rg -q --fixed-strings "## Related Docs" "$MATRIX"
 rg -q --fixed-strings "docs/RELEASE_SMOKE_MODES.md" "$MATRIX"
 rg -q --fixed-strings "docs/RELEASE_VALIDATE_MODES.md" "$MATRIX"
 rg -q --fixed-strings "docs/ICON_DIAGNOSTICS.md" "$MATRIX"
+rg -q --fixed-strings "docs/RELEASE_CONTRACTS.md" "$MATRIX"
 
 echo "release matrix checks passed"

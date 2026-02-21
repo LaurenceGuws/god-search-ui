@@ -46,3 +46,4 @@ Quick dry-run example:
 - `docs/RELEASE_SMOKE_MODES.md`
 - `docs/RELEASE_VALIDATE_MODES.md`
 - `docs/ICON_DIAGNOSTICS.md`
+- `docs/RELEASE_CONTRACTS.md`
