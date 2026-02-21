@@ -3604,3 +3604,26 @@
   - M8: UX Phase 4 - add concise release contract command order to release matrix notes section.
 
 ---
+## 2026-02-21 (Cycle 165)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add concise release-contract command order to release matrix
+- Changes:
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added short release contracts quick-order command block
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates quick-order header and commands in matrix doc
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - quick-order commands are docs contracts and must be updated in checker when intentionally changed.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts quick-order assertion to contracts-doc checker for parity.
+
+---

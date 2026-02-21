@@ -48,3 +48,8 @@ Quick dry-run example:
 - `docs/RELEASE_VALIDATE_MODES.md`
 - `docs/ICON_DIAGNOSTICS.md`
 - `docs/RELEASE_CONTRACTS.md`
+
+Release contracts quick order:
+- `scripts/check_release_contracts.sh --docs-only`
+- `scripts/release_validate.sh --ci --require-clean`
+- `scripts/check_release_validate_ci.sh`

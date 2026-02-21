@@ -178,3 +178,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - enforce dual README release-contracts references in alias contract checker.
 - [x] M8: UX Phase 4 - add release-contracts onboarding note to README Next section.
 - [x] M8: UX Phase 4 - enforce README release onboarding phrase in contracts alias checker.
+- [x] M8: UX Phase 4 - add concise release-contract command order note to release matrix.
