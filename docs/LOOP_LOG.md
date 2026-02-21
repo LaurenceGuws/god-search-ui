@@ -1933,3 +1933,22 @@
   - M8: UX Phase 2 - remove hardcoded row/chip colors into CSS/theme layer.
 
 ---
+## 2026-02-21 (Cycle 91)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - centralize GTK color tokens for theme extraction
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - introduced shared color constants for header/chip/title/subtitle/status
+    - replaced repeated inline color literals in row/status markup
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - colors are centralized but still in-code; CSS extraction remains next-step.
+- Next slice:
+  - M8: UX Phase 2 - move markup style strings to minimal GTK CSS provider.
+
+---

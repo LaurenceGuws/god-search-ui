@@ -7,6 +7,11 @@ const c = @cImport({
 const CandidateKind = @import("../search/mod.zig").CandidateKind;
 const GTRUE: c.gboolean = 1;
 const GFALSE: c.gboolean = 0;
+const COLOR_STATUS = "#8b93a8";
+const COLOR_HEADER = "#8b93a8";
+const COLOR_CHIP = "#9fb2ff";
+const COLOR_TITLE = "#e8ecf7";
+const COLOR_SUBTITLE = "#9aa1b5";
 
 const LaunchContext = struct {
     allocator: std.mem.Allocator,
@@ -258,8 +263,8 @@ pub const Shell = struct {
 
         const markup = std.fmt.allocPrint(
             std.heap.page_allocator,
-            "<span foreground='#9aa1b5'>{s}</span>",
-            .{std.mem.span(@as([*:0]const u8, @ptrCast(msg_escaped)))},
+            "<span foreground='{s}'>{s}</span>",
+            .{ COLOR_SUBTITLE, std.mem.span(@as([*:0]const u8, @ptrCast(msg_escaped))) },
         ) catch return;
         defer std.heap.page_allocator.free(markup);
         const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
@@ -327,7 +332,7 @@ pub const Shell = struct {
         if (title_escaped == null) return;
         defer c.g_free(title_escaped);
 
-        const markup = std.fmt.allocPrint(std.heap.page_allocator, "<span foreground='#8b93a8' weight='bold'>{s}</span>", .{std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped)))}) catch return;
+        const markup = std.fmt.allocPrint(std.heap.page_allocator, "<span foreground='{s}' weight='bold'>{s}</span>", .{ COLOR_HEADER, std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))) }) catch return;
         defer std.heap.page_allocator.free(markup);
         const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
         defer std.heap.page_allocator.free(markup_z);
@@ -355,8 +360,16 @@ pub const Shell = struct {
         const chip = kindChip(row.candidate.kind);
         const markup = std.fmt.allocPrint(
             allocator,
-            "{s}  <span foreground='#9fb2ff' weight='bold'>{s}</span>  <span foreground='#e8ecf7'>{s}</span>  <span foreground='#9aa1b5'>{s}</span>",
-            .{ icon, chip, std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))), std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped))) },
+            "{s}  <span foreground='{s}' weight='bold'>{s}</span>  <span foreground='{s}'>{s}</span>  <span foreground='{s}'>{s}</span>",
+            .{
+                icon,
+                COLOR_CHIP,
+                chip,
+                COLOR_TITLE,
+                std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))),
+                COLOR_SUBTITLE,
+                std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped))),
+            },
         ) catch return;
         defer allocator.free(markup);
         const markup_z = allocator.dupeZ(u8, markup) catch return;
@@ -479,8 +492,8 @@ pub const Shell = struct {
 
         const markup = std.fmt.allocPrint(
             std.heap.page_allocator,
-            "<span foreground='#8b93a8'>{s}</span>",
-            .{std.mem.span(@as([*:0]const u8, @ptrCast(msg_escaped)))},
+            "<span foreground='{s}'>{s}</span>",
+            .{ COLOR_STATUS, std.mem.span(@as([*:0]const u8, @ptrCast(msg_escaped))) },
         ) catch return;
         defer std.heap.page_allocator.free(markup);
         const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
