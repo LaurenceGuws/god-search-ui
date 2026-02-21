@@ -234,8 +234,11 @@ pub const Shell = struct {
         const title_ptr = c.g_object_get_data(@ptrCast(row), "gs-title");
         if (title_ptr == null) return;
         const title = std.mem.span(@as([*:0]const u8, @ptrCast(title_ptr)));
+        const kind_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind");
+        const kind = if (kind_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(kind_ptr))) else "";
+        const kind_label = kindStatusLabel(kind);
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const msg = std.fmt.allocPrint(allocator_ptr.*, "Enter launch: {s}", .{title}) catch return;
+        const msg = std.fmt.allocPrint(allocator_ptr.*, "Enter launch {s}: {s}", .{ kind_label, title }) catch return;
         defer allocator_ptr.*.free(msg);
         setStatus(ctx, msg);
     }
@@ -668,6 +671,15 @@ pub const Shell = struct {
             '?' => "Web route active: type search terms after ?",
             else => null,
         };
+    }
+
+    fn kindStatusLabel(kind: []const u8) []const u8 {
+        if (std.mem.eql(u8, kind, "app")) return "app";
+        if (std.mem.eql(u8, kind, "window")) return "window";
+        if (std.mem.eql(u8, kind, "dir")) return "directory";
+        if (std.mem.eql(u8, kind, "action")) return "action";
+        if (std.mem.eql(u8, kind, "hint")) return "hint";
+        return "item";
     }
 
     fn runShellCommand(command: []const u8) !void {

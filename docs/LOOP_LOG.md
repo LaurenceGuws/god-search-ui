@@ -2303,3 +2303,22 @@
   - M8: UX Phase 3 - adjust status copy to include selected candidate source kind.
 
 ---
+## 2026-02-21 (Cycle 110)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - adjust selected-row status copy to include source kind
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - selected-row footer status now includes source kind label (`app/window/directory/action`)
+    - added source-kind label helper for consistent wording
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - kind labels are currently singular lowercase terms for compact status display.
+- Next slice:
+  - M8: UX Phase 3 - add inline query-prefix cheat-sheet to status for empty query state.
+
+---
