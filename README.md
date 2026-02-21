@@ -123,6 +123,10 @@ One-command alias for all release contract checks:
 ```bash
 scripts/check_release_contracts.sh
 ```
+Fast docs-only variant:
+```bash
+scripts/check_release_contracts.sh --docs-only
+```
 Release-validate help/docs contract check:
 ```bash
 scripts/check_release_validate_contract.sh

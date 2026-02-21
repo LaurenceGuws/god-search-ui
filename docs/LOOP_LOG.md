@@ -3213,3 +3213,28 @@
   - M8: UX Phase 4 - add optional `--docs-only` mode to release contracts alias for faster local iteration.
 
 ---
+## 2026-02-21 (Cycle 148)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add `check_release_contracts --docs-only` fast path
+- Changes:
+  - Updated `scripts/check_release_contracts.sh`:
+    - added `--docs-only` mode and `--help` output
+    - docs-only runs contract docs checks without CI validate guard
+  - Updated `README.md`:
+    - documented docs-only command
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - adjusted safe/apply modes for release contracts alias
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts.sh --docs-only`
+  - `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - docs-only mode intentionally skips CI validate guard coverage.
+- Next slice:
+  - M8: UX Phase 4 - add contract checker for `check_release_contracts.sh` CLI/docs sync.
+
+---

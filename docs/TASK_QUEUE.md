@@ -161,3 +161,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add dedicated release-validate modes/options docs page.
 - [x] M8: UX Phase 4 - add related-doc references in release matrix and enforce via checks.
 - [x] M8: UX Phase 4 - add one-command `check_release_contracts.sh` alias for all release contracts.
+- [x] M8: UX Phase 4 - add `check_release_contracts.sh --docs-only` fast path for local iteration.
