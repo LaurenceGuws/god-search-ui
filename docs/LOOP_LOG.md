@@ -3412,3 +3412,26 @@
   - M8: UX Phase 4 - add concise "when to run which script" table in release contracts doc.
 
 ---
+## 2026-02-21 (Cycle 156)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add concise “when to run which script” table in release contracts doc
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added scenario-to-script table for quick operator decisions
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates scenario table header and key command references
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - scenario table is concise by design; detailed decision branches remain in runbooks.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts doc pointer in rollback runbook preflight section.
+
+---

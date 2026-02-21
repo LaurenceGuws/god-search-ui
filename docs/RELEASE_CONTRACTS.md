@@ -24,6 +24,15 @@ Release contracts are guard scripts that keep release automation CLI/docs behavi
 - Meta docs contracts:
   - `scripts/check_release_docs_contracts.sh`
 
+## When To Run Which Script
+
+| Situation | Script |
+|---|---|
+| Quick docs/help/matrix contract check | `scripts/check_release_contracts.sh --docs-only` |
+| Full local contract check (includes CI validate guard) | `scripts/check_release_contracts.sh` |
+| Release preflight from clean worktree | `scripts/release_validate.sh --ci --require-clean` |
+| Local iterative preflight before commit | `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/release_validate.sh --ci --require-clean` |
+
 ## CI Guard
 
 - CI non-interactive validate guard:
