@@ -5,4 +5,5 @@ pub const ProviderRegistry = @import("registry.zig").ProviderRegistry;
 pub const ProviderStatus = @import("registry.zig").ProviderStatus;
 pub const WindowsProvider = @import("windows.zig").WindowsProvider;
 pub const executeAction = @import("actions.zig").executeAction;
+pub const requiresConfirmation = @import("actions.zig").requiresConfirmation;
 pub const resolveActionCommand = @import("actions.zig").resolveActionCommand;

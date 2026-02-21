@@ -36,6 +36,10 @@ pub fn resolveActionCommand(action: []const u8) ?[]const u8 {
     return null;
 }
 
+pub fn requiresConfirmation(action: []const u8) bool {
+    return std.mem.eql(u8, action, "power");
+}
+
 pub fn executeAction(
     action: []const u8,
     runner: *const fn (command: []const u8) anyerror!void,
@@ -68,4 +72,9 @@ test "execute action resolves command mapping" {
     try executeAction("restart-waybar", Runner.run);
     try std.testing.expect(test_command_capture != null);
     try std.testing.expectEqualStrings("waybar --reload", test_command_capture.?);
+}
+
+test "power action requires confirmation" {
+    try std.testing.expect(requiresConfirmation("power"));
+    try std.testing.expect(!requiresConfirmation("settings"));
 }

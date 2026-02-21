@@ -3,7 +3,6 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M4: Add confirmation mode for sensitive actions (`power`).
 - [ ] M4: Add telemetry event sink for action execution results.
 
 ## In Progress
@@ -36,3 +35,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M3: Add action execution hook for selected result (`Enter`).
 - [x] M3: Add row-level icon/chip styling in GTK list renderer.
 - [x] M3: Add grouped sections in GTK list (apps/windows/dirs/actions).
+- [x] M4: Add confirmation mode for sensitive actions (`power`).

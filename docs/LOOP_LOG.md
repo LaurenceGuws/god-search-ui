@@ -469,3 +469,26 @@
   - M4: Add confirmation mode for sensitive actions (`power`).
 
 ---
+## 2026-02-21 (Cycle 23)
+- Milestone: M4 Action Execution + Safety
+- Task slice: Add confirmation mode for sensitive actions (`power`)
+- Changes:
+  - Added `requiresConfirmation(action)` in `src/providers/actions.zig`.
+  - Exported confirmation predicate in `src/providers/mod.zig`.
+  - Added GTK two-step confirmation flow for `power` action in `src/ui/gtk_shell.zig`:
+    - first activation arms confirmation
+    - second activation executes
+    - search placeholder reflects armed state
+    - confirmation clears on query updates or non-sensitive execution
+  - Added unit test for confirmation predicate.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Confirmation state is session-local and UI-local; no timeout yet.
+- Next slice:
+  - M4: Add telemetry event sink for action execution results.
+
+---

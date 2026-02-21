@@ -17,6 +17,7 @@ const UiContext = extern struct {
     list: *c.GtkListBox,
     allocator: *anyopaque,
     service: *app_mod.SearchService,
+    pending_power_confirm: c.gboolean,
 };
 
 pub const Shell = struct {
@@ -61,6 +62,7 @@ pub const Shell = struct {
         ctx.list = @ptrCast(list);
         ctx.allocator = @ptrCast(@constCast(&launch.allocator));
         ctx.service = launch.service;
+        ctx.pending_power_confirm = c.FALSE;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -118,6 +120,7 @@ pub const Shell = struct {
         _ = entry;
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        clearPowerConfirmation(ctx);
         const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
         if (text_ptr == null) {
             populateResults(ctx, "");
@@ -266,9 +269,19 @@ pub const Shell = struct {
         ctx.service.recordSelection(allocator, action) catch {};
 
         if (std.mem.eql(u8, kind, "action")) {
+            if (providers_mod.requiresConfirmation(action)) {
+                if (ctx.pending_power_confirm == c.FALSE) {
+                    armPowerConfirmation(ctx);
+                    return;
+                }
+                clearPowerConfirmation(ctx);
+            } else {
+                clearPowerConfirmation(ctx);
+            }
             providers_mod.executeAction(action, runShellCommand) catch {};
             return;
         }
+        clearPowerConfirmation(ctx);
         if (std.mem.eql(u8, kind, "app")) {
             if (!std.mem.eql(u8, action, "__drun__")) runShellCommand(action) catch {};
             return;
@@ -297,6 +310,17 @@ pub const Shell = struct {
             std.heap.page_allocator.free(result.stderr);
         }
         if (result.term != .Exited or result.term.Exited != 0) return error.CommandFailed;
+    }
+
+    fn armPowerConfirmation(ctx: *UiContext) void {
+        ctx.pending_power_confirm = c.TRUE;
+        c.gtk_entry_set_placeholder_text(@ptrCast(ctx.entry), "Press Enter again to confirm Power menu");
+    }
+
+    fn clearPowerConfirmation(ctx: *UiContext) void {
+        if (ctx.pending_power_confirm == c.FALSE) return;
+        ctx.pending_power_confirm = c.FALSE;
+        c.gtk_entry_set_placeholder_text(@ptrCast(ctx.entry), "Type to search...");
     }
 
     fn kindTag(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
