@@ -2419,3 +2419,23 @@
   - M8: UX Phase 3 - reduce status jitter by avoiding redundant status text updates.
 
 ---
+## 2026-02-21 (Cycle 116)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - reduce status jitter by avoiding redundant status text updates
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added cached status hash/tone fields in UI context
+    - `setStatusWithTone` now skips no-op updates when text and tone are unchanged
+    - added explicit tone-code helper for stable status dedupe checks
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dedupe uses hash+tone and assumes very low collision risk for short UI status strings.
+- Next slice:
+  - M8: UX Phase 3 - add slight adaptive debounce (shorter delay after query idle) to improve perceived responsiveness.
+
+---

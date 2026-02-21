@@ -26,6 +26,8 @@ const UiContext = extern struct {
     pending_power_confirm: c.gboolean,
     search_debounce_id: c.guint,
     status_reset_id: c.guint,
+    last_status_hash: u64,
+    last_status_tone: u8,
 };
 
 pub const Shell = struct {
@@ -83,6 +85,8 @@ pub const Shell = struct {
         ctx.pending_power_confirm = GFALSE;
         ctx.search_debounce_id = 0;
         ctx.status_reset_id = 0;
+        ctx.last_status_hash = 0;
+        ctx.last_status_tone = 0;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -671,6 +675,10 @@ pub const Shell = struct {
     };
 
     fn setStatusWithTone(ctx: *UiContext, message: []const u8, tone: StatusTone) void {
+        const status_hash = std.hash.Wyhash.hash(0, message);
+        const tone_code = statusToneCode(tone);
+        if (ctx.last_status_hash == status_hash and ctx.last_status_tone == tone_code) return;
+
         const status_widget: *c.GtkWidget = @ptrCast(@alignCast(ctx.status));
         c.gtk_widget_remove_css_class(status_widget, "gs-status-success");
         c.gtk_widget_remove_css_class(status_widget, "gs-status-failure");
@@ -682,6 +690,8 @@ pub const Shell = struct {
         const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
         defer std.heap.page_allocator.free(msg_z);
         c.gtk_label_set_text(ctx.status, msg_z.ptr);
+        ctx.last_status_hash = status_hash;
+        ctx.last_status_tone = tone_code;
     }
 
     fn installCss(window: *c.GtkWidget) void {
@@ -748,6 +758,14 @@ pub const Shell = struct {
         if (std.mem.indexOf(u8, message, "opened") != null) return .success;
         if (std.mem.indexOf(u8, message, "focused") != null) return .success;
         return .neutral;
+    }
+
+    fn statusToneCode(tone: StatusTone) u8 {
+        return switch (tone) {
+            .neutral => 0,
+            .success => 1,
+            .failure => 2,
+        };
     }
 
     fn runShellCommand(command: []const u8) !void {
