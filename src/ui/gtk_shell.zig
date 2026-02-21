@@ -339,17 +339,18 @@ pub const Shell = struct {
         title: []const u8,
         add_separator: bool,
     ) bool {
-        var has_any = false;
+        var match_count: usize = 0;
         for (rows) |row| {
             if (row.candidate.kind == kind) {
-                has_any = true;
-                break;
+                match_count += 1;
             }
         }
-        if (!has_any) return false;
+        if (match_count == 0) return false;
 
         if (add_separator) appendSectionSeparatorRow(ctx.list);
-        appendHeaderRow(ctx.list, title);
+        var header_buf: [96]u8 = undefined;
+        const header = std.fmt.bufPrint(&header_buf, "{s} ({d})", .{ title, match_count }) catch title;
+        appendHeaderRow(ctx.list, header);
         for (rows) |row| {
             if (row.candidate.kind != kind) continue;
             appendCandidateRow(ctx.list, allocator, row);

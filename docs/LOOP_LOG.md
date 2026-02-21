@@ -2129,3 +2129,22 @@
   - M8: UX Phase 3 - add section result counts in headers for scanability.
 
 ---
+## 2026-02-21 (Cycle 101)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add per-section result counts in GTK headers
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - section headers now include candidate counts (for example `Apps (5)`)
+    - preserved section ordering and separator behavior
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - count label width may vary with large result sets; capped render list already limits this.
+- Next slice:
+  - M8: UX Phase 3 - tune blended ranking to keep action results near top for short queries.
+
+---
