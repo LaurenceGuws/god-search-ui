@@ -87,3 +87,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add `--reuse-notes` workflow note in `v0.1.1` release notes.
 - [x] M8: Add release-notes curation checklist for patch cuts.
 - [x] M8: Add lint script to detect placeholder text in release notes.
+- [x] M8: Add post-`v0.1.1` maintenance checklist entry in docs.

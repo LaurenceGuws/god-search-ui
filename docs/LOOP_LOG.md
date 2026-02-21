@@ -1601,3 +1601,19 @@
   - M8: add final post-v0.1.1 maintenance checklist entry in docs.
 
 ---
+## 2026-02-21 (Cycle 75)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add post-`v0.1.1` maintenance checklist entry in docs
+- Changes:
+  - Updated `docs/V0_1_1_PATCH_PLAN.md` with a post-`v0.1.1` maintenance checklist.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checklist is operational and assumes `origin` remains the primary release remote.
+- Next slice:
+  - M8: queue first `v0.1.2` candidate after triage updates.
+
+---
