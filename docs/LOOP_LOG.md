@@ -2864,3 +2864,28 @@
   - M8: UX Phase 4 - add release-smoke `--ci` preset alias to bundle stable CI flags.
 
 ---
+## 2026-02-21 (Cycle 135)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add `release_smoke --ci` preset alias and switch CI workflow
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - added `--ci` preset alias (`--skip-gtk-build` + strict icon threshold with default limit `5`)
+    - updated usage/help text and preset status output
+  - Updated `.github/workflows/ci.yml`:
+    - switched icon-threshold smoke step to `scripts/release_smoke.sh --ci`
+  - Updated `README.md`:
+    - replaced explicit CI flag combination with `--ci` preset command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--ci` preset still runs headless diagnostic flows and can vary with host snapshot content.
+- Next slice:
+  - M8: UX Phase 4 - add docs table for release-smoke modes (`default`, `--ci`, `--with-gtk-runtime`).
+
+---

@@ -68,7 +68,7 @@ scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5
 ```
 CI/minimal-host mode without GTK dev packages:
 ```bash
-scripts/release_smoke.sh --skip-gtk-build --strict-icon-threshold --icon-threshold=5
+scripts/release_smoke.sh --ci
 ```
 Optional GTK runtime launch smoke:
 ```bash

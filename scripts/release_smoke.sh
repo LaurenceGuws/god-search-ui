@@ -8,11 +8,18 @@ RUN_GTK_RUNTIME=0
 STRICT_ICON_THRESHOLD=0
 ICON_THRESHOLD="${MAX_GLYPH_FALLBACK_PCT:-100}"
 SKIP_GTK_BUILD=0
+CI_PRESET=0
 
 for arg in "$@"; do
   case "$arg" in
     --with-gtk-runtime)
       RUN_GTK_RUNTIME=1
+      ;;
+    --ci)
+      CI_PRESET=1
+      STRICT_ICON_THRESHOLD=1
+      SKIP_GTK_BUILD=1
+      ICON_THRESHOLD="${MAX_GLYPH_FALLBACK_PCT:-5}"
       ;;
     --strict-icon-threshold)
       STRICT_ICON_THRESHOLD=1
@@ -26,7 +33,7 @@ for arg in "$@"; do
       ;;
     *)
       echo "unknown argument: $arg"
-      echo "usage: scripts/release_smoke.sh [--with-gtk-runtime] [--strict-icon-threshold] [--icon-threshold=N] [--skip-gtk-build]"
+      echo "usage: scripts/release_smoke.sh [--ci] [--with-gtk-runtime] [--strict-icon-threshold] [--icon-threshold=N] [--skip-gtk-build]"
       exit 1
       ;;
   esac
@@ -87,6 +94,10 @@ EOF
   HOME="$TMP_HOME" timeout 3s zig build run -Denable_gtk=true -- --ui >/dev/null 2>&1 || true
   rm -rf "$TMP_HOME"
   trap - EXIT
+fi
+
+if [[ $CI_PRESET -eq 1 ]]; then
+  echo "[preset] ci mode enabled (--skip-gtk-build + strict icon threshold)"
 fi
 
 echo "release smoke checks passed"
