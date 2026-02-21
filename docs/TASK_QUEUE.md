@@ -80,3 +80,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add lightweight script to validate release-matrix command references.
 - [x] M8: Add patch release notes draft for `v0.1.1`.
 - [x] M8: Fill concrete highlights/fixes in `docs/release-notes-v0.1.1.md`.
+- [x] M8: Add pre-cut readiness gate script for `v0.1.1`.

@@ -1445,3 +1445,25 @@
   - M8: add quick checklist script for v0.1.1 pre-cut readiness gate.
 
 ---
+## 2026-02-21 (Cycle 68)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add pre-cut readiness gate script for `v0.1.1`
+- Changes:
+  - Added `scripts/precut_v0_1_1.sh` to run a compact pre-cut gate:
+    - release smoke
+    - helper/matrix contract checks
+    - GTK build check
+    - release-notes + triage artifact presence checks
+  - Linked gate script in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/precut_v0_1_1.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - gate validates artifact presence, not editorial quality.
+- Next slice:
+  - M8: run real `v0.1.1` cut dry-run using precut gate path.
+
+---
