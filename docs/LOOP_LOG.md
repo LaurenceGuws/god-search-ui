@@ -595,3 +595,26 @@
   - M5: Add cache invalidation strategy for provider snapshot refresh.
 
 ---
+## 2026-02-21 (Cycle 29)
+- Milestone: M5 Performance + Stability
+- Task slice: Add cache invalidation strategy for provider snapshot refresh
+- Changes:
+  - Extended `SearchService` cache model with:
+    - `cache_last_refresh_ns`
+    - `cache_ttl_ns`
+    - `invalidateSnapshot()`
+    - TTL-based `refreshSnapshotIfNeeded()`
+  - Query flow now refreshes stale snapshot automatically when needed.
+  - Added tests for invalidation-triggered recollection.
+  - Runtime now sets default cache TTL in `src/main.zig`.
+  - Updated M5 milestone notes in `docs/DEVELOPMENT_JOURNEY.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Refresh currently happens inline on query path (not backgrounded).
+- Next slice:
+  - M5: Add explicit refresh trigger command/path in UI layer.
+
+---

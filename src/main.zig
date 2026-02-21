@@ -59,6 +59,7 @@ const Runtime = struct {
         const registry = god_search_ui.providers.ProviderRegistry.init(&self.provider_list);
         self.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, self.history_path);
         self.service.max_history = 64;
+        self.service.cache_ttl_ns = 30 * std.time.ns_per_s;
         self.telemetry = god_search_ui.app.TelemetrySink.init(self.telemetry_path);
     }
 };
@@ -97,6 +98,7 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
     const registry = god_search_ui.providers.ProviderRegistry.init(&runtime.provider_list);
     runtime.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, history_path);
     runtime.service.max_history = 64;
+    runtime.service.cache_ttl_ns = 30 * std.time.ns_per_s;
     runtime.telemetry = god_search_ui.app.TelemetrySink.init(telemetry_path);
 
     return runtime;

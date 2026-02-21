@@ -74,6 +74,7 @@ Exit criteria:
 - Startup/query profiling
 - Caching layers (provider snapshots + recent history)
 - Failure injection and recovery tests
+- Snapshot invalidation strategy (TTL + manual refresh path)
 
 Exit criteria:
 - Meets latency targets
