@@ -170,6 +170,13 @@ pub const Shell = struct {
                 c.gtk_window_close(@ptrCast(ctx.window));
                 return GTRUE;
             },
+            c.GDK_KEY_l, c.GDK_KEY_L => {
+                if ((state & c.GDK_CONTROL_MASK) != 0) {
+                    _ = c.gtk_widget_grab_focus(@ptrCast(@alignCast(ctx.entry)));
+                    return GTRUE;
+                }
+                return GFALSE;
+            },
             c.GDK_KEY_r, c.GDK_KEY_R => {
                 if ((state & c.GDK_CONTROL_MASK) != 0) {
                     refreshSnapshot(ctx);
@@ -178,11 +185,27 @@ pub const Shell = struct {
                 return GFALSE;
             },
             c.GDK_KEY_Down => {
-                selectOffset(ctx, 1);
+                selectActionableDelta(ctx, 1);
                 return GTRUE;
             },
             c.GDK_KEY_Up => {
-                selectOffset(ctx, -1);
+                selectActionableDelta(ctx, -1);
+                return GTRUE;
+            },
+            c.GDK_KEY_Page_Down => {
+                selectActionableDelta(ctx, 5);
+                return GTRUE;
+            },
+            c.GDK_KEY_Page_Up => {
+                selectActionableDelta(ctx, -5);
+                return GTRUE;
+            },
+            c.GDK_KEY_Home => {
+                selectFirstActionableRow(ctx);
+                return GTRUE;
+            },
+            c.GDK_KEY_End => {
+                selectLastActionableRow(ctx);
                 return GTRUE;
             },
             c.GDK_KEY_Return, c.GDK_KEY_KP_Enter => {
@@ -266,23 +289,34 @@ pub const Shell = struct {
         setStatus(ctx, msg);
     }
 
-    fn selectOffset(ctx: *UiContext, delta: i32) void {
+    fn selectActionableDelta(ctx: *UiContext, delta: i32) void {
+        if (delta == 0) return;
+        const step: i32 = if (delta > 0) 1 else -1;
+        const target_moves: i32 = @intCast(@abs(delta));
         const selected = c.gtk_list_box_get_selected_row(ctx.list);
         if (selected == null) {
-            selectFirstActionableRow(ctx);
+            if (delta > 0) {
+                selectFirstActionableRow(ctx);
+            } else {
+                selectLastActionableRow(ctx);
+            }
             return;
         }
 
-        var idx: i32 = c.gtk_list_box_row_get_index(selected) + delta;
+        var idx: i32 = c.gtk_list_box_row_get_index(selected) + step;
         if (idx < 0) return;
 
-        while (idx >= 0) : (idx += delta) {
+        var moved: i32 = 0;
+        while (idx >= 0) : (idx += step) {
             const target = c.gtk_list_box_get_row_at_index(ctx.list, idx);
             if (target == null) return;
             if (c.g_object_get_data(@ptrCast(target), "gs-action") != null) {
-                c.gtk_list_box_select_row(ctx.list, target);
-                ensureSelectedRowVisible(ctx);
-                return;
+                moved += 1;
+                if (moved >= target_moves) {
+                    c.gtk_list_box_select_row(ctx.list, target);
+                    ensureSelectedRowVisible(ctx);
+                    return;
+                }
             }
         }
     }
@@ -301,6 +335,22 @@ pub const Shell = struct {
         c.gtk_list_box_select_row(ctx.list, null);
     }
 
+    fn selectLastActionableRow(ctx: *UiContext) void {
+        var idx: i32 = 0;
+        while (c.gtk_list_box_get_row_at_index(ctx.list, idx) != null) : (idx += 1) {}
+        idx -= 1;
+        while (idx >= 0) : (idx -= 1) {
+            const row = c.gtk_list_box_get_row_at_index(ctx.list, idx);
+            if (row == null) break;
+            if (c.g_object_get_data(@ptrCast(row), "gs-action") != null) {
+                c.gtk_list_box_select_row(ctx.list, row);
+                ensureSelectedRowVisible(ctx);
+                return;
+            }
+        }
+        c.gtk_list_box_select_row(ctx.list, null);
+    }
+
     fn ensureSelectedRowVisible(ctx: *UiContext) void {
         const row = c.gtk_list_box_get_selected_row(ctx.list);
         if (row == null) return;
@@ -308,12 +358,10 @@ pub const Shell = struct {
         const adjustment = c.gtk_scrolled_window_get_vadjustment(ctx.scroller);
         if (adjustment == null) return;
 
-        const row_index = c.gtk_list_box_row_get_index(row);
-        if (row_index < 0) return;
-
-        const row_height: f64 = 44.0;
-        const top = @as(f64, @floatFromInt(row_index)) * row_height;
-        const bottom = top + row_height;
+        var alloc: c.GtkAllocation = undefined;
+        c.gtk_widget_get_allocation(@ptrCast(row), &alloc);
+        const top = @as(f64, @floatFromInt(alloc.y));
+        const bottom = @as(f64, @floatFromInt(alloc.y + alloc.height));
         const value = c.gtk_adjustment_get_value(adjustment);
         const page_size = c.gtk_adjustment_get_page_size(adjustment);
 
@@ -343,6 +391,7 @@ pub const Shell = struct {
         const rows = ranked[0..limit];
         const empty_query = query_trimmed.len == 0;
         const route_hint = routeHintForQuery(query_trimmed);
+        const highlight_token = highlightTokenForQuery(query_trimmed);
         const has_app_glyph_fallback = hasAppGlyphFallback(rows);
         if (empty_query) {
             appendInfoRow(ctx.list, "Start typing to search, or use a route prefix.");
@@ -355,7 +404,7 @@ pub const Shell = struct {
             appendInfoRow(ctx.list, "No results");
             appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  > run  = calc  ? web");
         } else {
-            appendGroupedRows(ctx, allocator, rows);
+            appendGroupedRows(ctx, allocator, rows, highlight_token);
             if (ranked.len > limit) {
                 appendInfoRow(ctx.list, "Showing top 20 results");
             }
@@ -423,13 +472,18 @@ pub const Shell = struct {
         populateResults(ctx, query);
     }
 
-    fn appendGroupedRows(ctx: *UiContext, allocator: std.mem.Allocator, rows: []const @import("../search/mod.zig").ScoredCandidate) void {
+    fn appendGroupedRows(
+        ctx: *UiContext,
+        allocator: std.mem.Allocator,
+        rows: []const @import("../search/mod.zig").ScoredCandidate,
+        highlight_token: []const u8,
+    ) void {
         var rendered_any = false;
-        rendered_any = appendGroup(ctx, allocator, rows, .app, "Apps", rendered_any) or rendered_any;
-        rendered_any = appendGroup(ctx, allocator, rows, .window, "Windows", rendered_any) or rendered_any;
-        rendered_any = appendGroup(ctx, allocator, rows, .dir, "Directories", rendered_any) or rendered_any;
-        rendered_any = appendGroup(ctx, allocator, rows, .action, "Actions", rendered_any) or rendered_any;
-        _ = appendGroup(ctx, allocator, rows, .hint, "Hints", rendered_any);
+        rendered_any = appendGroup(ctx, allocator, rows, .app, "Apps", rendered_any, highlight_token) or rendered_any;
+        rendered_any = appendGroup(ctx, allocator, rows, .window, "Windows", rendered_any, highlight_token) or rendered_any;
+        rendered_any = appendGroup(ctx, allocator, rows, .dir, "Directories", rendered_any, highlight_token) or rendered_any;
+        rendered_any = appendGroup(ctx, allocator, rows, .action, "Actions", rendered_any, highlight_token) or rendered_any;
+        _ = appendGroup(ctx, allocator, rows, .hint, "Hints", rendered_any, highlight_token);
     }
 
     fn appendGroup(
@@ -439,6 +493,7 @@ pub const Shell = struct {
         kind: CandidateKind,
         title: []const u8,
         add_separator: bool,
+        highlight_token: []const u8,
     ) bool {
         var match_count: usize = 0;
         for (rows) |row| {
@@ -454,7 +509,7 @@ pub const Shell = struct {
         appendHeaderRow(ctx.list, header);
         for (rows) |row| {
             if (row.candidate.kind != kind) continue;
-            appendCandidateRow(ctx.list, allocator, row);
+            appendCandidateRow(ctx.list, allocator, row, highlight_token);
         }
         return true;
     }
@@ -492,21 +547,21 @@ pub const Shell = struct {
         c.gtk_list_box_append(@ptrCast(list), row);
     }
 
-    fn appendCandidateRow(list: *c.GtkListBox, allocator: std.mem.Allocator, row: @import("../search/mod.zig").ScoredCandidate) void {
-        const title_escaped = c.g_markup_escape_text(row.candidate.title.ptr, @intCast(row.candidate.title.len));
-        if (title_escaped == null) return;
-        defer c.g_free(title_escaped);
-        const subtitle_escaped = c.g_markup_escape_text(row.candidate.subtitle.ptr, @intCast(row.candidate.subtitle.len));
-        if (subtitle_escaped == null) return;
-        defer c.g_free(subtitle_escaped);
-
+    fn appendCandidateRow(
+        list: *c.GtkListBox,
+        allocator: std.mem.Allocator,
+        row: @import("../search/mod.zig").ScoredCandidate,
+        highlight_token: []const u8,
+    ) void {
         const chip_markup = kindChipMarkup(row.candidate.kind);
+        const title_markup = highlightedMarkup(allocator, row.candidate.title, highlight_token) catch return;
+        defer allocator.free(title_markup);
         const primary_markup = std.fmt.allocPrint(
             allocator,
-            "{s}  <b>{s}</b>",
+            "{s}  {s}",
             .{
                 chip_markup,
-                std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))),
+                title_markup,
             },
         ) catch return;
         defer allocator.free(primary_markup);
@@ -523,9 +578,12 @@ pub const Shell = struct {
         c.gtk_box_append(@ptrCast(primary_row), icon_widget);
         c.gtk_box_append(@ptrCast(primary_row), primary_label);
 
-        const subtitle_text_z = allocator.dupeZ(u8, std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped)))) catch return;
-        defer allocator.free(subtitle_text_z);
-        const secondary_label = c.gtk_label_new(subtitle_text_z.ptr);
+        const subtitle_markup = highlightedMarkup(allocator, row.candidate.subtitle, highlight_token) catch return;
+        defer allocator.free(subtitle_markup);
+        const subtitle_markup_z = allocator.dupeZ(u8, subtitle_markup) catch return;
+        defer allocator.free(subtitle_markup_z);
+        const secondary_label = c.gtk_label_new(null);
+        c.gtk_label_set_markup(@ptrCast(secondary_label), subtitle_markup_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
         c.gtk_label_set_ellipsize(@ptrCast(secondary_label), c.PANGO_ELLIPSIZE_END);
         c.gtk_label_set_single_line_mode(@ptrCast(secondary_label), GTRUE);
@@ -558,6 +616,16 @@ pub const Shell = struct {
         c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
         c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
         c.g_object_set_data_full(@ptrCast(list_row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
+        const title_tip = allocator.dupeZ(u8, row.candidate.title) catch null;
+        if (title_tip) |tip| {
+            defer allocator.free(tip);
+            c.gtk_widget_set_tooltip_text(primary_label, tip.ptr);
+        }
+        const subtitle_tip = allocator.dupeZ(u8, row.candidate.subtitle) catch null;
+        if (subtitle_tip) |tip| {
+            defer allocator.free(tip);
+            c.gtk_widget_set_tooltip_text(secondary_label, tip.ptr);
+        }
         c.gtk_list_box_append(@ptrCast(list), list_row);
     }
 
@@ -786,6 +854,52 @@ pub const Shell = struct {
         };
     }
 
+    fn highlightTokenForQuery(query_trimmed: []const u8) []const u8 {
+        var token = std.mem.trim(u8, query_trimmed, " \t\r\n");
+        if (token.len == 0) return "";
+        if (token.len > 1) {
+            token = switch (token[0]) {
+                '@', '#', '~', '>', '=', '?' => std.mem.trim(u8, token[1..], " \t\r\n"),
+                else => token,
+            };
+        }
+        return token;
+    }
+
+    fn highlightedMarkup(allocator: std.mem.Allocator, text: []const u8, token: []const u8) ![]u8 {
+        if (text.len == 0) return allocator.dupe(u8, "");
+
+        const trimmed_token = std.mem.trim(u8, token, " \t\r\n");
+        if (trimmed_token.len == 0) return escapeMarkupAlloc(allocator, text);
+
+        const idx = firstCaseInsensitiveIndex(text, trimmed_token) orelse return escapeMarkupAlloc(allocator, text);
+        const head = try escapeMarkupAlloc(allocator, text[0..idx]);
+        defer allocator.free(head);
+        const hit = try escapeMarkupAlloc(allocator, text[idx .. idx + trimmed_token.len]);
+        defer allocator.free(hit);
+        const tail = try escapeMarkupAlloc(allocator, text[idx + trimmed_token.len ..]);
+        defer allocator.free(tail);
+
+        return std.fmt.allocPrint(allocator, "{s}<b>{s}</b>{s}", .{ head, hit, tail });
+    }
+
+    fn escapeMarkupAlloc(allocator: std.mem.Allocator, text: []const u8) ![]u8 {
+        const escaped_ptr = c.g_markup_escape_text(text.ptr, @intCast(text.len));
+        if (escaped_ptr == null) return error.OutOfMemory;
+        defer c.g_free(escaped_ptr);
+        const escaped = std.mem.span(@as([*:0]const u8, @ptrCast(escaped_ptr)));
+        return allocator.dupe(u8, escaped);
+    }
+
+    fn firstCaseInsensitiveIndex(haystack: []const u8, needle: []const u8) ?usize {
+        if (needle.len == 0 or haystack.len < needle.len) return null;
+        var idx: usize = 0;
+        while (idx + needle.len <= haystack.len) : (idx += 1) {
+            if (std.ascii.eqlIgnoreCase(haystack[idx .. idx + needle.len], needle)) return idx;
+        }
+        return null;
+    }
+
     fn kindStatusLabel(kind: []const u8) []const u8 {
         if (std.mem.eql(u8, kind, "app")) return "app";
         if (std.mem.eql(u8, kind, "window")) return "window";
@@ -826,9 +940,9 @@ pub const Shell = struct {
     fn statusPrefix(tone: StatusTone) []const u8 {
         return switch (tone) {
             .neutral => "",
-            .info => "i",
-            .success => "ok",
-            .failure => "!",
+            .info => "[i]",
+            .success => "[ok]",
+            .failure => "[!]",
         };
     }
 

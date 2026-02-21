@@ -183,3 +183,8 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add release-contract command block to rollback runbook preflight.
 - [x] M8: UX Phase 4 - enforce rollback runbook quick-command presence in release-validate checker.
 - [x] M8: UX Phase 4 - add release-validate contract check summary line to release-contracts docs.
+- [x] M8: UX Phase 4 - add local default `--docs-only` recommendation note to release-contracts docs.
+- [x] M8: UX Phase 5 - add GTK power-user keyboard navigation (`Ctrl+L`, `Home/End`, `PageUp/PageDown`).
+- [x] M8: UX Phase 5 - add query-term highlighting in GTK candidate title/subtitle rows.
+- [x] M8: UX Phase 5 - add GTK tooltips for full candidate title/subtitle text.
+- [x] M8: UX Phase 5 - use real GTK row allocation for selected-row scroll visibility.

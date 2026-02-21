@@ -3718,3 +3718,38 @@
   - M8: UX Phase 4 - add release contracts doc note for `check_release_contracts.sh --docs-only` default local recommendation.
 
 ---
+## 2026-02-21 (Cycle 170)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4/5 bundle - local docs-only default note + GTK navigation/readability polish
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added local default recommendation to run `scripts/check_release_contracts.sh --docs-only` first
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates the local default recommendation note exists
+    - fixed backtick command-substitution bug in fixed-string assertion by using single-quoted pattern
+  - Updated `src/ui/gtk_shell.zig`:
+    - expanded keyboard navigation:
+      - `Ctrl+L` focuses search input
+      - `PageUp/PageDown` moves across actionable rows faster
+      - `Home/End` jumps to first/last actionable row
+    - improved actionable selection movement logic for multi-step navigation
+    - switched selected-row scroll visibility to use real row allocations instead of fixed row height
+    - added query-term highlighting (case-insensitive first match) in candidate title/subtitle markup
+    - added tooltips on primary/secondary labels for full untruncated text
+    - adjusted status prefixes to bracketed forms for clearer status tone scanning
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+  - `scripts/check_release_docs_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - match highlighting currently emphasizes only the first substring match per field to keep row rendering lightweight.
+  - keyboard paging moves by actionable-row count rather than visual page height.
+- Next slice:
+  - M8: UX Phase 5 - add richer row micro-layout polish pass (chip/icon/title baseline alignment + subtitle density tuning).
+
+---
