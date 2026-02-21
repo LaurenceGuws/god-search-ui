@@ -1285,3 +1285,22 @@
   - M8: add first post-release issue triage template.
 
 ---
+## 2026-02-21 (Cycle 60)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add post-release issue triage template for v0.1.1 planning
+- Changes:
+  - Added `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`.
+  - Linked template from:
+    - `docs/V0_1_1_PATCH_PLAN.md`
+    - `README.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - template is intentionally minimal and may be extended as issue volume grows.
+- Next slice:
+  - M8: queue first concrete triage item from real-world usage.
+
+---

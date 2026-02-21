@@ -35,3 +35,7 @@ Run in this order for each `v0.1.1` patch slice:
 - New provider classes.
 - Large ranking-model changes.
 - UI redesign.
+
+## Triage Intake
+Use:
+- `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`

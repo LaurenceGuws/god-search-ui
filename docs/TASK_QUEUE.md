@@ -72,3 +72,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add post-release patch checklist execution order to runbook docs.
 - [x] M8: Add GTK explicit empty/error state rows in result list.
 - [x] M8: Add GTK placeholder guidance for empty-query state.
+- [x] M8: Add post-release issue triage template for v0.1.1 planning.
