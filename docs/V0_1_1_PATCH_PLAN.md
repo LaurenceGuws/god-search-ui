@@ -21,6 +21,16 @@ Post-`v0.1.0` patch scope focused on low-risk reliability and UX polish.
   - `zig build run -Denable_gtk=true -- --ui`
 - Patch notes drafted in `docs/release-notes-v0.1.1.md`.
 
+## Execution Order
+Run in this order for each `v0.1.1` patch slice:
+1. `scripts/dev.sh check`
+2. `scripts/check_release_helpers.sh`
+3. `scripts/release_smoke.sh`
+4. Manual GTK run:
+   - `zig build run -Denable_gtk=true -- --ui`
+5. Update patch notes draft:
+   - `scripts/gen_release_notes.sh v0.1.1 docs/release-notes-v0.1.1.md`
+
 ## Out of Scope
 - New provider classes.
 - Large ranking-model changes.

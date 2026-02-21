@@ -1227,3 +1227,22 @@
   - M8: add runbook note for post-release patch checklist execution order.
 
 ---
+## 2026-02-21 (Cycle 57)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add post-release patch checklist execution order to runbook docs
+- Changes:
+  - Added ordered patch execution checklist in:
+    - `docs/V0_1_1_PATCH_PLAN.md`
+  - Linked patch-plan execution order from:
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checklist includes manual GTK step that depends on local display/session.
+- Next slice:
+  - M8: queue first GTK UX patch candidate from `v0.1.1` plan.
+
+---

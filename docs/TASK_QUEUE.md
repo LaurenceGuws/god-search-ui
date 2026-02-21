@@ -69,3 +69,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add post-release patch plan for `v0.1.1` (top bugs/polish/risk fixes).
 - [x] M8: Fix publish-helper help text to reflect `--remote` behavior.
 - [x] M8: Add guard script for release-helper CLI docs/output consistency.
+- [x] M8: Add post-release patch checklist execution order to runbook docs.

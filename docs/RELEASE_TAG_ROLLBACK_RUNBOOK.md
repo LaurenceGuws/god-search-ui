@@ -12,6 +12,9 @@ Notes:
 - Release notes draft file is generated only with `--apply`.
 - Use `--commit-notes` if tag should point to the commit that contains release notes.
 
+For post-release patch cadence (`v0.1.1` and later), follow execution order in:
+- `docs/V0_1_1_PATCH_PLAN.md`
+
 ## Inputs
 - `VERSION` (example: `v0.1.0`)
 - `PREV_REF` previous known-good tag/commit
