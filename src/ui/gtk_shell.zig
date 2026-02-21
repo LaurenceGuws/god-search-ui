@@ -497,13 +497,11 @@ pub const Shell = struct {
         if (subtitle_escaped == null) return;
         defer c.g_free(subtitle_escaped);
 
-        const icon = kindIcon(row.candidate.kind);
         const chip_markup = kindChipMarkup(row.candidate.kind);
         const primary_markup = std.fmt.allocPrint(
             allocator,
-            "{s}  {s}  <b>{s}</b>",
+            "{s}  <b>{s}</b>",
             .{
-                icon,
                 chip_markup,
                 std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))),
             },
@@ -517,6 +515,11 @@ pub const Shell = struct {
         c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
         c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
 
+        const icon_widget = candidateIconWidget(allocator, row.candidate.kind, row.candidate.action);
+        const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_box_append(@ptrCast(primary_row), icon_widget);
+        c.gtk_box_append(@ptrCast(primary_row), primary_label);
+
         const subtitle_text_z = allocator.dupeZ(u8, std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped)))) catch return;
         defer allocator.free(subtitle_text_z);
         const secondary_label = c.gtk_label_new(subtitle_text_z.ptr);
@@ -529,7 +532,7 @@ pub const Shell = struct {
         const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
         c.gtk_widget_set_margin_top(content, 2);
         c.gtk_widget_set_margin_bottom(content, 2);
-        c.gtk_box_append(@ptrCast(content), primary_label);
+        c.gtk_box_append(@ptrCast(content), primary_row);
         c.gtk_box_append(@ptrCast(content), secondary_label);
 
         const list_row = c.gtk_list_box_row_new();
@@ -695,11 +698,12 @@ pub const Shell = struct {
     }
 
     fn setStatus(ctx: *UiContext, message: []const u8) void {
-        setStatusWithTone(ctx, message, .neutral);
+        setStatusWithTone(ctx, message, launchStatusTone(message));
     }
 
     const StatusTone = enum {
         neutral,
+        info,
         success,
         failure,
     };
@@ -710,16 +714,27 @@ pub const Shell = struct {
         if (ctx.last_status_hash == status_hash and ctx.last_status_tone == tone_code) return;
 
         const status_widget: *c.GtkWidget = @ptrCast(@alignCast(ctx.status));
+        c.gtk_widget_remove_css_class(status_widget, "gs-status-info");
         c.gtk_widget_remove_css_class(status_widget, "gs-status-success");
         c.gtk_widget_remove_css_class(status_widget, "gs-status-failure");
         switch (tone) {
+            .info => c.gtk_widget_add_css_class(status_widget, "gs-status-info"),
             .success => c.gtk_widget_add_css_class(status_widget, "gs-status-success"),
             .failure => c.gtk_widget_add_css_class(status_widget, "gs-status-failure"),
             .neutral => {},
         }
-        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
-        defer std.heap.page_allocator.free(msg_z);
-        c.gtk_label_set_text(ctx.status, msg_z.ptr);
+        const prefix = statusPrefix(tone);
+        if (prefix.len > 0) {
+            const composed = std.fmt.allocPrint(std.heap.page_allocator, "{s} {s}", .{ prefix, message }) catch return;
+            defer std.heap.page_allocator.free(composed);
+            const msg_z = std.heap.page_allocator.dupeZ(u8, composed) catch return;
+            defer std.heap.page_allocator.free(msg_z);
+            c.gtk_label_set_text(ctx.status, msg_z.ptr);
+        } else {
+            const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
+            defer std.heap.page_allocator.free(msg_z);
+            c.gtk_label_set_text(ctx.status, msg_z.ptr);
+        }
         ctx.last_status_hash = status_hash;
         ctx.last_status_tone = tone_code;
     }
@@ -727,6 +742,7 @@ pub const Shell = struct {
     fn installCss(window: *c.GtkWidget) void {
         const css =
             ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
+            ".gs-status-info { color: #80a6d8; }\n" ++
             ".gs-status-success { color: #87c97f; }\n" ++
             ".gs-status-failure { color: #e58a8a; }\n" ++
             ".gs-header { color: #8b93a8; }\n" ++
@@ -736,6 +752,7 @@ pub const Shell = struct {
             ".gs-results > row { border-radius: 8px; padding: 2px 6px; }\n" ++
             ".gs-results > row:selected { background: rgba(140, 170, 235, 0.22); }\n" ++
             ".gs-results > row:hover { background: rgba(140, 170, 235, 0.12); }\n" ++
+            ".gs-kind-icon { color: #a9b1c7; }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n";
 
@@ -784,6 +801,8 @@ pub const Shell = struct {
     }
 
     fn launchStatusTone(message: []const u8) StatusTone {
+        if (std.mem.indexOf(u8, message, "Searching") != null) return .info;
+        if (std.mem.indexOf(u8, message, "Refresh") != null) return .info;
         if (std.mem.indexOf(u8, message, "failed") != null) return .failure;
         if (std.mem.indexOf(u8, message, "launched") != null) return .success;
         if (std.mem.indexOf(u8, message, "opened") != null) return .success;
@@ -794,9 +813,54 @@ pub const Shell = struct {
     fn statusToneCode(tone: StatusTone) u8 {
         return switch (tone) {
             .neutral => 0,
-            .success => 1,
-            .failure => 2,
+            .info => 1,
+            .success => 2,
+            .failure => 3,
         };
+    }
+
+    fn statusPrefix(tone: StatusTone) []const u8 {
+        return switch (tone) {
+            .neutral => "",
+            .info => "i",
+            .success => "ok",
+            .failure => "!",
+        };
+    }
+
+    fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8) *c.GtkWidget {
+        if (kind == .app) {
+            if (appIconNameFromAction(allocator, action)) |icon_name_z| {
+                defer allocator.free(icon_name_z);
+                const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
+                c.gtk_image_set_pixel_size(@ptrCast(image), 16);
+                c.gtk_widget_add_css_class(image, "gs-kind-icon");
+                return @ptrCast(image);
+            }
+        }
+
+        const fallback_icon_z = allocator.dupeZ(u8, kindIcon(kind)) catch return c.gtk_label_new(null);
+        defer allocator.free(fallback_icon_z);
+        const icon_label = c.gtk_label_new(fallback_icon_z.ptr);
+        c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
+        return @ptrCast(icon_label);
+    }
+
+    fn appIconNameFromAction(allocator: std.mem.Allocator, action: []const u8) ?[:0]u8 {
+        const trimmed = std.mem.trim(u8, action, " \t\r\n");
+        if (trimmed.len == 0) return null;
+
+        const split_idx = std.mem.indexOfScalar(u8, trimmed, ' ') orelse trimmed.len;
+        var token = trimmed[0..split_idx];
+        token = std.mem.trim(u8, token, "\"'");
+        if (token.len == 0) return null;
+
+        if (std.mem.lastIndexOfScalar(u8, token, '/')) |slash_idx| {
+            if (slash_idx + 1 < token.len) token = token[slash_idx + 1 ..];
+        }
+        if (token.len == 0) return null;
+
+        return allocator.dupeZ(u8, token) catch null;
     }
 
     fn runShellCommand(command: []const u8) !void {

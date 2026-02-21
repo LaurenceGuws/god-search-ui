@@ -2496,3 +2496,25 @@
   - M8: UX Phase 3 - add lightweight status icon glyph prefix for success/failure states.
 
 ---
+## 2026-02-21 (Cycle 120)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - status icon prefixes/tone routing + app icon support fallback
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added status prefix indicators and info/success/failure tone routing for status messages
+    - upgraded status styling with an explicit info tone class
+    - changed candidate primary rows to use icon widget + text layout
+    - added app icon support via icon-name lookup from app action command token with glyph fallback
+    - added icon styling class for consistent scan contrast
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - app icon lookup currently derives icon name from command token; provider-side icon metadata would be more accurate.
+- Next slice:
+  - M8: UX Phase 4 - enrich apps provider cache format to carry desktop icon metadata explicitly.
+
+---
