@@ -1342,3 +1342,26 @@
   - M8: add GTK runtime smoke command to release smoke script (optional mode).
 
 ---
+## 2026-02-21 (Cycle 63)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add optional GTK runtime launch smoke mode to release smoke script
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - added optional `--with-gtk-runtime` mode
+    - runs short GTK launch smoke via timeout when enabled
+  - Updated docs:
+    - `README.md`
+    - `docs/V0_1_1_PATCH_PLAN.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --with-gtk-runtime`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - optional runtime smoke is best-effort and may no-op in headless/no-display sessions.
+- Next slice:
+  - M8: add quick script-usage matrix for release helper docs.
+
+---

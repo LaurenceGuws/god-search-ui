@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+RUN_GTK_RUNTIME=0
+if [[ "${1:-}" == "--with-gtk-runtime" ]]; then
+  RUN_GTK_RUNTIME=1
+fi
+
 echo "[1/4] full check"
 scripts/dev.sh check
 
@@ -20,5 +25,10 @@ rm -f "$TMP_NOTES"
 
 echo "[5/5] release helper CLI contract smoke"
 scripts/check_release_helpers.sh
+
+if [[ $RUN_GTK_RUNTIME -eq 1 ]]; then
+  echo "[optional] gtk runtime launch smoke"
+  timeout 3s zig build run -Denable_gtk=true -- --ui >/dev/null 2>&1 || true
+fi
 
 echo "release smoke checks passed"

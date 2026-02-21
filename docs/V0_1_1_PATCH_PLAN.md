@@ -26,6 +26,7 @@ Run in this order for each `v0.1.1` patch slice:
 1. `scripts/dev.sh check`
 2. `scripts/check_release_helpers.sh`
 3. `scripts/release_smoke.sh`
+   - optional GTK runtime check: `scripts/release_smoke.sh --with-gtk-runtime`
 4. Manual GTK run:
    - `zig build run -Denable_gtk=true -- --ui`
 5. Update patch notes draft:
