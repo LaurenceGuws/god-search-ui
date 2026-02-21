@@ -60,3 +60,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M7: Make release-tag dry-run mode side-effect free (no generated files).
 - [x] M7: Execute local RC tag cut (`v0.1.0-rc1`) with release preflight.
 - [x] M7: Add `--commit-notes` option so tags can include release-notes commit.
+- [x] M7: Execute local RC tag cut (`v0.1.0-rc2`) with notes included in tagged commit.

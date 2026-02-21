@@ -1012,3 +1012,26 @@
   - M7: decide whether to re-cut RC tag to include notes commit.
 
 ---
+## 2026-02-21 (Cycle 47)
+- Milestone: M7 Release Hardening
+- Task slice: Execute local RC tag cut (`v0.1.0-rc2`) with notes in tagged commit
+- Changes:
+  - Ran:
+    - `scripts/cut_release_tag.sh --version v0.1.0-rc2 --apply --commit-notes`
+  - Preflight passed (`scripts/release_smoke.sh`).
+  - Generated and committed release notes:
+    - `docs/release-notes-v0.1.0-rc2.md`
+  - Created local annotated tag `v0.1.0-rc2` at commit `0e9a485`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git show v0.1.0-rc2 --no-patch --oneline`
+  - `git status --short`
+- Commit(s):
+  - script-created commit: `0e9a485`
+  - pending docs/log commit
+- Risks/notes:
+  - Tag not pushed; remote publish remains explicit.
+- Next slice:
+  - M7: optional publish flow (`--push`) after maintainer approval.
+
+---
