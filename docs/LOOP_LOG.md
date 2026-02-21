@@ -1617,3 +1617,21 @@
   - M8: queue first `v0.1.2` candidate after triage updates.
 
 ---
+## 2026-02-21 (Cycle 76)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Queue first `v0.1.2` candidate from triage findings
+- Changes:
+  - Added new triage entry in `docs/TRIAGE_LOG.md`:
+    - curated release notes overwrite risk during apply cut
+  - Added `v0.1.2` candidate seed in `docs/V0_1_1_PATCH_PLAN.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - candidate is process/tooling focused rather than runtime UX.
+- Next slice:
+  - M8: implement first `v0.1.2` candidate change (default-safe notes mode).
+
+---

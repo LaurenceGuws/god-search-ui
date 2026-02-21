@@ -88,3 +88,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add release-notes curation checklist for patch cuts.
 - [x] M8: Add lint script to detect placeholder text in release notes.
 - [x] M8: Add post-`v0.1.1` maintenance checklist entry in docs.
+- [x] M8: Queue first `v0.1.2` candidate from triage findings.

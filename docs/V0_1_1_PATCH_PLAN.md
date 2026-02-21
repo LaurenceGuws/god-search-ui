@@ -50,3 +50,8 @@ Use:
 2. Run `scripts/release_smoke.sh` on latest `main`.
 3. Append any new findings to `docs/TRIAGE_LOG.md`.
 4. If patch follow-up is needed, queue next item in `docs/TASK_QUEUE.md` under `Ready`.
+
+## v0.1.2 Candidate Seed
+- Prioritize triage item:
+  - "Curated notes overwritten during apply cut without reuse flag"
+  - Source: `docs/TRIAGE_LOG.md`
