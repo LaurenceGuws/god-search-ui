@@ -1561,3 +1561,22 @@
   - M8: add release-notes curation checklist to avoid template-only patch notes.
 
 ---
+## 2026-02-21 (Cycle 73)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add release-notes curation checklist for patch cuts
+- Changes:
+  - Added `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`.
+  - Linked checklist in:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checklist enforces process discipline but does not auto-edit release notes.
+- Next slice:
+  - M8: add quick lint script to detect placeholder text in release notes.
+
+---

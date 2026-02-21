@@ -85,3 +85,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Execute `v0.1.1` apply cut and publish to `origin`.
 - [x] M8: Add `--reuse-notes` option to `cut_release_tag.sh` to preserve curated notes.
 - [x] M8: Add `--reuse-notes` workflow note in `v0.1.1` release notes.
+- [x] M8: Add release-notes curation checklist for patch cuts.

@@ -109,6 +109,7 @@ scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
 - GTK rollout checklist: `docs/GTK_ROLLOUT_CHECKLIST.md`
 - Troubleshooting runbook: `docs/TROUBLESHOOTING_RUNBOOK.md`
 - Release notes template: `docs/RELEASE_NOTES_TEMPLATE.md`
+- Release notes curation checklist: `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`
 - Release tagging/rollback runbook: `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
 - Release script matrix: `docs/RELEASE_SCRIPT_MATRIX.md`
 - v0.1.1 patch plan: `docs/V0_1_1_PATCH_PLAN.md`

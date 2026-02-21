@@ -12,6 +12,8 @@ Notes:
 - Release notes draft file is generated only with `--apply`.
 - Use `--commit-notes` if tag should point to the commit that contains release notes.
 - Use `--reuse-notes` with `--apply` to avoid overwriting manually edited release notes.
+- Curate notes using checklist before final apply cut:
+  - `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`
 
 For post-release patch cadence (`v0.1.1` and later), follow execution order in:
 - `docs/V0_1_1_PATCH_PLAN.md`
