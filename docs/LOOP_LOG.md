@@ -2013,3 +2013,22 @@
   - M8: UX Phase 2 - add keyboard shortcut hint row when query is empty.
 
 ---
+## 2026-02-21 (Cycle 95)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - add keyboard shortcut hint row for empty query state
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - when query is empty, prepend an informational shortcut row:
+      - Enter launch, Ctrl+R refresh, Esc close
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - adds one extra non-actionable row at top for empty-query state by design.
+- Next slice:
+  - M8: UX Phase 2 - keep launch feedback rows bounded (avoid unbounded accumulation).
+
+---

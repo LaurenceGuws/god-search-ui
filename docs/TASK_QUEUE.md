@@ -106,3 +106,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 2 - move GTK row/status styling to a minimal CSS provider.
 - [x] M8: UX Phase 2 - replace single-line candidate markup with structured row layout.
 - [x] M8: UX Phase 2 - tighten candidate row spacing and subtitle truncation.
+- [x] M8: UX Phase 2 - add keyboard shortcut hint row for empty query state.

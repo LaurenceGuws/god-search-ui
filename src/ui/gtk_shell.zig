@@ -234,6 +234,9 @@ pub const Shell = struct {
 
         const limit = @min(ranked.len, 20);
         const rows = ranked[0..limit];
+        if (query_trimmed.len == 0) {
+            appendInfoRow(ctx.list, "Shortcuts: Enter launch | Ctrl+R refresh | Esc close");
+        }
         if (rows.len == 0) {
             appendInfoRow(ctx.list, "No results");
         } else {
