@@ -681,3 +681,27 @@
   - M5: Add background refresh strategy to avoid synchronous cache refresh on query path.
 
 ---
+## 2026-02-21 (Cycle 33)
+- Milestone: M5 Performance + Stability
+- Task slice: Add background refresh strategy to avoid synchronous cache refresh on query path
+- Changes:
+  - Refactored cache-refresh behavior in `SearchService` to cooperative scheduling:
+    - query path serves cached snapshot immediately
+    - stale snapshot sets `refresh_requested`
+    - refresh runs through `drainScheduledRefresh()` outside query critical path
+  - Added state flags:
+    - `last_query_used_stale_cache`
+    - `last_query_refreshed_cache`
+  - Updated headless and GTK UI paths to drain scheduled refresh after rendering.
+  - Updated tests for scheduled refresh behavior.
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf 'kitty\\n:q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Current strategy is cooperative (single-threaded), not detached threaded worker.
+- Next slice:
+  - M6: Add operator troubleshooting runbook for common failures.
+
+---

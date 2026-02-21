@@ -26,10 +26,14 @@ pub const Shell = struct {
             defer allocator.free(ranked);
             const ms = @as(f64, @floatFromInt(service.last_query_elapsed_ns)) / 1_000_000.0;
             try stdout.print("  (query time: {d:.2} ms)\n", .{ms});
+            if (service.last_query_used_stale_cache) {
+                try stdout.print("  (using stale snapshot; refresh scheduled)\n", .{});
+            }
             if (service.last_query_refreshed_cache) {
                 try stdout.print("  (snapshot auto-refreshed)\n", .{});
             }
             try printTopResults(stdout, ranked, 5);
+            _ = try service.drainScheduledRefresh(allocator);
 
             if (ranked.len > 0) {
                 try service.recordSelection(allocator, ranked[0].candidate.action);

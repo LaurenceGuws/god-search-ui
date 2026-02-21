@@ -177,12 +177,15 @@ pub const Shell = struct {
         const limit = @min(ranked.len, 20);
         const rows = ranked[0..limit];
         appendGroupedRows(ctx, allocator, rows);
-        if (ctx.service.last_query_refreshed_cache) {
+        if (ctx.service.last_query_used_stale_cache) {
+            c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (refresh scheduled)");
+        } else if (ctx.service.last_query_refreshed_cache) {
             c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (snapshot refreshed)");
         } else if (ctx.pending_power_confirm == GFALSE) {
             c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search...");
         }
 
+        _ = ctx.service.drainScheduledRefresh(allocator) catch false;
         const first = c.gtk_list_box_get_row_at_index(ctx.list, 0);
         if (first != null) c.gtk_list_box_select_row(ctx.list, first);
     }

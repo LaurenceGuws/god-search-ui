@@ -10,9 +10,11 @@ pub const SearchService = struct {
     cache_ready: bool = false,
     cache_last_refresh_ns: i128 = 0,
     cache_ttl_ns: u64 = 30 * std.time.ns_per_s,
+    refresh_requested: bool = false,
     max_history: usize = 32,
     last_query_elapsed_ns: u64 = 0,
     last_query_refreshed_cache: bool = false,
+    last_query_used_stale_cache: bool = false,
 
     pub fn init(registry: providers.ProviderRegistry) SearchService {
         return .{ .registry = registry };
@@ -33,7 +35,9 @@ pub const SearchService = struct {
 
     pub fn searchQuery(self: *SearchService, allocator: std.mem.Allocator, raw_query: []const u8) ![]search.ScoredCandidate {
         const sw = @import("metrics.zig").Stopwatch.start();
-        self.last_query_refreshed_cache = try self.refreshSnapshotIfNeeded(allocator);
+        self.last_query_refreshed_cache = false;
+        self.last_query_used_stale_cache = false;
+        try self.scheduleRefreshIfNeeded();
         var query_candidates = search.CandidateList.empty;
         defer query_candidates.deinit(allocator);
 
@@ -57,28 +61,37 @@ pub const SearchService = struct {
         try self.registry.collectAll(allocator, &self.cached_candidates);
         self.cache_ready = true;
         self.cache_last_refresh_ns = std.time.nanoTimestamp();
+        self.refresh_requested = false;
     }
 
     pub fn invalidateSnapshot(self: *SearchService) void {
         self.cache_ready = false;
         self.cache_last_refresh_ns = 0;
+        self.refresh_requested = false;
     }
 
-    fn refreshSnapshotIfNeeded(self: *SearchService, allocator: std.mem.Allocator) !bool {
-        if (!self.cache_ready) return false;
+    pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {
+        if (!self.refresh_requested) return false;
+        try self.prewarmProviders(allocator);
+        self.last_query_refreshed_cache = true;
+        return true;
+    }
+
+    fn scheduleRefreshIfNeeded(self: *SearchService) !void {
+        if (!self.cache_ready) return;
         if (self.cache_ttl_ns == 0) {
-            try self.prewarmProviders(allocator);
-            return true;
+            self.refresh_requested = true;
+            self.last_query_used_stale_cache = true;
+            return;
         }
 
         const now = std.time.nanoTimestamp();
         const age = now - self.cache_last_refresh_ns;
-        if (age <= 0) return false;
+        if (age <= 0) return;
         if (@as(u64, @intCast(age)) >= self.cache_ttl_ns) {
-            try self.prewarmProviders(allocator);
-            return true;
+            self.refresh_requested = true;
+            self.last_query_used_stale_cache = true;
         }
-        return false;
     }
 
     pub fn recordSelection(self: *SearchService, allocator: std.mem.Allocator, action: []const u8) !void {
@@ -306,7 +319,12 @@ test "stale refresh marks last_query_refreshed_cache" {
     const ranked = try service.searchQuery(std.testing.allocator, "");
     defer std.testing.allocator.free(ranked);
 
-    try std.testing.expect(service.last_query_refreshed_cache);
+    try std.testing.expect(service.last_query_used_stale_cache);
+    try std.testing.expect(!service.last_query_refreshed_cache);
+    try std.testing.expect(service.refresh_requested);
+    const refreshed = try service.drainScheduledRefresh(std.testing.allocator);
+    try std.testing.expect(refreshed);
+    try std.testing.expect(!service.refresh_requested);
     try std.testing.expectEqual(@as(usize, 2), Fake.collect_calls);
 }
 
