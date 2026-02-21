@@ -60,6 +60,7 @@ const Runtime = struct {
         self.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, self.history_path);
         self.service.max_history = 64;
         self.service.cache_ttl_ns = 30 * std.time.ns_per_s;
+        self.service.enable_async_refresh = useAsyncRefresh();
         self.telemetry = god_search_ui.app.TelemetrySink.init(self.telemetry_path);
     }
 };
@@ -99,7 +100,19 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
     runtime.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, history_path);
     runtime.service.max_history = 64;
     runtime.service.cache_ttl_ns = 30 * std.time.ns_per_s;
+    runtime.service.enable_async_refresh = useAsyncRefresh();
     runtime.telemetry = god_search_ui.app.TelemetrySink.init(telemetry_path);
 
     return runtime;
+}
+
+fn useAsyncRefresh() bool {
+    const value = std.process.getEnvVarOwned(std.heap.page_allocator, "GOD_SEARCH_ASYNC_REFRESH") catch return false;
+    defer std.heap.page_allocator.free(value);
+    const trimmed = std.mem.trim(u8, value, " \t\r\n");
+    if (trimmed.len == 0) return false;
+    if (std.mem.eql(u8, trimmed, "1")) return true;
+    if (std.ascii.eqlIgnoreCase(trimmed, "true")) return true;
+    if (std.ascii.eqlIgnoreCase(trimmed, "yes")) return true;
+    return false;
 }

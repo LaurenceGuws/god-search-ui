@@ -746,6 +746,30 @@
 
 ---
 ## 2026-02-21 (Cycle 36)
+- Milestone: M5 Performance + Stability
+- Task slice: Add async thread-based refresh worker (optional advanced path)
+- Changes:
+  - Extended `SearchService` with optional async refresh worker support:
+    - `enable_async_refresh`
+    - background refresh thread lifecycle
+    - mutex-protected cache state for worker coordination
+  - Query path can schedule thread-based refresh when stale.
+  - Runtime toggle added via env var:
+    - `GOD_SEARCH_ASYNC_REFRESH=1`
+  - Added test coverage for optional async path.
+  - Updated README and queue status.
+- Verification:
+  - `scripts/dev.sh check`
+  - `GOD_SEARCH_ASYNC_REFRESH=1 printf ':q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Async mode is opt-in and intended as advanced/experimental.
+- Next slice:
+  - M6: Add changelog generation script for release notes draft.
+
+---
+## 2026-02-21 (Cycle 36)
 - Milestone: M6 Packaging + Integration
 - Task slice: Add release-notes template for milestone cutovers
 - Changes:

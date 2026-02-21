@@ -32,6 +32,11 @@ zig build -Denable_gtk=true run -- --ui
 ```
 In GTK mode, use `Ctrl+R` to refresh provider snapshot cache.
 
+Optional advanced refresh mode:
+```bash
+GOD_SEARCH_ASYNC_REFRESH=1 god-search-ui --ui
+```
+
 ## Dev Loop Commands
 ```bash
 scripts/dev.sh check
