@@ -31,6 +31,14 @@ Release contracts are guard scripts that keep release automation CLI/docs behavi
 
 This is included by default in `scripts/check_release_contracts.sh` (unless `--docs-only` is used).
 
+## Operator Quick Order
+
+1. `scripts/check_release_contracts.sh --docs-only`
+2. `scripts/release_validate.sh --ci --require-clean`
+3. `scripts/gen_release_notes.sh vX.Y.Z docs/release-notes-vX.Y.Z.md`
+4. `scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push`
+5. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`
+
 ## Local Dirty-Worktree Quick Smoke
 
 During active local iteration (before committing), use:

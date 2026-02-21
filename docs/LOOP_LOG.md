@@ -3366,3 +3366,26 @@
   - M8: UX Phase 4 - add release contracts “operator quick order” section aligned to runbook steps.
 
 ---
+## 2026-02-21 (Cycle 154)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release contracts operator quick-order section aligned with runbook
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added numbered operator quick-order release flow
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates quick-order section and key release flow commands
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - quick-order flow remains a condensed guide; detailed edge-case handling stays in runbooks.
+- Next slice:
+  - M8: UX Phase 4 - add cross-link from release contracts doc to release rollback runbook and smoke modes.
+
+---

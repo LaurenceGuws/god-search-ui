@@ -167,3 +167,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add release-contracts doc consistency checker and meta-guard integration.
 - [x] M8: UX Phase 4 - add local dirty-worktree quick smoke guidance to release-contracts docs.
 - [x] M8: UX Phase 4 - add explicit warning banner for dirty-override non-CI usage.
+- [x] M8: UX Phase 4 - add operator quick-order release flow in release-contracts docs.
