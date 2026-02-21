@@ -2612,3 +2612,27 @@
   - M8: UX Phase 4 - add tiny release-smoke preflight for icon theme availability diagnostics.
 
 ---
+## 2026-02-21 (Cycle 125)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add icon theme environment preflight diagnostics
+- Changes:
+  - Added `scripts/check_icon_theme_env.sh`:
+    - non-failing diagnostic for common icon theme presence under `/usr/share/icons`
+    - warns when environment likely lacks theme assets and glyph fallback is expected
+  - Updated `scripts/release_smoke.sh`:
+    - integrated icon-theme preflight as explicit smoke step
+    - updated smoke step numbering
+  - Updated `README.md`:
+    - documented icon-theme preflight command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - diagnostic is heuristic and intentionally non-blocking for CI and minimal host images.
+- Next slice:
+  - M8: UX Phase 4 - add startup status notice when app icon metadata is absent and glyph fallback is in use.
+
+---

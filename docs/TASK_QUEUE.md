@@ -137,3 +137,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - document apps-cache icon column format and migration notes.
 - [x] M8: UX Phase 4 - add release smoke assertion for legacy+extended apps-cache compatibility.
 - [x] M8: UX Phase 4 - extend optional GTK runtime smoke to exercise app icon render path.
+- [x] M8: UX Phase 4 - add icon-theme preflight diagnostics to release smoke checks.

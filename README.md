@@ -71,6 +71,10 @@ Apps cache format compatibility checks:
 ```bash
 scripts/check_apps_cache_format.sh
 ```
+Icon theme environment preflight:
+```bash
+scripts/check_icon_theme_env.sh
+```
 Release script-matrix checks:
 ```bash
 scripts/check_release_matrix.sh
