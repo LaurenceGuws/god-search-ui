@@ -171,12 +171,21 @@ pub const Shell = struct {
         const allocator = allocator_ptr.*;
 
         clearList(ctx.list);
-        const ranked = ctx.service.searchQuery(allocator, query) catch return;
+        const ranked = ctx.service.searchQuery(allocator, query) catch |err| {
+            const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
+            defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
+            appendInfoRow(ctx.list, msg);
+            return;
+        };
         defer allocator.free(ranked);
 
         const limit = @min(ranked.len, 20);
         const rows = ranked[0..limit];
-        appendGroupedRows(ctx, allocator, rows);
+        if (rows.len == 0) {
+            appendInfoRow(ctx.list, "No results");
+        } else {
+            appendGroupedRows(ctx, allocator, rows);
+        }
         if (ctx.service.last_query_used_stale_cache) {
             c.gtk_entry_set_placeholder_text(@ptrCast(@alignCast(ctx.entry)), "Type to search... (refresh scheduled)");
         } else if (ctx.service.last_query_refreshed_cache) {
@@ -188,6 +197,31 @@ pub const Shell = struct {
         _ = ctx.service.drainScheduledRefresh(allocator) catch false;
         const first = c.gtk_list_box_get_row_at_index(ctx.list, 0);
         if (first != null) c.gtk_list_box_select_row(ctx.list, first);
+    }
+
+    fn appendInfoRow(list: *c.GtkListBox, message: []const u8) void {
+        const msg_escaped = c.g_markup_escape_text(message.ptr, @intCast(message.len));
+        if (msg_escaped == null) return;
+        defer c.g_free(msg_escaped);
+
+        const markup = std.fmt.allocPrint(
+            std.heap.page_allocator,
+            "<span foreground='#9aa1b5'>{s}</span>",
+            .{std.mem.span(@as([*:0]const u8, @ptrCast(msg_escaped)))},
+        ) catch return;
+        defer std.heap.page_allocator.free(markup);
+        const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
+        defer std.heap.page_allocator.free(markup_z);
+
+        const label = c.gtk_label_new(null);
+        c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_list_box_row_set_child(@ptrCast(row), label);
+        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_append(@ptrCast(list), row);
     }
 
     fn refreshSnapshot(ctx: *UiContext) void {

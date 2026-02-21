@@ -1246,3 +1246,23 @@
   - M8: queue first GTK UX patch candidate from `v0.1.1` plan.
 
 ---
+## 2026-02-21 (Cycle 58)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add GTK explicit empty/error state rows in result list
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - render `"No results"` row when ranked slice is empty
+    - render `"Search failed: <error>"` row when query evaluation errors
+    - added `appendInfoRow` helper for non-activatable status rows
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status rows are non-selectable; keyboard selection remains on first selectable result when present.
+- Next slice:
+  - M8: add GTK placeholder text for empty query guidance.
+
+---
