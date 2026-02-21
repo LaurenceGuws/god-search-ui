@@ -130,3 +130,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - reduce status jitter by skipping redundant status updates.
 - [x] M8: UX Phase 3 - add adaptive query-length debounce for better responsiveness.
 - [x] M8: UX Phase 3 - add max-height guard for status text to prevent layout jump.
+- [x] M8: UX Phase 3 - add hotkeys legend row style differentiation from generic info rows.

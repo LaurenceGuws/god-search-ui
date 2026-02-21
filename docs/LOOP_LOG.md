@@ -2477,3 +2477,22 @@
   - M8: UX Phase 3 - add tiny hotkeys legend row style differentiation from generic info rows.
 
 ---
+## 2026-02-21 (Cycle 119)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add hotkeys legend row style differentiation from generic info rows
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added dedicated legend-row renderer for empty-query hotkey guidance
+    - introduced `gs-legend` CSS class to visually distinguish hotkey legend from generic info rows
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - empty-state now renders two informational rows by design (prompt + hotkey legend).
+- Next slice:
+  - M8: UX Phase 3 - add lightweight status icon glyph prefix for success/failure states.
+
+---

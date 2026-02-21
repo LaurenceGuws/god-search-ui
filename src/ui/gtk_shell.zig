@@ -345,6 +345,7 @@ pub const Shell = struct {
         const route_hint = routeHintForQuery(query_trimmed);
         if (empty_query) {
             appendInfoRow(ctx.list, "Start typing to search, or use a route prefix.");
+            appendLegendRow(ctx.list, "Hotkeys: Enter launch | Ctrl+R refresh | Esc close");
         }
         if (route_hint) |hint| {
             appendInfoRow(ctx.list, hint);
@@ -380,6 +381,22 @@ pub const Shell = struct {
         c.gtk_label_set_text(@ptrCast(label), msg_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(label), 0.0);
         c.gtk_widget_add_css_class(label, "gs-info");
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_list_box_row_set_child(@ptrCast(row), label);
+        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_append(@ptrCast(list), row);
+    }
+
+    fn appendLegendRow(list: *c.GtkListBox, message: []const u8) void {
+        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
+        defer std.heap.page_allocator.free(msg_z);
+
+        const label = c.gtk_label_new(null);
+        c.gtk_label_set_text(@ptrCast(label), msg_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+        c.gtk_widget_add_css_class(label, "gs-legend");
 
         const row = c.gtk_list_box_row_new();
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
@@ -714,6 +731,7 @@ pub const Shell = struct {
             ".gs-status-failure { color: #e58a8a; }\n" ++
             ".gs-header { color: #8b93a8; }\n" ++
             ".gs-info { color: #9aa1b5; }\n" ++
+            ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
             ".gs-results > row { border-radius: 8px; padding: 2px 6px; }\n" ++
             ".gs-results > row:selected { background: rgba(140, 170, 235, 0.22); }\n" ++
