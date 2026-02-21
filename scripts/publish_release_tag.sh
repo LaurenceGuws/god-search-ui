@@ -17,7 +17,7 @@ Default mode is dry-run and prints planned push commands.
 Options:
   --version   existing local tag to publish (required)
   --remote    git remote to publish to (default: origin)
-  --apply     push main and tag to origin
+  --apply     push main and tag to selected remote
 EOF
 }
 

@@ -1187,3 +1187,21 @@
   - M8: queue first `v0.1.1` implementation bugfix item.
 
 ---
+## 2026-02-21 (Cycle 55)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Fix publish-helper help text for `--remote`
+- Changes:
+  - Updated `scripts/publish_release_tag.sh` help text:
+    - `--apply` now correctly states push is to selected remote
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/publish_release_tag.sh --help`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - none
+- Next slice:
+  - M8: add guard test script for release-helper CLI docs/output consistency.
+
+---
