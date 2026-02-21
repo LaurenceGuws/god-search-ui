@@ -2,6 +2,7 @@ const std = @import("std");
 const god_search_ui = @import("god_search_ui");
 
 pub fn main() !void {
+    const startup_sw = god_search_ui.app.Stopwatch.start();
     const allocator = std.heap.page_allocator;
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
@@ -16,10 +17,12 @@ pub fn main() !void {
         runtime.rebindProviderContexts();
         try runtime.service.loadHistory(allocator);
         defer runtime.service.saveHistory(allocator) catch {};
+        logger.info("runtime ready in {d:.2} ms", .{startup_sw.elapsedMs()});
         try god_search_ui.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry);
         return;
     }
 
+    logger.info("startup ready in {d:.2} ms", .{startup_sw.elapsedMs()});
     try god_search_ui.bufferedPrint();
 }
 

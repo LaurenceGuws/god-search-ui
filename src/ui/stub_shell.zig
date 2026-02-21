@@ -18,6 +18,8 @@ pub const Shell = struct {
 
             const ranked = try service.searchQuery(allocator, query);
             defer allocator.free(ranked);
+            const ms = @as(f64, @floatFromInt(service.last_query_elapsed_ns)) / 1_000_000.0;
+            try stdout.print("  (query time: {d:.2} ms)\n", .{ms});
             try printTopResults(stdout, ranked, 5);
 
             if (ranked.len > 0) {

@@ -7,6 +7,7 @@ pub const SearchService = struct {
     history_path: ?[]const u8 = null,
     history: std.ArrayListUnmanaged([]u8) = .{},
     max_history: usize = 32,
+    last_query_elapsed_ns: u64 = 0,
 
     pub fn init(registry: providers.ProviderRegistry) SearchService {
         return .{ .registry = registry };
@@ -25,6 +26,7 @@ pub const SearchService = struct {
     }
 
     pub fn searchQuery(self: *SearchService, allocator: std.mem.Allocator, raw_query: []const u8) ![]search.ScoredCandidate {
+        const sw = @import("metrics.zig").Stopwatch.start();
         var candidates = search.CandidateList.empty;
         defer candidates.deinit(allocator);
         try self.registry.collectAll(allocator, &candidates);
@@ -33,7 +35,9 @@ pub const SearchService = struct {
         const recent = try self.historyViewNewestFirst(allocator);
         defer allocator.free(recent);
 
-        return search.rankCandidatesWithHistory(allocator, parsed, candidates.items, recent);
+        const ranked = try search.rankCandidatesWithHistory(allocator, parsed, candidates.items, recent);
+        self.last_query_elapsed_ns = sw.elapsedNs();
+        return ranked;
     }
 
     pub fn recordSelection(self: *SearchService, allocator: std.mem.Allocator, action: []const u8) !void {

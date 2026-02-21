@@ -516,3 +516,22 @@
   - M5: Add startup/query timing instrumentation.
 
 ---
+## 2026-02-21 (Cycle 25)
+- Milestone: M5 Performance + Stability
+- Task slice: Add startup/query timing instrumentation
+- Changes:
+  - Added `src/app/metrics.zig` stopwatch helper.
+  - Exported `Stopwatch` in `src/app/mod.zig`.
+  - Added startup timing logs in `src/main.zig`.
+  - Added per-query elapsed timing capture in `SearchService` (`last_query_elapsed_ns`).
+  - Displayed query timing in headless UI loop (`src/ui/stub_shell.zig`).
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Timing is wall-clock style and not yet persisted as telemetry metrics.
+- Next slice:
+  - M5: Add provider snapshot cache prewarm for faster first query.
+
+---
