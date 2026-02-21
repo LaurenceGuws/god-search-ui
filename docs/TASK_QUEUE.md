@@ -96,3 +96,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Prevent recursive preflight in cut dry-run assertion checks.
 - [x] M8: Run `v0.1.2` release cut dry-run with default-safe notes mode.
 - [x] M8: Execute `v0.1.2` apply cut and publish to `origin`.
+- [x] M8: UX Phase 1 - add scrolled results container and actionable-row-only selection.

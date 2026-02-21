@@ -56,10 +56,10 @@ pub const Shell = struct {
 
         const list = c.gtk_list_box_new();
         c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
-        const row = c.gtk_label_new("Result placeholder");
-        c.gtk_list_box_append(@ptrCast(list), row);
-        const first = c.gtk_list_box_get_row_at_index(@ptrCast(list), 0);
-        if (first != null) c.gtk_list_box_select_row(@ptrCast(list), first);
+        const scroller = c.gtk_scrolled_window_new();
+        c.gtk_widget_set_vexpand(scroller, GTRUE);
+        c.gtk_scrolled_window_set_policy(@ptrCast(scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
+        c.gtk_scrolled_window_set_child(@ptrCast(scroller), list);
 
         const ctx: *UiContext = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(UiContext))));
         ctx.window = @ptrCast(window);
@@ -78,7 +78,7 @@ pub const Shell = struct {
         _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(onDestroy), ctx, null, 0);
 
         c.gtk_box_append(@ptrCast(root_box), entry);
-        c.gtk_box_append(@ptrCast(root_box), list);
+        c.gtk_box_append(@ptrCast(root_box), scroller);
         c.gtk_window_set_child(@ptrCast(window), root_box);
         c.gtk_window_present(@ptrCast(window));
 
@@ -158,12 +158,35 @@ pub const Shell = struct {
 
     fn selectOffset(list: *c.GtkListBox, delta: i32) void {
         const selected = c.gtk_list_box_get_selected_row(list);
-        var idx: i32 = 0;
-        if (selected != null) idx = c.gtk_list_box_row_get_index(selected) + delta;
-        if (idx < 0) idx = 0;
+        if (selected == null) {
+            selectFirstActionableRow(list);
+            return;
+        }
 
-        const target = c.gtk_list_box_get_row_at_index(list, idx);
-        if (target != null) c.gtk_list_box_select_row(list, target);
+        var idx: i32 = c.gtk_list_box_row_get_index(selected) + delta;
+        if (idx < 0) return;
+
+        while (idx >= 0) : (idx += delta) {
+            const target = c.gtk_list_box_get_row_at_index(list, idx);
+            if (target == null) return;
+            if (c.g_object_get_data(@ptrCast(target), "gs-action") != null) {
+                c.gtk_list_box_select_row(list, target);
+                return;
+            }
+        }
+    }
+
+    fn selectFirstActionableRow(list: *c.GtkListBox) void {
+        var idx: i32 = 0;
+        while (true) : (idx += 1) {
+            const row = c.gtk_list_box_get_row_at_index(list, idx);
+            if (row == null) break;
+            if (c.g_object_get_data(@ptrCast(row), "gs-action") != null) {
+                c.gtk_list_box_select_row(list, row);
+                return;
+            }
+        }
+        c.gtk_list_box_select_row(list, null);
     }
 
     fn populateResults(ctx: *UiContext, query: []const u8) void {
@@ -198,8 +221,7 @@ pub const Shell = struct {
         }
 
         _ = ctx.service.drainScheduledRefresh(allocator) catch false;
-        const first = c.gtk_list_box_get_row_at_index(ctx.list, 0);
-        if (first != null) c.gtk_list_box_select_row(ctx.list, first);
+        selectFirstActionableRow(ctx.list);
     }
 
     fn appendInfoRow(list: *c.GtkListBox, message: []const u8) void {

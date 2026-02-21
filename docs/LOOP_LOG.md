@@ -1810,3 +1810,25 @@
   - M8: add post-v0.1.2 maintenance checklist update.
 
 ---
+## 2026-02-21 (Cycle 85)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 1 - scrolled results container + actionable-row selection
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced direct list embedding with `GtkScrolledWindow`
+    - removed startup placeholder row injection
+    - added `selectFirstActionableRow` helper
+    - updated arrow-key offset navigation to skip non-actionable rows (headers/info)
+    - updated initial post-render selection to choose first actionable row
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - navigation no longer lands on informational/header rows by design.
+- Next slice:
+  - M8: UX Phase 1 - add non-blocking action execution path.
+
+---
