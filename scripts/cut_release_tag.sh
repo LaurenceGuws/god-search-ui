@@ -71,10 +71,8 @@ fi
 echo "[preflight] running release smoke"
 scripts/release_smoke.sh
 
-echo "[preflight] generating release notes draft"
-scripts/gen_release_notes.sh "$VERSION" "docs/release-notes-${VERSION}.md"
-
 if [[ $DRY_RUN -eq 1 ]]; then
+  echo "[dry-run] would run: scripts/gen_release_notes.sh $VERSION docs/release-notes-${VERSION}.md"
   echo "[dry-run] would run: git tag -a $VERSION -m \"god-search-ui $VERSION\""
   if [[ $PUSH -eq 1 ]]; then
     echo "[dry-run] would run: git push origin main"
@@ -82,6 +80,9 @@ if [[ $DRY_RUN -eq 1 ]]; then
   fi
   exit 0
 fi
+
+echo "[apply] generating release notes draft"
+scripts/gen_release_notes.sh "$VERSION" "docs/release-notes-${VERSION}.md"
 
 echo "[apply] creating annotated tag"
 git tag -a "$VERSION" -m "god-search-ui $VERSION"

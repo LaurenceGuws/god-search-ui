@@ -948,3 +948,23 @@
   - M7: run real `v0.1.0-rc1` cut on maintainer command.
 
 ---
+## 2026-02-21 (Cycle 44)
+- Milestone: M7 Release Hardening
+- Task slice: Make release-tag dry-run mode side-effect free
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - dry-run now prints intended release-notes generation command
+    - release notes draft is generated only under `--apply`
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md` to clarify dry-run behavior.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --version v0.1.0-rc1`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Dry-run still executes preflight smoke checks by design.
+- Next slice:
+  - M7: run real `v0.1.0-rc1` cut on maintainer command.
+
+---
