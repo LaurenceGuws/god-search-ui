@@ -16,6 +16,7 @@ Quick reference for release automation scripts.
 | `scripts/check_release_helpers.sh` | CLI contract checks for helpers | `scripts/check_release_helpers.sh` | (same command) |
 | `scripts/check_release_docs_contracts.sh` | Meta contract check for release docs/help/matrix | `scripts/check_release_docs_contracts.sh` | (same command) |
 | `scripts/check_release_contracts.sh` | One-command alias for all release contract checks | `scripts/check_release_contracts.sh --docs-only` | `scripts/check_release_contracts.sh` |
+| `scripts/check_release_contracts_contract.sh` | Contract checks for release-contracts alias CLI/docs sync | `scripts/check_release_contracts_contract.sh` | (same command) |
 | `scripts/check_release_smoke_contract.sh` | Release-smoke help/docs contract checks | `scripts/check_release_smoke_contract.sh` | (same command) |
 | `scripts/check_release_validate_contract.sh` | Release-validate help/docs contract checks | `scripts/check_release_validate_contract.sh` | (same command) |
 | `scripts/check_apps_cache_format.sh` | Apps cache format compatibility guard | `scripts/check_apps_cache_format.sh` | (same command) |

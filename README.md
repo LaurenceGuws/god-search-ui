@@ -127,6 +127,10 @@ Fast docs-only variant:
 ```bash
 scripts/check_release_contracts.sh --docs-only
 ```
+Release-contracts alias help/docs contract check:
+```bash
+scripts/check_release_contracts_contract.sh
+```
 Release-validate help/docs contract check:
 ```bash
 scripts/check_release_validate_contract.sh

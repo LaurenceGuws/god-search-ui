@@ -3238,3 +3238,31 @@
   - M8: UX Phase 4 - add contract checker for `check_release_contracts.sh` CLI/docs sync.
 
 ---
+## 2026-02-21 (Cycle 149)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add contract checker for release-contracts alias CLI/docs sync
+- Changes:
+  - Added `scripts/check_release_contracts_contract.sh`:
+    - validates alias CLI help options (`--docs-only`, `--help`)
+    - validates README + matrix references for alias commands
+  - Updated `scripts/check_release_docs_contracts.sh`:
+    - includes release-contracts alias contract check
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md` and `scripts/check_release_matrix.sh`:
+    - added/validated release-contracts alias contract checker script row
+  - Updated `README.md`:
+    - documented release-contracts alias contract checker command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - contract checks are string-reference based and require updates when docs wording changes.
+- Next slice:
+  - M8: UX Phase 4 - add release-contracts alias docs section to matrix related docs.
+
+---
