@@ -46,11 +46,13 @@ pub const AppsProvider = struct {
             const category = fields.next() orelse continue;
             const name = fields.next() orelse continue;
             const exec_cmd = fields.next() orelse continue;
+            const icon_name = fields.next() orelse "";
 
             const kept_name = try self.keepString(allocator, name);
             const kept_category = try self.keepString(allocator, category);
             const kept_exec = try self.keepString(allocator, exec_cmd);
-            try out.append(allocator, search.Candidate.init(.app, kept_name, kept_category, kept_exec));
+            const kept_icon = try self.keepString(allocator, icon_name);
+            try out.append(allocator, search.Candidate.initWithIcon(.app, kept_name, kept_category, kept_exec, kept_icon));
             count += 1;
         }
 
@@ -79,8 +81,8 @@ test "apps provider collects rows from cache file" {
     try tmp.dir.writeFile(.{
         .sub_path = "apps.tsv",
         .data =
-        \\Utilities\tKitty\tkitty
-        \\Internet\tFirefox\tfirefox
+        \\Utilities\tKitty\tkitty\tkitty
+        \\Internet\tFirefox\tfirefox\tfirefox
         \\
         ,
     });
@@ -102,6 +104,7 @@ test "apps provider collects rows from cache file" {
     try std.testing.expectEqualStrings("Kitty", list.items[0].title);
     try std.testing.expectEqualStrings("Utilities", list.items[0].subtitle);
     try std.testing.expectEqualStrings("kitty", list.items[0].action);
+    try std.testing.expectEqualStrings("kitty", list.items[0].icon);
 }
 
 test "apps provider falls back when cache is missing" {

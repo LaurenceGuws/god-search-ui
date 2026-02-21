@@ -515,7 +515,7 @@ pub const Shell = struct {
         c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
         c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
 
-        const icon_widget = candidateIconWidget(allocator, row.candidate.kind, row.candidate.action);
+        const icon_widget = candidateIconWidget(allocator, row.candidate.kind, row.candidate.action, row.candidate.icon);
         const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
         c.gtk_box_append(@ptrCast(primary_row), icon_widget);
         c.gtk_box_append(@ptrCast(primary_row), primary_label);
@@ -828,8 +828,18 @@ pub const Shell = struct {
         };
     }
 
-    fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8) *c.GtkWidget {
+    fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget {
         if (kind == .app) {
+            if (std.mem.trim(u8, icon, " \t\r\n").len > 0) {
+                const icon_name_z = allocator.dupeZ(u8, std.mem.trim(u8, icon, " \t\r\n")) catch null;
+                if (icon_name_z) |name| {
+                    defer allocator.free(name);
+                    const image = c.gtk_image_new_from_icon_name(name.ptr);
+                    c.gtk_image_set_pixel_size(@ptrCast(image), 16);
+                    c.gtk_widget_add_css_class(image, "gs-kind-icon");
+                    return @ptrCast(image);
+                }
+            }
             if (appIconNameFromAction(allocator, action)) |icon_name_z| {
                 defer allocator.free(icon_name_z);
                 const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);

@@ -133,3 +133,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - add hotkeys legend row style differentiation from generic info rows.
 - [x] M8: UX Phase 4 - add status icon prefixes with info/success/failure tone routing.
 - [x] M8: UX Phase 4 - add app icon support in GTK candidate rows with glyph fallback.
+- [x] M8: UX Phase 4 - enrich apps cache/provider with explicit icon metadata for GTK rows.

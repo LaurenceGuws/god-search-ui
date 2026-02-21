@@ -13,6 +13,7 @@ pub const Candidate = struct {
     title: []const u8,
     subtitle: []const u8,
     action: []const u8,
+    icon: []const u8,
 
     pub fn init(kind: CandidateKind, title: []const u8, subtitle: []const u8, action: []const u8) Candidate {
         return .{
@@ -20,6 +21,17 @@ pub const Candidate = struct {
             .title = title,
             .subtitle = subtitle,
             .action = action,
+            .icon = "",
+        };
+    }
+
+    pub fn initWithIcon(kind: CandidateKind, title: []const u8, subtitle: []const u8, action: []const u8, icon: []const u8) Candidate {
+        return .{
+            .kind = kind,
+            .title = title,
+            .subtitle = subtitle,
+            .action = action,
+            .icon = icon,
         };
     }
 };

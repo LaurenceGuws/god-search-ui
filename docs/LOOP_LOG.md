@@ -2518,3 +2518,29 @@
   - M8: UX Phase 4 - enrich apps provider cache format to carry desktop icon metadata explicitly.
 
 ---
+## 2026-02-21 (Cycle 121)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - explicit app icon metadata pipeline for GTK rows
+- Changes:
+  - Updated `src/search/types.zig`:
+    - added `Candidate.icon` field with backwards-compatible default
+    - added `Candidate.initWithIcon(...)` constructor
+  - Updated `src/providers/apps.zig`:
+    - extended TSV parse to optional 4th icon column (`category\tname\texec\ticon`)
+    - app candidates now carry icon metadata when present
+    - updated provider test fixture/assertions for icon column parsing
+  - Updated `src/ui/gtk_shell.zig`:
+    - app icon rendering now prefers provider icon metadata
+    - falls back to command-token icon lookup, then glyph fallback
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - icon metadata is optional; existing 3-column cache files remain compatible.
+- Next slice:
+  - M8: UX Phase 4 - document apps cache icon column and add migration note in troubleshooting docs.
+
+---
