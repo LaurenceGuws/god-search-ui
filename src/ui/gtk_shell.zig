@@ -62,6 +62,7 @@ pub const Shell = struct {
         c.gtk_widget_add_css_class(status, "gs-status");
 
         const list = c.gtk_list_box_new();
+        c.gtk_widget_add_css_class(list, "gs-results");
         c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
         const scroller = c.gtk_scrolled_window_new();
         c.gtk_widget_set_vexpand(scroller, GTRUE);
@@ -575,6 +576,9 @@ pub const Shell = struct {
             ".gs-header { color: #8b93a8; }\n" ++
             ".gs-info { color: #9aa1b5; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
+            ".gs-results > row { border-radius: 8px; padding: 2px 6px; }\n" ++
+            ".gs-results > row:selected { background: rgba(140, 170, 235, 0.22); }\n" ++
+            ".gs-results > row:hover { background: rgba(140, 170, 235, 0.12); }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n";
 

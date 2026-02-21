@@ -2109,3 +2109,23 @@
   - M8: UX Phase 3 - improve keyboard selection visibility via focused row styling.
 
 ---
+## 2026-02-21 (Cycle 100)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - improve keyboard selection visibility in GTK results
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - tagged result list with `gs-results` CSS class
+    - added selected/hover row styling for clearer keyboard focus tracking
+    - added small row radius/padding polish for stronger visual affordance
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - selected/hover colors may need further tuning against user theme variants.
+- Next slice:
+  - M8: UX Phase 3 - add section result counts in headers for scanability.
+
+---
