@@ -1467,3 +1467,26 @@
   - M8: run real `v0.1.1` cut dry-run using precut gate path.
 
 ---
+## 2026-02-21 (Cycle 69)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Run `v0.1.1` release cut dry-run and record outcome
+- Changes:
+  - Ran:
+    - `scripts/precut_v0_1_1.sh`
+    - `scripts/cut_release_tag.sh --version v0.1.1`
+  - Dry-run result:
+    - preflight/smoke path passes
+    - planned tag command emitted for `v0.1.1`
+    - no tag created (dry-run)
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - dry-run output includes:
+    - `git tag -a v0.1.1 -m "god-search-ui v0.1.1"`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - final publish still requires explicit `--apply --push` flow.
+- Next slice:
+  - M8: decide and execute `v0.1.1` apply cut when approved.
+
+---
