@@ -39,6 +39,12 @@ This is included by default in `scripts/check_release_contracts.sh` (unless `--d
 4. `scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push`
 5. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`
 
+## Related References
+
+- `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+- `docs/RELEASE_SMOKE_MODES.md`
+- `docs/RELEASE_VALIDATE_MODES.md`
+
 ## Local Dirty-Worktree Quick Smoke
 
 During active local iteration (before committing), use:
