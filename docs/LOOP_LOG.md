@@ -535,3 +535,24 @@
   - M5: Add provider snapshot cache prewarm for faster first query.
 
 ---
+## 2026-02-21 (Cycle 26)
+- Milestone: M5 Performance + Stability
+- Task slice: Add provider snapshot cache prewarm for faster first query
+- Changes:
+  - Added candidate snapshot cache to `SearchService`:
+    - `cached_candidates`
+    - `cache_ready`
+    - `prewarmProviders()`
+  - Updated query flow to use cached snapshot when prewarmed.
+  - Added test verifying provider collect is called once after prewarm.
+  - Runtime now prewarms providers during `--ui` startup in `src/main.zig`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Cache invalidation is manual (currently at startup prewarm only).
+- Next slice:
+  - M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
+
+---

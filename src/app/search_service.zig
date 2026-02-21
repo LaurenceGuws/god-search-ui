@@ -6,6 +6,8 @@ pub const SearchService = struct {
     registry: providers.ProviderRegistry,
     history_path: ?[]const u8 = null,
     history: std.ArrayListUnmanaged([]u8) = .{},
+    cached_candidates: search.CandidateList = .empty,
+    cache_ready: bool = false,
     max_history: usize = 32,
     last_query_elapsed_ns: u64 = 0,
 
@@ -23,21 +25,33 @@ pub const SearchService = struct {
     pub fn deinit(self: *SearchService, allocator: std.mem.Allocator) void {
         for (self.history.items) |item| allocator.free(item);
         self.history.deinit(allocator);
+        self.cached_candidates.deinit(allocator);
     }
 
     pub fn searchQuery(self: *SearchService, allocator: std.mem.Allocator, raw_query: []const u8) ![]search.ScoredCandidate {
         const sw = @import("metrics.zig").Stopwatch.start();
-        var candidates = search.CandidateList.empty;
-        defer candidates.deinit(allocator);
-        try self.registry.collectAll(allocator, &candidates);
+        var query_candidates = search.CandidateList.empty;
+        defer query_candidates.deinit(allocator);
+
+        const source: []const search.Candidate = source: {
+            if (self.cache_ready) break :source self.cached_candidates.items;
+            try self.registry.collectAll(allocator, &query_candidates);
+            break :source query_candidates.items;
+        };
 
         const parsed = search.parseQuery(raw_query);
         const recent = try self.historyViewNewestFirst(allocator);
         defer allocator.free(recent);
 
-        const ranked = try search.rankCandidatesWithHistory(allocator, parsed, candidates.items, recent);
+        const ranked = try search.rankCandidatesWithHistory(allocator, parsed, source, recent);
         self.last_query_elapsed_ns = sw.elapsedNs();
         return ranked;
+    }
+
+    pub fn prewarmProviders(self: *SearchService, allocator: std.mem.Allocator) !void {
+        self.cached_candidates.clearRetainingCapacity();
+        try self.registry.collectAll(allocator, &self.cached_candidates);
+        self.cache_ready = true;
     }
 
     pub fn recordSelection(self: *SearchService, allocator: std.mem.Allocator, action: []const u8) !void {
@@ -153,6 +167,44 @@ test "search service applies history boost through ranking" {
 
     try std.testing.expectEqual(@as(usize, 1), results.len);
     try std.testing.expectEqualStrings("Power menu", results[0].candidate.title);
+}
+
+test "prewarm cache avoids repeated provider collection" {
+    const Fake = struct {
+        var collect_calls: usize = 0;
+
+        fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+            _ = context;
+            collect_calls += 1;
+            try out.append(allocator, search.Candidate.init(.action, "Settings", "System", "settings"));
+        }
+
+        fn health(context: *anyopaque) search.ProviderHealth {
+            _ = context;
+            return .ready;
+        }
+    };
+
+    Fake.collect_calls = 0;
+    var dummy: u8 = 0;
+    const source = [_]search.Provider{
+        .{
+            .name = "fake",
+            .context = &dummy,
+            .vtable = &.{ .collect = Fake.collect, .health = Fake.health },
+        },
+    };
+
+    const registry = providers.ProviderRegistry.init(&source);
+    var service = SearchService.init(registry);
+    defer service.deinit(std.testing.allocator);
+
+    try service.prewarmProviders(std.testing.allocator);
+    const a = try service.searchQuery(std.testing.allocator, "");
+    defer std.testing.allocator.free(a);
+    const b = try service.searchQuery(std.testing.allocator, "set");
+    defer std.testing.allocator.free(b);
+    try std.testing.expectEqual(@as(usize, 1), Fake.collect_calls);
 }
 
 test "history load and save roundtrip" {

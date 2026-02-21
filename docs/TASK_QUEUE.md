@@ -3,7 +3,6 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M5: Add provider snapshot cache prewarm for faster first query.
 - [ ] M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
 
 ## In Progress
@@ -39,3 +38,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M4: Add confirmation mode for sensitive actions (`power`).
 - [x] M4: Add telemetry event sink for action execution results.
 - [x] M5: Add startup/query timing instrumentation.
+- [x] M5: Add provider snapshot cache prewarm for faster first query.
