@@ -94,7 +94,7 @@ pub const Shell = struct {
         _: ?*c.GtkEventControllerKey,
         keyval: c.guint,
         _: c.guint,
-        _: c.GdkModifierType,
+        state: c.GdkModifierType,
         user_data: ?*anyopaque,
     ) callconv(.c) c.gboolean {
         if (user_data == null) return GFALSE;
@@ -104,6 +104,13 @@ pub const Shell = struct {
             c.GDK_KEY_Escape => {
                 c.gtk_window_close(@ptrCast(ctx.window));
                 return GTRUE;
+            },
+            c.GDK_KEY_r, c.GDK_KEY_R => {
+                if ((state & c.GDK_CONTROL_MASK) != 0) {
+                    refreshSnapshot(ctx);
+                    return GTRUE;
+                }
+                return GFALSE;
             },
             c.GDK_KEY_Down => {
                 selectOffset(ctx.list, 1);
@@ -173,6 +180,21 @@ pub const Shell = struct {
 
         const first = c.gtk_list_box_get_row_at_index(ctx.list, 0);
         if (first != null) c.gtk_list_box_select_row(ctx.list, first);
+    }
+
+    fn refreshSnapshot(ctx: *UiContext) void {
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+        ctx.service.invalidateSnapshot();
+        ctx.service.prewarmProviders(allocator) catch return;
+
+        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+        if (text_ptr == null) {
+            populateResults(ctx, "");
+            return;
+        }
+        const query = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
+        populateResults(ctx, query);
     }
 
     fn appendGroupedRows(ctx: *UiContext, allocator: std.mem.Allocator, rows: []const @import("../search/mod.zig").ScoredCandidate) void {

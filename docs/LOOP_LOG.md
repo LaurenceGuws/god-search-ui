@@ -618,3 +618,24 @@
   - M5: Add explicit refresh trigger command/path in UI layer.
 
 ---
+## 2026-02-21 (Cycle 30)
+- Milestone: M5 Performance + Stability
+- Task slice: Add explicit refresh trigger command/path in UI layer
+- Changes:
+  - Added headless refresh command in `src/ui/stub_shell.zig`:
+    - `:refresh` invalidates + prewarms provider snapshot
+  - Added GTK refresh shortcut in `src/ui/gtk_shell.zig`:
+    - `Ctrl+R` invalidates + prewarms snapshot and refreshes visible results
+  - Documented refresh controls in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf ':refresh\\n:q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Refresh operation is synchronous and may briefly block UI on slow providers.
+- Next slice:
+  - M5: Add stale-cache indicator in UI when snapshot is auto-refreshed.
+
+---

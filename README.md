@@ -22,12 +22,15 @@ Headless/stub UI:
 ```bash
 zig build run -- --ui
 ```
-In headless mode, type queries and press Enter. Use `:q` to exit.
+In headless mode, type queries and press Enter. Commands:
+- `:q` to exit
+- `:refresh` to invalidate + prewarm provider snapshot cache
 
 GTK4 shell (requires GTK4 dev libraries):
 ```bash
 zig build -Denable_gtk=true run -- --ui
 ```
+In GTK mode, use `Ctrl+R` to refresh provider snapshot cache.
 
 ## Dev Loop Commands
 ```bash

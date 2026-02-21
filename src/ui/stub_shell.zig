@@ -15,6 +15,12 @@ pub const Shell = struct {
             const line = line_opt orelse break;
             const query = std.mem.trim(u8, line, " \t\r\n");
             if (std.mem.eql(u8, query, ":q")) break;
+            if (std.mem.eql(u8, query, ":refresh")) {
+                service.invalidateSnapshot();
+                try service.prewarmProviders(allocator);
+                try stdout.print("  snapshot refreshed\n", .{});
+                continue;
+            }
 
             const ranked = try service.searchQuery(allocator, query);
             defer allocator.free(ranked);
