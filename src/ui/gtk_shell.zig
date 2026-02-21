@@ -343,6 +343,7 @@ pub const Shell = struct {
         const rows = ranked[0..limit];
         const empty_query = query_trimmed.len == 0;
         const route_hint = routeHintForQuery(query_trimmed);
+        const has_app_glyph_fallback = hasAppGlyphFallback(rows);
         if (empty_query) {
             appendInfoRow(ctx.list, "Start typing to search, or use a route prefix.");
             appendLegendRow(ctx.list, "Hotkeys: Enter launch | Ctrl+R refresh | Esc close");
@@ -363,6 +364,8 @@ pub const Shell = struct {
             setStatus(ctx, "Refresh scheduled");
         } else if (ctx.service.last_query_refreshed_cache) {
             setStatus(ctx, "Snapshot refreshed");
+        } else if (empty_query and has_app_glyph_fallback and ctx.pending_power_confirm == GFALSE) {
+            setStatus(ctx, "App icon fallback active for some entries");
         } else if (empty_query and ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs > run = calc ? web");
         } else if (ctx.pending_power_confirm == GFALSE) {
@@ -803,6 +806,7 @@ pub const Shell = struct {
     fn launchStatusTone(message: []const u8) StatusTone {
         if (std.mem.indexOf(u8, message, "Searching") != null) return .info;
         if (std.mem.indexOf(u8, message, "Refresh") != null) return .info;
+        if (std.mem.indexOf(u8, message, "fallback") != null) return .info;
         if (std.mem.indexOf(u8, message, "failed") != null) return .failure;
         if (std.mem.indexOf(u8, message, "launched") != null) return .success;
         if (std.mem.indexOf(u8, message, "opened") != null) return .success;
@@ -857,20 +861,33 @@ pub const Shell = struct {
     }
 
     fn appIconNameFromAction(allocator: std.mem.Allocator, action: []const u8) ?[:0]u8 {
+        const token = actionCommandToken(action);
+        if (token.len == 0) return null;
+        return allocator.dupeZ(u8, token) catch null;
+    }
+
+    fn actionCommandToken(action: []const u8) []const u8 {
         const trimmed = std.mem.trim(u8, action, " \t\r\n");
-        if (trimmed.len == 0) return null;
+        if (trimmed.len == 0) return "";
 
         const split_idx = std.mem.indexOfScalar(u8, trimmed, ' ') orelse trimmed.len;
         var token = trimmed[0..split_idx];
         token = std.mem.trim(u8, token, "\"'");
-        if (token.len == 0) return null;
+        if (token.len == 0) return "";
 
         if (std.mem.lastIndexOfScalar(u8, token, '/')) |slash_idx| {
             if (slash_idx + 1 < token.len) token = token[slash_idx + 1 ..];
         }
-        if (token.len == 0) return null;
+        return token;
+    }
 
-        return allocator.dupeZ(u8, token) catch null;
+    fn hasAppGlyphFallback(rows: []const @import("../search/mod.zig").ScoredCandidate) bool {
+        for (rows) |row| {
+            if (row.candidate.kind != .app) continue;
+            if (std.mem.trim(u8, row.candidate.icon, " \t\r\n").len > 0) continue;
+            if (actionCommandToken(row.candidate.action).len == 0) return true;
+        }
+        return false;
     }
 
     fn runShellCommand(command: []const u8) !void {

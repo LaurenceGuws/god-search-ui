@@ -2636,3 +2636,24 @@
   - M8: UX Phase 4 - add startup status notice when app icon metadata is absent and glyph fallback is in use.
 
 ---
+## 2026-02-21 (Cycle 126)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add startup notice for app icon glyph fallback state
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - detects when app rows have neither icon metadata nor derivable command token icon
+    - surfaces startup status notice when glyph fallback is active in empty-query view
+    - added shared action-command token helper and reused it in icon lookup path
+    - mapped fallback notice to info tone
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - fallback detection is heuristic and based on icon metadata/token availability, not theme render success.
+- Next slice:
+  - M8: UX Phase 4 - add headless diagnostics command to print icon metadata/fallback stats.
+
+---
