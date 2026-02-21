@@ -3,24 +3,30 @@
 ## Release
 - Version: v0.1.1
 - Date: 2026-02-21
-- Milestone Scope:
+- Milestone Scope: M8 Patch Release Cadence
 
 ## Highlights
-- 
-- 
-- 
+- Hardened release automation with contract/matrix validators and pre-cut gate script.
+- Improved GTK query UX with explicit empty/error rows and clearer empty-query guidance.
+- Added patch-operations docs: triage template/log, script matrix, and notes curation checklist.
 
 ## New Features
-- 
+- `scripts/check_release_matrix.sh`
+- `scripts/precut_v0_1_1.sh`
+- `scripts/lint_release_notes.sh`
 
 ## Improvements
-- 
+- `scripts/release_smoke.sh` supports optional `--with-gtk-runtime`.
+- `scripts/cut_release_tag.sh` supports `--reuse-notes` to preserve edited notes.
+- Release runbook now includes SSH preflight guidance.
 
 ## Fixes
-- 
+- Corrected publish-helper help text for remote behavior.
+- Added release-helper CLI contract checks to prevent flag/help drift.
+- Avoided silent GTK empty state by rendering explicit status rows.
 
 ## Breaking / Behavior Changes
-- 
+- None.
 
 ## Migration Notes
 - Future patch cut workflow:
@@ -28,17 +34,21 @@
   - Use `--reuse-notes` to preserve curated release-note content.
 
 ## Verification Summary
-- `scripts/dev.sh check`: pass/fail
-- GTK build (`zig build -Denable_gtk=true`): pass/fail
+- `scripts/dev.sh check`: pass
+- GTK build (`zig build -Denable_gtk=true`): pass
 - Smoke test command(s):
-  - 
+  - `scripts/release_smoke.sh` (pass)
+  - `scripts/precut_v0_1_1.sh` (pass)
+  - `scripts/check_release_helpers.sh` (pass)
+  - `scripts/check_release_matrix.sh` (pass)
+  - `scripts/lint_release_notes.sh docs/release-notes-v0.1.1.md` (pass)
 
 ## Rollback Notes
-- Fallback keybind path:
-- Previous known-good commit/tag:
+- Fallback keybind path: existing shell launcher binding on separate key.
+- Previous known-good commit/tag: `v0.1.0`
 
 ## Known Issues
-- 
+- SSH auth can still fail in new workspaces with incorrect private-key permissions.
 
 ## Draft Commit Digest
 

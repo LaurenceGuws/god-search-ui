@@ -70,6 +70,10 @@ v0.1.1 pre-cut readiness gate:
 ```bash
 scripts/precut_v0_1_1.sh
 ```
+Release notes lint:
+```bash
+scripts/lint_release_notes.sh docs/release-notes-v0.1.1.md
+```
 
 Arch package smoke helper:
 ```bash

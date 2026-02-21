@@ -1580,3 +1580,24 @@
   - M8: add quick lint script to detect placeholder text in release notes.
 
 ---
+## 2026-02-21 (Cycle 74)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add lint script to detect placeholder text in release notes
+- Changes:
+  - Added `scripts/lint_release_notes.sh`.
+  - Wired lint into `scripts/precut_v0_1_1.sh`.
+  - Linked lint usage in `README.md`.
+  - Refreshed `docs/release-notes-v0.1.1.md` to remove placeholders and satisfy lint.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/lint_release_notes.sh docs/release-notes-v0.1.1.md`
+  - `scripts/precut_v0_1_1.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - release-notes content must be kept current if new patch commits are added.
+- Next slice:
+  - M8: add final post-v0.1.1 maintenance checklist entry in docs.
+
+---
