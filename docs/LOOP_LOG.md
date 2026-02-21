@@ -1784,3 +1784,29 @@
   - M8: queue/apply `v0.1.2` cut when approved.
 
 ---
+## 2026-02-21 (Cycle 84)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Execute `v0.1.2` apply cut and publish to `origin`
+- Changes:
+  - Fixed apply-flow edge case in `scripts/cut_release_tag.sh`:
+    - when `--commit-notes` is set and notes are unchanged, skip commit cleanly
+  - Ran:
+    - `scripts/cut_release_tag.sh --version v0.1.2 --apply --commit-notes --push`
+  - Results:
+    - reused existing `docs/release-notes-v0.1.2.md`
+    - skipped notes commit (no content changes)
+    - created local tag `v0.1.2` at `547910a`
+    - pushed `main` and tag `v0.1.2` to `origin`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git tag -l | sort`
+  - `git ls-remote --tags origin | rg "v0.1.2(\\^\\{\\})?$"`
+- Commit(s):
+  - fix commit: `547910a`
+  - pending docs/log commit
+- Risks/notes:
+  - release now tags helper-fix commit directly due no-op notes commit path.
+- Next slice:
+  - M8: add post-v0.1.2 maintenance checklist update.
+
+---
