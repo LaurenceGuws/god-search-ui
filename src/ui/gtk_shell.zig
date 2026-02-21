@@ -62,6 +62,9 @@ pub const Shell = struct {
         c.gtk_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
         const status = c.gtk_label_new("Esc to close, Ctrl+R to refresh");
         c.gtk_label_set_xalign(@ptrCast(status), 0.0);
+        c.gtk_label_set_single_line_mode(@ptrCast(status), GTRUE);
+        c.gtk_label_set_ellipsize(@ptrCast(status), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_max_width_chars(@ptrCast(status), 96);
         c.gtk_widget_set_margin_bottom(status, 4);
         c.gtk_widget_add_css_class(status, "gs-status");
 

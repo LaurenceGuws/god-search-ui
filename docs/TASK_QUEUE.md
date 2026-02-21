@@ -129,3 +129,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - add transient timeout to clear status emphasis back to neutral hints.
 - [x] M8: UX Phase 3 - reduce status jitter by skipping redundant status updates.
 - [x] M8: UX Phase 3 - add adaptive query-length debounce for better responsiveness.
+- [x] M8: UX Phase 3 - add max-height guard for status text to prevent layout jump.

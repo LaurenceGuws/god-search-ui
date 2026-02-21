@@ -2458,3 +2458,22 @@
   - M8: UX Phase 3 - add max-height guard for status text to prevent layout jump on long messages.
 
 ---
+## 2026-02-21 (Cycle 118)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add max-height guard for status text to prevent layout jump
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - status label is now single-line with ellipsize at end
+    - added max-width hint to avoid multi-line growth and list displacement
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - very long status strings truncate by design; detailed context remains available in result rows.
+- Next slice:
+  - M8: UX Phase 3 - add tiny hotkeys legend row style differentiation from generic info rows.
+
+---
