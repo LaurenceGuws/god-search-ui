@@ -3753,3 +3753,29 @@
   - M8: UX Phase 5 - add richer row micro-layout polish pass (chip/icon/title baseline alignment + subtitle density tuning).
 
 ---
+## 2026-02-21 (Cycle 171)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 5 bundle - candidate row micro-layout refactor and CSS chip extraction
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - refactored candidate primary row layout to:
+      - left icon
+      - center title (ellipsized, expandable)
+      - right aligned kind chip
+    - replaced kind chip inline markup with dedicated widget + CSS classes
+    - added per-kind chip CSS classes (`app/window/dir/action/hint`) with pill styling
+    - tightened row padding/spacing for denser scan-friendly list layout
+    - expanded empty-query legend row to include:
+      - `Ctrl+L`, `PageUp/PageDown`, `Home/End`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - chip palette remains app-defined CSS and may require another pass for certain light themes.
+- Next slice:
+  - M8: UX Phase 5 - add actionable row focus-ring and contrast pass for improved selection visibility on mixed themes.
+
+---

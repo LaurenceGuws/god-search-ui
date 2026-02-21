@@ -188,3 +188,6 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 5 - add query-term highlighting in GTK candidate title/subtitle rows.
 - [x] M8: UX Phase 5 - add GTK tooltips for full candidate title/subtitle text.
 - [x] M8: UX Phase 5 - use real GTK row allocation for selected-row scroll visibility.
+- [x] M8: UX Phase 5 - refactor GTK candidate rows to icon + title + right-aligned kind chip layout.
+- [x] M8: UX Phase 5 - move kind-chip visuals fully into GTK CSS classes (no inline markup colors).
+- [x] M8: UX Phase 5 - expand empty-query hotkey legend for advanced navigation shortcuts.

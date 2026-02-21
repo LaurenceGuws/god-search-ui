@@ -395,7 +395,7 @@ pub const Shell = struct {
         const has_app_glyph_fallback = hasAppGlyphFallback(rows);
         if (empty_query) {
             appendInfoRow(ctx.list, "Start typing to search, or use a route prefix.");
-            appendLegendRow(ctx.list, "Hotkeys: Enter launch | Ctrl+R refresh | Esc close");
+            appendLegendRow(ctx.list, "Hotkeys: Enter launch | Ctrl+L focus | PgUp/PgDn move | Home/End jump | Ctrl+R refresh | Esc close");
         }
         if (route_hint) |hint| {
             appendInfoRow(ctx.list, hint);
@@ -553,14 +553,12 @@ pub const Shell = struct {
         row: @import("../search/mod.zig").ScoredCandidate,
         highlight_token: []const u8,
     ) void {
-        const chip_markup = kindChipMarkup(row.candidate.kind);
         const title_markup = highlightedMarkup(allocator, row.candidate.title, highlight_token) catch return;
         defer allocator.free(title_markup);
         const primary_markup = std.fmt.allocPrint(
             allocator,
-            "{s}  {s}",
+            "<span weight=\"600\">{s}</span>",
             .{
-                chip_markup,
                 title_markup,
             },
         ) catch return;
@@ -571,12 +569,20 @@ pub const Shell = struct {
         const primary_label = c.gtk_label_new(null);
         c.gtk_label_set_markup(@ptrCast(primary_label), primary_markup_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
+        c.gtk_label_set_ellipsize(@ptrCast(primary_label), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_single_line_mode(@ptrCast(primary_label), GTRUE);
+        c.gtk_widget_set_hexpand(primary_label, GTRUE);
         c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
 
         const icon_widget = candidateIconWidget(allocator, row.candidate.kind, row.candidate.action, row.candidate.icon);
+        c.gtk_widget_set_valign(icon_widget, c.GTK_ALIGN_CENTER);
+        const chip = kindChipWidget(row.candidate.kind);
+        c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
         const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
         c.gtk_box_append(@ptrCast(primary_row), icon_widget);
         c.gtk_box_append(@ptrCast(primary_row), primary_label);
+        c.gtk_box_append(@ptrCast(primary_row), chip);
 
         const subtitle_markup = highlightedMarkup(allocator, row.candidate.subtitle, highlight_token) catch return;
         defer allocator.free(subtitle_markup);
@@ -593,6 +599,7 @@ pub const Shell = struct {
         const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
         c.gtk_widget_set_margin_top(content, 2);
         c.gtk_widget_set_margin_bottom(content, 2);
+        c.gtk_widget_add_css_class(content, "gs-candidate-content");
         c.gtk_box_append(@ptrCast(content), primary_row);
         c.gtk_box_append(@ptrCast(content), secondary_label);
 
@@ -820,12 +827,20 @@ pub const Shell = struct {
             ".gs-info { color: #9aa1b5; }\n" ++
             ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
-            ".gs-results > row { border-radius: 8px; padding: 2px 6px; }\n" ++
+            ".gs-results > row { border-radius: 8px; padding: 4px 8px; }\n" ++
             ".gs-results > row:selected { background: rgba(140, 170, 235, 0.22); }\n" ++
             ".gs-results > row:hover { background: rgba(140, 170, 235, 0.12); }\n" ++
             ".gs-kind-icon { color: #a9b1c7; }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; }\n" ++
-            ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n";
+            ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n" ++
+            ".gs-primary-row { min-height: 20px; }\n" ++
+            ".gs-candidate-content { spacing: 2px; }\n" ++
+            ".gs-chip { font-size: 0.72em; font-weight: 700; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; }\n" ++
+            ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
+            ".gs-chip-window { color: #78d2c7; background: rgba(120, 210, 199, 0.16); }\n" ++
+            ".gs-chip-dir { color: #ddb26f; background: rgba(221, 178, 111, 0.16); }\n" ++
+            ".gs-chip-action { color: #f18cb6; background: rgba(241, 140, 182, 0.16); }\n" ++
+            ".gs-chip-hint { color: #9aa1b5; background: rgba(154, 161, 181, 0.16); }\n";
 
         const provider = c.gtk_css_provider_new();
         defer c.g_object_unref(provider);
@@ -1052,13 +1067,26 @@ pub const Shell = struct {
         };
     }
 
-    fn kindChipMarkup(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
+    fn kindChipWidget(kind: @import("../search/mod.zig").CandidateKind) *c.GtkWidget {
+        const label = c.gtk_label_new(kindChipText(kind).ptr);
+        c.gtk_widget_add_css_class(label, "gs-chip");
+        switch (kind) {
+            .app => c.gtk_widget_add_css_class(label, "gs-chip-app"),
+            .window => c.gtk_widget_add_css_class(label, "gs-chip-window"),
+            .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
+            .action => c.gtk_widget_add_css_class(label, "gs-chip-action"),
+            .hint => c.gtk_widget_add_css_class(label, "gs-chip-hint"),
+        }
+        return @ptrCast(label);
+    }
+
+    fn kindChipText(kind: @import("../search/mod.zig").CandidateKind) [:0]const u8 {
         return switch (kind) {
-            .app => "<span foreground=\"#7fb0ff\">APP</span>",
-            .window => "<span foreground=\"#78d2c7\">WIN</span>",
-            .dir => "<span foreground=\"#ddb26f\">DIR</span>",
-            .action => "<span foreground=\"#f18cb6\">ACT</span>",
-            .hint => "<span foreground=\"#9aa1b5\">TIP</span>",
+            .app => "APP",
+            .window => "WIN",
+            .dir => "DIR",
+            .action => "ACT",
+            .hint => "TIP",
         };
     }
 };
