@@ -40,4 +40,10 @@ rg -q --fixed-strings "scripts/cut_release_tag.sh --version vX.Y.Z --apply --com
 rg -q --fixed-strings -- "--regen-notes" "$MATRIX"
 rg -q --fixed-strings "scripts/publish_release_tag.sh --version vX.Y.Z --apply" "$MATRIX"
 
+# Ensure related docs references exist.
+rg -q --fixed-strings "## Related Docs" "$MATRIX"
+rg -q --fixed-strings "docs/RELEASE_SMOKE_MODES.md" "$MATRIX"
+rg -q --fixed-strings "docs/RELEASE_VALIDATE_MODES.md" "$MATRIX"
+rg -q --fixed-strings "docs/ICON_DIAGNOSTICS.md" "$MATRIX"
+
 echo "release matrix checks passed"

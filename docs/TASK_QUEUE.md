@@ -159,3 +159,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add explicit clean-worktree guard for `release_validate --require-clean`.
 - [x] M8: UX Phase 4 - add `release_validate --help` output and dedicated contract checker.
 - [x] M8: UX Phase 4 - add dedicated release-validate modes/options docs page.
+- [x] M8: UX Phase 4 - add related-doc references in release matrix and enforce via checks.

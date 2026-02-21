@@ -38,3 +38,9 @@ Quick dry-run example:
   - `[dry-run] would reuse: docs/release-notes-v0.1.2.md`
   - or regeneration command when notes file does not yet exist.
 6. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`
+
+## Related Docs
+
+- `docs/RELEASE_SMOKE_MODES.md`
+- `docs/RELEASE_VALIDATE_MODES.md`
+- `docs/ICON_DIAGNOSTICS.md`
