@@ -343,3 +343,24 @@
   - M3: Render real ranked candidate rows in GTK list (instead of placeholder).
 
 ---
+## 2026-02-21 (Cycle 17)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add keyboard navigation behaviors (`Esc`, arrows, Enter) in GTK shell
+- Changes:
+  - Added GTK key controller handling in `src/ui/gtk_shell.zig`.
+  - Implemented:
+    - `Esc` to close window
+    - `Up/Down` to move list selection
+    - `Enter/KP_Enter` to activate selected row
+  - Added small UI context struct for callback state.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK key behavior is feature-gated and requires GTK build mode to validate at runtime.
+- Next slice:
+  - M3: Render real ranked candidate rows in GTK list (instead of placeholder).
+
+---
