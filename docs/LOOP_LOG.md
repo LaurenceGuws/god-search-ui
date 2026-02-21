@@ -254,3 +254,24 @@
   - M2: Wire query parser + ranking into a search service that consumes provider registry.
 
 ---
+## 2026-02-21 (Cycle 13)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Wire query parser + ranking into a search service that consumes provider registry
+- Changes:
+  - Added `src/app/search_service.zig`:
+    - provider aggregation via `ProviderRegistry`
+    - query parsing + ranked search (`searchQuery`)
+    - selection history recording for recency (`recordSelection`)
+  - Added service test covering history-influenced ranking.
+  - Exported `SearchService` in `src/app/mod.zig`.
+  - Marked service slice complete and queued next M2/M3 tasks in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - History is currently in-memory only; persistence is a separate queued task.
+- Next slice:
+  - M2: Add history persistence store (file-backed) for recency reuse across launches.
+
+---

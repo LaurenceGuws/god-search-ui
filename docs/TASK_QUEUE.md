@@ -3,7 +3,9 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M2: Wire query parser + ranking into a search service that consumes provider registry.
+- [ ] M2: Add history persistence store (file-backed) for recency reuse across launches.
+- [ ] M3: Add minimal GTK4 window shell (search entry + list placeholder).
+- [ ] M3: Wire search service into UI update loop (query -> ranked rows).
 
 ## In Progress
 - [ ] (empty)
@@ -24,3 +26,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M2: Add query parser for prefix routing (`@ # ~ > = ?`).
 - [x] M2: Implement baseline blended ranking (exact/prefix/source weights).
 - [x] M2: Add recency boost from action history.
+- [x] M2: Wire query parser + ranking into a search service that consumes provider registry.
