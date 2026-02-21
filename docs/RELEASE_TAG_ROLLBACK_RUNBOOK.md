@@ -28,7 +28,7 @@ For post-release patch cadence (`v0.1.1` and later), follow execution order in:
 ```bash
 git status --short
 scripts/release_smoke.sh
-scripts/release_validate.sh --ci
+scripts/release_validate.sh --ci --require-clean
 ```
 
 Working tree must be clean before tagging.

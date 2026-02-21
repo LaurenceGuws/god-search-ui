@@ -7,6 +7,7 @@ Quick reference for release automation scripts.
 | `scripts/release_smoke.sh` | End-to-end release sanity checks | `scripts/release_smoke.sh` | `scripts/release_smoke.sh --with-gtk-runtime` |
 | `scripts/release_smoke.sh` (CI preset) | CI-friendly smoke preset | `scripts/release_smoke.sh --ci` | `scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5` |
 | `scripts/release_validate.sh` | One-pass operator validation wrapper | `scripts/release_validate.sh` | `scripts/release_validate.sh --ci` |
+| `scripts/check_clean_worktree.sh` | Clean-worktree preflight guard | `scripts/check_clean_worktree.sh` | (same command) |
 | `scripts/check_release_validate_ci.sh` | CI guard ensuring `release_validate --ci` completes non-interactively | `scripts/check_release_validate_ci.sh` | (same command) |
 | `scripts/gen_release_notes.sh` | Draft release notes from template + commits | `scripts/gen_release_notes.sh v0.1.1` | edit generated notes and commit |
 | `scripts/cut_release_tag.sh` | Tag cut flow with preflight | `scripts/cut_release_tag.sh --version v0.1.1` | `scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --push` |

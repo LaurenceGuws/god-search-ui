@@ -74,6 +74,10 @@ One-pass operator validation wrapper:
 ```bash
 scripts/release_validate.sh --ci
 ```
+Enforce clean worktree during validation:
+```bash
+scripts/release_validate.sh --ci --require-clean
+```
 CI non-interactive guard:
 ```bash
 scripts/check_release_validate_ci.sh

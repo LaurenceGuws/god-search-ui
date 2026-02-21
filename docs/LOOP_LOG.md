@@ -3081,3 +3081,33 @@
   - M8: UX Phase 4 - add explicit “clean worktree required” guard script for release-validate preset.
 
 ---
+## 2026-02-21 (Cycle 143)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add explicit clean-worktree guard for `release_validate` preset
+- Changes:
+  - Added `scripts/check_clean_worktree.sh`:
+    - fails when worktree has uncommitted changes
+  - Updated `scripts/release_validate.sh`:
+    - added `--require-clean` and `--allow-dirty` flags
+    - supports `RELEASE_VALIDATE_ALLOW_DIRTY=1` override for local iterative runs
+  - Updated `scripts/check_release_validate_ci.sh`:
+    - enforces `--require-clean` during CI guard runs
+    - supports local dirty override via `RELEASE_VALIDATE_ALLOW_DIRTY=1`
+  - Updated docs:
+    - `README.md`, `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`, `docs/TROUBLESHOOTING_RUNBOOK.md`
+    - `docs/RELEASE_SCRIPT_MATRIX.md` + `scripts/check_release_matrix.sh` include clean-worktree guard
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_validate.sh --ci --require-clean --allow-dirty`
+  - `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_validate_ci.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - clean-worktree enforcement is opt-in (`--require-clean`) to avoid disrupting active dev loops.
+- Next slice:
+  - M8: UX Phase 4 - add explicit release_validate `--help` output and contract checker script.
+
+---

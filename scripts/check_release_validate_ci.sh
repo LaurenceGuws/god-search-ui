@@ -5,8 +5,12 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 TIMEOUT_SECS="${RELEASE_VALIDATE_TIMEOUT_SECS:-300}"
+ALLOW_DIRTY_FLAG=""
+if [[ "${RELEASE_VALIDATE_ALLOW_DIRTY:-0}" == "1" ]]; then
+  ALLOW_DIRTY_FLAG="--allow-dirty"
+fi
 
-if timeout "${TIMEOUT_SECS}"s scripts/release_validate.sh --ci >/dev/null; then
+if timeout "${TIMEOUT_SECS}"s scripts/release_validate.sh --ci --require-clean ${ALLOW_DIRTY_FLAG} >/dev/null; then
   echo "release validate ci guard passed"
   exit 0
 fi

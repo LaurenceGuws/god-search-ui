@@ -110,7 +110,7 @@ Symptoms:
 Actions:
 1. Run with full output:
    ```bash
-   scripts/release_validate.sh --ci
+   scripts/release_validate.sh --ci --require-clean
    ```
 2. Confirm output includes all markers:
    - `release smoke checks passed`
@@ -122,6 +122,8 @@ Actions:
    - `scripts/check_release_docs_contracts.sh`
 5. If CI guard times out, increase timeout temporarily:
    - `RELEASE_VALIDATE_TIMEOUT_SECS=600 scripts/check_release_validate_ci.sh`
+6. If local workspace is intentionally dirty during iteration, explicitly allow it:
+   - `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/release_validate.sh --ci --require-clean`
 
 ## 3) Recovery / Rollback
 

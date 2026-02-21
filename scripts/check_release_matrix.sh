@@ -11,6 +11,7 @@ test -f "$MATRIX"
 scripts=(
   "scripts/release_smoke.sh"
   "scripts/release_validate.sh"
+  "scripts/check_clean_worktree.sh"
   "scripts/check_release_validate_ci.sh"
   "scripts/gen_release_notes.sh"
   "scripts/cut_release_tag.sh"
