@@ -3187,3 +3187,29 @@
   - M8: UX Phase 4 - add one command alias for all release contract checks in README quick list.
 
 ---
+## 2026-02-21 (Cycle 147)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add one-command alias for all release contract checks
+- Changes:
+  - Added `scripts/check_release_contracts.sh`:
+    - runs docs contracts guard and CI validate guard checks
+  - Updated `README.md`:
+    - added one-command release contracts alias in quick list
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added release contracts alias row
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates release contracts alias script reference/executability
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - alias command inherits runtime cost of CI validate guard.
+- Next slice:
+  - M8: UX Phase 4 - add optional `--docs-only` mode to release contracts alias for faster local iteration.
+
+---

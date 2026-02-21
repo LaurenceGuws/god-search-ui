@@ -119,6 +119,10 @@ Meta guard for all release docs contracts:
 ```bash
 scripts/check_release_docs_contracts.sh
 ```
+One-command alias for all release contract checks:
+```bash
+scripts/check_release_contracts.sh
+```
 Release-validate help/docs contract check:
 ```bash
 scripts/check_release_validate_contract.sh

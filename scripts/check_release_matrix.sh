@@ -20,6 +20,7 @@ scripts=(
   "scripts/arch_package_smoke.sh"
   "scripts/check_release_helpers.sh"
   "scripts/check_release_docs_contracts.sh"
+  "scripts/check_release_contracts.sh"
   "scripts/check_release_smoke_contract.sh"
   "scripts/check_apps_cache_format.sh"
   "scripts/check_icon_theme_env.sh"
