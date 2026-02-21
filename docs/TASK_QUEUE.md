@@ -3,7 +3,6 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M3: Add row-level icon/chip styling in GTK list renderer.
 - [ ] M3: Add grouped sections in GTK list (apps/windows/dirs/actions).
 - [ ] M4: Add confirmation mode for sensitive actions (`power`).
 - [ ] M4: Add telemetry event sink for action execution results.
@@ -36,3 +35,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M3: Render real ranked candidate rows in GTK list (instead of placeholder).
 - [x] M3: Connect GTK search entry changes to `SearchService.searchQuery`.
 - [x] M3: Add action execution hook for selected result (`Enter`).
+- [x] M3: Add row-level icon/chip styling in GTK list renderer.

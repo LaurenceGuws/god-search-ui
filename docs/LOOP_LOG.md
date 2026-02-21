@@ -426,3 +426,23 @@
   - M3: Add row-level icon/chip styling in GTK list renderer.
 
 ---
+## 2026-02-21 (Cycle 21)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add row-level icon/chip styling in GTK list renderer
+- Changes:
+  - Updated GTK row rendering to use markup with:
+    - per-kind icons
+    - chip labels (`APP`, `WIN`, `DIR`, `ACT`, `TIP`)
+    - styled title/subtitle colors
+  - Added markup-escaping for row text safety.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Visual polish depends on font/icon availability and GTK theme rendering.
+- Next slice:
+  - M3: Add grouped sections in GTK list (apps/windows/dirs/actions).
+
+---

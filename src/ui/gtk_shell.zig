@@ -159,10 +159,24 @@ pub const Shell = struct {
 
         const limit = @min(ranked.len, 20);
         for (ranked[0..limit]) |row| {
-            const text = std.fmt.allocPrintZ(allocator, "{s} — {s}", .{ row.candidate.title, row.candidate.subtitle }) catch continue;
-            defer allocator.free(text);
+            const title_escaped = c.g_markup_escape_text(row.candidate.title.ptr, @intCast(row.candidate.title.len));
+            if (title_escaped == null) continue;
+            defer c.g_free(title_escaped);
+            const subtitle_escaped = c.g_markup_escape_text(row.candidate.subtitle.ptr, @intCast(row.candidate.subtitle.len));
+            if (subtitle_escaped == null) continue;
+            defer c.g_free(subtitle_escaped);
 
-            const label = c.gtk_label_new(text.ptr);
+            const icon = kindIcon(row.candidate.kind);
+            const chip = kindChip(row.candidate.kind);
+            const markup = std.fmt.allocPrintZ(
+                allocator,
+                "{s}  <span foreground='#9fb2ff' weight='bold'>{s}</span>  <span foreground='#e8ecf7'>{s}</span>  <span foreground='#9aa1b5'>{s}</span>",
+                .{ icon, chip, std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped))), std.mem.span(@as([*:0]const u8, @ptrCast(subtitle_escaped))) },
+            ) catch continue;
+            defer allocator.free(markup);
+
+            const label = c.gtk_label_new(null);
+            c.gtk_label_set_markup(@ptrCast(label), markup.ptr);
             c.gtk_label_set_xalign(@ptrCast(label), 0.0);
             const list_row = c.gtk_list_box_row_new();
             c.gtk_list_box_row_set_child(@ptrCast(list_row), label);
@@ -238,6 +252,26 @@ pub const Shell = struct {
             .dir => "dir",
             .action => "action",
             .hint => "hint",
+        };
+    }
+
+    fn kindIcon(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
+        return switch (kind) {
+            .app => "󰀻",
+            .window => "",
+            .dir => "󰉋",
+            .action => "",
+            .hint => "󰘥",
+        };
+    }
+
+    fn kindChip(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
+        return switch (kind) {
+            .app => "APP",
+            .window => "WIN",
+            .dir => "DIR",
+            .action => "ACT",
+            .hint => "TIP",
         };
     }
 };
