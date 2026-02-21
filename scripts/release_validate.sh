@@ -4,12 +4,29 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+usage() {
+  cat <<'EOF'
+Usage: scripts/release_validate.sh [options]
+
+Options:
+  --require-clean   Require clean worktree before running validation
+  --allow-dirty     Override clean-worktree requirement
+  --help            Show this help
+
+Any other options are forwarded to scripts/release_smoke.sh.
+EOF
+}
+
 REQUIRE_CLEAN=0
 ALLOW_DIRTY=0
 SMOKE_ARGS=()
 
 for arg in "$@"; do
   case "$arg" in
+    --help)
+      usage
+      exit 0
+      ;;
     --require-clean)
       REQUIRE_CLEAN=1
       ;;

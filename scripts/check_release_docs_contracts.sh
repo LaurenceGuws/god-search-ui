@@ -7,5 +7,6 @@ cd "$ROOT_DIR"
 scripts/check_release_helpers.sh
 scripts/check_release_matrix.sh
 scripts/check_release_smoke_contract.sh
+scripts/check_release_validate_contract.sh
 
 echo "release docs contract checks passed"

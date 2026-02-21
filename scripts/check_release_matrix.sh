@@ -13,6 +13,7 @@ scripts=(
   "scripts/release_validate.sh"
   "scripts/check_clean_worktree.sh"
   "scripts/check_release_validate_ci.sh"
+  "scripts/check_release_validate_contract.sh"
   "scripts/gen_release_notes.sh"
   "scripts/cut_release_tag.sh"
   "scripts/publish_release_tag.sh"

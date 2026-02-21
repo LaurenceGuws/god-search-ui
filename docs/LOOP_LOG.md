@@ -3111,3 +3111,32 @@
   - M8: UX Phase 4 - add explicit release_validate `--help` output and contract checker script.
 
 ---
+## 2026-02-21 (Cycle 144)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add `release_validate --help` and contract checker
+- Changes:
+  - Updated `scripts/release_validate.sh`:
+    - added explicit `--help` output and option descriptions
+  - Added `scripts/check_release_validate_contract.sh`:
+    - validates release-validate CLI help and docs references
+  - Updated `scripts/check_release_docs_contracts.sh`:
+    - now includes release-validate contract check
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md` and `scripts/check_release_matrix.sh`:
+    - added release-validate contract checker to matrix/check set
+  - Updated `README.md`:
+    - documented `scripts/check_release_validate_contract.sh`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_validate_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/release_validate.sh --help`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - contract checks are intentionally strict on docs/help string presence.
+- Next slice:
+  - M8: UX Phase 4 - add release_validate mode table and options to dedicated docs page.
+
+---
