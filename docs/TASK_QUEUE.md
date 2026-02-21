@@ -124,3 +124,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - adjust selected-row status copy to include source kind.
 - [x] M8: UX Phase 3 - add inline query-prefix cheat sheet to empty-query status.
 - [x] M8: UX Phase 3 - add concise post-launch status guidance for repeated Enter behavior.
+- [x] M8: UX Phase 3 - compact empty-query info row copy to reduce status-line duplication.

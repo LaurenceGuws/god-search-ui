@@ -321,7 +321,7 @@ pub const Shell = struct {
         const empty_query = query_trimmed.len == 0;
         const route_hint = routeHintForQuery(query_trimmed);
         if (empty_query) {
-            appendInfoRow(ctx.list, "Shortcuts: Enter launch | Ctrl+R refresh | Esc close");
+            appendInfoRow(ctx.list, "Start typing to search, or use a route prefix.");
         }
         if (route_hint) |hint| {
             appendInfoRow(ctx.list, hint);

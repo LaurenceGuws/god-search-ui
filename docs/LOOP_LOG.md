@@ -2360,3 +2360,22 @@
   - M8: UX Phase 3 - compact empty-query info row copy to reduce visual duplication with status line.
 
 ---
+## 2026-02-21 (Cycle 113)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - compact empty-query info row copy to reduce status-line duplication
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced verbose shortcut info row with concise empty-state prompt text
+    - relies on status line for detailed shortcut + route-prefix reference
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - empty-state guidance now splits detail between info row and status line by design.
+- Next slice:
+  - M8: UX Phase 3 - add subtle status color emphasis for success vs error launch feedback.
+
+---
