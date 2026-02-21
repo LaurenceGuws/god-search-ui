@@ -4,7 +4,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
 - [ ] M5: Add async thread-based refresh worker (optional advanced path).
-- [ ] M6: Add release-notes template for milestone cutovers.
+- [ ] M6: Add changelog generation script for release notes draft.
 
 ## In Progress
 - [ ] (empty)
@@ -49,3 +49,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M6: Add rollout checklist for migrating from shell launcher to GTK launcher.
 - [x] M6: Add operator troubleshooting runbook for common failures.
 - [x] M6: Add systemd user unit example file under `packaging/systemd/`.
+- [x] M6: Add release-notes template for milestone cutovers.

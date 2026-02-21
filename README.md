@@ -47,6 +47,7 @@ scripts/dev.sh test
 - Hypr/Waybar integration: `docs/HYPR_WAYBAR_INTEGRATION.md`
 - GTK rollout checklist: `docs/GTK_ROLLOUT_CHECKLIST.md`
 - Troubleshooting runbook: `docs/TROUBLESHOOTING_RUNBOOK.md`
+- Release notes template: `docs/RELEASE_NOTES_TEMPLATE.md`
 
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.

@@ -745,3 +745,23 @@
   - M5: Add async thread-based refresh worker (optional advanced path).
 
 ---
+## 2026-02-21 (Cycle 36)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add release-notes template for milestone cutovers
+- Changes:
+  - Added `docs/RELEASE_NOTES_TEMPLATE.md` with sections for:
+    - highlights/features/fixes
+    - behavior changes + migration
+    - verification + rollback notes
+  - Linked release template from `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Template is intentionally lightweight and manual.
+- Next slice:
+  - M5: Add async thread-based refresh worker (optional advanced path).
+
+---
