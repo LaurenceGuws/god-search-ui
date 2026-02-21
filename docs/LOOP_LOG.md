@@ -2032,3 +2032,22 @@
   - M8: UX Phase 2 - keep launch feedback rows bounded (avoid unbounded accumulation).
 
 ---
+## 2026-02-21 (Cycle 96)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - bound launch feedback rows to avoid accumulation
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - `showLaunchFeedback` now clears previous feedback rows before appending new one
+    - added feedback-row tagging and cleanup helpers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - feedback rows remain transient and clear on next query render.
+- Next slice:
+  - M8: UX Phase 2 - add lightweight visual separator between sections.
+
+---

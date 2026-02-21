@@ -481,9 +481,37 @@ pub const Shell = struct {
     }
 
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
-        appendInfoRow(ctx.list, message);
+        clearLaunchFeedbackRows(ctx.list);
+        appendLaunchFeedbackRow(ctx.list, message);
         setStatus(ctx, message);
         selectFirstActionableRow(ctx.list);
+    }
+
+    fn clearLaunchFeedbackRows(list: *c.GtkListBox) void {
+        var child = c.gtk_widget_get_first_child(@ptrCast(@alignCast(list)));
+        while (child != null) {
+            const next = c.gtk_widget_get_next_sibling(child);
+            if (c.g_object_get_data(@ptrCast(child), "gs-feedback") != null) {
+                c.gtk_list_box_remove(list, child);
+            }
+            child = next;
+        }
+    }
+
+    fn appendLaunchFeedbackRow(list: *c.GtkListBox, message: []const u8) void {
+        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
+        defer std.heap.page_allocator.free(msg_z);
+
+        const label = c.gtk_label_new(msg_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+        c.gtk_widget_add_css_class(label, "gs-info");
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_list_box_row_set_child(@ptrCast(row), label);
+        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
+        c.g_object_set_data_full(@ptrCast(row), "gs-feedback", c.g_strdup("1"), c.g_free);
+        c.gtk_list_box_append(@ptrCast(list), row);
     }
 
     fn setStatus(ctx: *UiContext, message: []const u8) void {
