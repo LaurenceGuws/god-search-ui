@@ -175,3 +175,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add release-contracts cheat sheet block to README release section.
 - [x] M8: UX Phase 4 - enforce README release-contracts cheat-sheet command presence in contract checks.
 - [x] M8: UX Phase 4 - add release-contracts link to top-level README docs list.
+- [x] M8: UX Phase 4 - enforce dual README release-contracts references in alias contract checker.

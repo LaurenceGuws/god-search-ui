@@ -3541,3 +3541,25 @@
   - M8: UX Phase 4 - add release-contracts top-level docs-link assertion to contracts alias checker.
 
 ---
+## 2026-02-21 (Cycle 162)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce dual README release-contracts references in alias contract checker
+- Changes:
+  - Updated `scripts/check_release_contracts_contract.sh`:
+    - added assertion that README contains at least two `Release contracts reference:` entries
+    - ensures both release section and top-level docs list stay aligned
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker intentionally couples README structure to discoverability expectations.
+- Next slice:
+  - M8: UX Phase 4 - add short release contracts onboarding note to README "Next" section.
+
+---
