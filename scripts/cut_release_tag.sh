@@ -155,9 +155,13 @@ else
 fi
 
 if [[ $COMMIT_NOTES -eq 1 ]]; then
-  echo "[apply] committing release notes draft"
   git add "$NOTES_PATH"
-  git commit -m "Add release notes draft for ${VERSION}"
+  if git diff --cached --quiet; then
+    echo "[apply] notes unchanged; skipping release-notes commit"
+  else
+    echo "[apply] committing release notes draft"
+    git commit -m "Add release notes draft for ${VERSION}"
+  fi
 fi
 
 echo "[apply] creating annotated tag"
