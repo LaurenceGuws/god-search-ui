@@ -15,12 +15,11 @@ pub const ActionsProvider = struct {
     }
 
     fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
-        _ = allocator;
         _ = context;
-        try out.append(search.Candidate.init(.action, "Settings", "System", "settings"));
-        try out.append(search.Candidate.init(.action, "Power menu", "Session", "power"));
-        try out.append(search.Candidate.init(.action, "Restart Waybar", "System", "restart-waybar"));
-        try out.append(search.Candidate.init(.action, "Notifications panel", "System", "notifications"));
+        try out.append(allocator, search.Candidate.init(.action, "Settings", "System", "settings"));
+        try out.append(allocator, search.Candidate.init(.action, "Power menu", "Session", "power"));
+        try out.append(allocator, search.Candidate.init(.action, "Restart Waybar", "System", "restart-waybar"));
+        try out.append(allocator, search.Candidate.init(.action, "Notifications panel", "System", "notifications"));
     }
 
     fn health(context: *anyopaque) search.ProviderHealth {

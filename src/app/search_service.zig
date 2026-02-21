@@ -99,6 +99,7 @@ fn readFileAnyPath(allocator: std.mem.Allocator, path: []const u8, max_bytes: us
 
 fn writeFileAnyPath(path: []const u8, data: []const u8) !void {
     if (std.fs.path.isAbsolute(path)) {
+        try ensureParentDirAbsolute(path);
         const file = try std.fs.createFileAbsolute(path, .{ .truncate = true });
         defer file.close();
         try file.writeAll(data);
@@ -110,13 +111,17 @@ fn writeFileAnyPath(path: []const u8, data: []const u8) !void {
     });
 }
 
+fn ensureParentDirAbsolute(path: []const u8) !void {
+    const parent = std.fs.path.dirname(path) orelse return;
+    try std.fs.makeDirAbsolute(parent);
+}
+
 test "search service applies history boost through ranking" {
     const Fake = struct {
         fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
-            _ = allocator;
             _ = context;
-            try out.append(search.Candidate.init(.action, "Settings", "System", "settings"));
-            try out.append(search.Candidate.init(.action, "Power menu", "Session", "power"));
+            try out.append(allocator, search.Candidate.init(.action, "Settings", "System", "settings"));
+            try out.append(allocator, search.Candidate.init(.action, "Power menu", "Session", "power"));
         }
 
         fn health(context: *anyopaque) search.ProviderHealth {

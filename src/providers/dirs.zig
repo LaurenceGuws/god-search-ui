@@ -39,7 +39,7 @@ pub const DirsProvider = struct {
             const base = std.fs.path.basename(trimmed);
             const kept_base = try self.keepString(allocator, base);
             const kept_path = try self.keepString(allocator, trimmed);
-            try out.append(search.Candidate.init(.dir, kept_base, "Directory", kept_path));
+            try out.append(allocator, search.Candidate.init(.dir, kept_base, "Directory", kept_path));
         }
     }
 
@@ -61,9 +61,12 @@ fn hasSystemTools() bool {
 }
 
 fn commandExists(name: []const u8) bool {
+    const check_cmd = std.fmt.allocPrint(std.heap.page_allocator, "{s} --help >/dev/null 2>&1", .{name}) catch return false;
+    defer std.heap.page_allocator.free(check_cmd);
+
     const result = std.process.Child.run(.{
         .allocator = std.heap.page_allocator,
-        .argv = &.{ "sh", "-lc", name ++ " --help >/dev/null 2>&1" },
+        .argv = &.{ "sh", "-lc", check_cmd },
     }) catch return false;
     defer {
         std.heap.page_allocator.free(result.stdout);

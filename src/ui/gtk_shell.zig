@@ -1,23 +1,24 @@
 const std = @import("std");
+const app_mod = @import("../app/mod.zig");
 
 pub const Shell = struct {
-    pub fn run() !void {
+    pub fn run(_: std.mem.Allocator, _: *app_mod.SearchService) !void {
         const c = @cImport({
             @cInclude("gtk/gtk.h");
         });
 
-        const app = c.gtk_application_new("io.god.search.ui", c.G_APPLICATION_DEFAULT_FLAGS);
-        defer c.g_object_unref(app);
+        const gtk_app = c.gtk_application_new("io.god.search.ui", c.G_APPLICATION_DEFAULT_FLAGS);
+        defer c.g_object_unref(gtk_app);
 
-        _ = c.g_signal_connect_data(app, "activate", c.G_CALLBACK(onActivate), null, null, 0);
-        _ = c.g_application_run(@ptrCast(app), 0, null);
+        _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), null, null, 0);
+        _ = c.g_application_run(@ptrCast(gtk_app), 0, null);
     }
 
-    fn onActivate(app: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
+    fn onActivate(app_ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
         const c = @cImport({
             @cInclude("gtk/gtk.h");
         });
-        const gtk_app: *c.GtkApplication = @ptrCast(@alignCast(app.?));
+        const gtk_app: *c.GtkApplication = @ptrCast(@alignCast(app_ptr.?));
         const window = c.gtk_application_window_new(gtk_app);
         c.gtk_window_set_title(@ptrCast(window), "God Search");
         c.gtk_window_set_default_size(@ptrCast(window), 900, 560);

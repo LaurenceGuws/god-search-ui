@@ -53,9 +53,8 @@ pub const Provider = struct {
 
 const FakeProviderContext = struct {
     pub fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *CandidateList) !void {
-        _ = allocator;
         _ = context;
-        try out.append(.init(.action, "Settings", "System", "settings"));
+        try out.append(allocator, .init(.action, "Settings", "System", "settings"));
     }
 
     pub fn health(context: *anyopaque) ProviderHealth {

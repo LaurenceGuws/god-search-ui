@@ -31,7 +31,7 @@ pub const AppsProvider = struct {
         const self: *AppsProvider = @ptrCast(@alignCast(context));
         const data = std.fs.cwd().readFileAlloc(allocator, self.cache_path, 2 * 1024 * 1024) catch |err| switch (err) {
             error.FileNotFound => {
-                try out.append(search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
+                try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
                 return;
             },
             else => return err,
@@ -50,12 +50,12 @@ pub const AppsProvider = struct {
             const kept_name = try self.keepString(allocator, name);
             const kept_category = try self.keepString(allocator, category);
             const kept_exec = try self.keepString(allocator, exec_cmd);
-            try out.append(search.Candidate.init(.app, kept_name, kept_category, kept_exec));
+            try out.append(allocator, search.Candidate.init(.app, kept_name, kept_category, kept_exec));
             count += 1;
         }
 
         if (count == 0) {
-            try out.append(search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
+            try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
         }
     }
 

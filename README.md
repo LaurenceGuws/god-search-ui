@@ -22,6 +22,7 @@ Headless/stub UI:
 ```bash
 zig build run -- --ui
 ```
+In headless mode, type queries and press Enter. Use `:q` to exit.
 
 GTK4 shell (requires GTK4 dev libraries):
 ```bash

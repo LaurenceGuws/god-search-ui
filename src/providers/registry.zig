@@ -65,9 +65,8 @@ test "registry aggregates provider candidates and reports health" {
         };
 
         fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
-            _ = allocator;
             const ctx: *Ctx = @ptrCast(@alignCast(context));
-            try out.append(search.Candidate.init(.hint, ctx.title, "Provider", "noop"));
+            try out.append(allocator, search.Candidate.init(.hint, ctx.title, "Provider", "noop"));
         }
 
         fn health(context: *anyopaque) search.ProviderHealth {

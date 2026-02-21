@@ -3,9 +3,10 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M3: Wire search service into UI update loop (query -> ranked rows).
-- [ ] M3: Add fallback headless renderer mode for environments without GTK libs.
 - [ ] M3: Add keyboard navigation behaviors (`Esc`, arrows, Enter) in GTK shell.
+- [ ] M3: Render real ranked candidate rows in GTK list (instead of placeholder).
+- [ ] M3: Connect GTK search entry changes to `SearchService.searchQuery`.
+- [ ] M3: Add action execution hook for selected result (`Enter`).
 
 ## In Progress
 - [ ] (empty)
@@ -29,3 +30,5 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M2: Wire query parser + ranking into a search service that consumes provider registry.
 - [x] M2: Add history persistence store (file-backed) for recency reuse across launches.
 - [x] M3: Add minimal GTK4 window shell (search entry + list placeholder).
+- [x] M3: Wire search service into UI update loop (query -> ranked rows).
+- [x] M3: Add fallback headless renderer mode for environments without GTK libs.

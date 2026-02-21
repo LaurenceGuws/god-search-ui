@@ -318,3 +318,28 @@
   - M3: Wire search service into UI update loop (query -> ranked rows).
 
 ---
+## 2026-02-21 (Cycle 16)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Wire search service into UI update loop (query -> ranked rows)
+- Changes:
+  - Updated `src/main.zig` runtime setup to instantiate providers + registry + search service.
+  - Added history load/save integration for `--ui` sessions.
+  - Upgraded headless shell (`src/ui/stub_shell.zig`) to interactive query loop:
+    - reads query input
+    - calls `SearchService.searchQuery`
+    - prints top ranked rows
+    - records top action for recency feedback
+  - Added shell API parity for GTK/stub (`run(allocator, service)`).
+  - Updated `README.md` and queue entries.
+  - Fixed Zig 0.15 compatibility issues across providers/tests (append signatures, dynamic command checks).
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf ':q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK shell still renders placeholder row; ranked rows are currently visible in headless mode.
+- Next slice:
+  - M3: Render real ranked candidate rows in GTK list (instead of placeholder).
+
+---

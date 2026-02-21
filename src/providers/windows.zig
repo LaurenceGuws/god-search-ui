@@ -42,7 +42,7 @@ pub const WindowsProvider = struct {
             const kept_title = try self.keepString(allocator, title);
             const kept_class = try self.keepString(allocator, class);
             const kept_address = try self.keepString(allocator, address);
-            try out.append(search.Candidate.init(.window, kept_title, kept_class, kept_address));
+            try out.append(allocator, search.Candidate.init(.window, kept_title, kept_class, kept_address));
         }
     }
 
@@ -64,9 +64,12 @@ fn hasSystemTools() bool {
 }
 
 fn commandExists(name: []const u8) bool {
+    const check_cmd = std.fmt.allocPrint(std.heap.page_allocator, "{s} --help >/dev/null 2>&1", .{name}) catch return false;
+    defer std.heap.page_allocator.free(check_cmd);
+
     const result = std.process.Child.run(.{
         .allocator = std.heap.page_allocator,
-        .argv = &.{ "sh", "-lc", name ++ " --help >/dev/null 2>&1" },
+        .argv = &.{ "sh", "-lc", check_cmd },
     }) catch return false;
     defer {
         std.heap.page_allocator.free(result.stdout);
