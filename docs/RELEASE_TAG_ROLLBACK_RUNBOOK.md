@@ -34,6 +34,13 @@ scripts/release_validate.sh --ci --require-clean
 Reference:
 - `docs/RELEASE_CONTRACTS.md`
 
+Quick release-contract commands:
+```bash
+scripts/check_release_contracts.sh --docs-only
+scripts/release_validate.sh --ci --require-clean
+scripts/check_release_validate_ci.sh
+```
+
 Working tree must be clean before tagging.
 
 Expected success markers from `scripts/release_validate.sh --ci`:

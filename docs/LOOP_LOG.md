@@ -3650,3 +3650,26 @@
   - M8: UX Phase 4 - add short release contracts command block to rollback runbook for operator continuity.
 
 ---
+## 2026-02-21 (Cycle 167)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contract command block to rollback runbook preflight
+- Changes:
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`:
+    - added quick release-contract command block in preflight section
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates rollback runbook includes release-contract quick commands
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - runbook now intentionally duplicates command trio for operator continuity between docs.
+- Next slice:
+  - M8: UX Phase 4 - add runbook quick-command presence assertion to release-validate contract checker.
+
+---

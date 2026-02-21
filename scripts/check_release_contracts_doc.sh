@@ -39,5 +39,8 @@ rg -q --fixed-strings "RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_cont
 rg -q --fixed-strings "Do not use dirty-worktree override in CI or release cut/tag workflows." "$DOC"
 rg -q --fixed-strings "scripts/release_validate.sh --ci --require-clean" "$DOC"
 rg -q --fixed-strings "docs/RELEASE_CONTRACTS.md" "$RUNBOOK"
+rg -q --fixed-strings "scripts/check_release_contracts.sh --docs-only" "$RUNBOOK"
+rg -q --fixed-strings "scripts/release_validate.sh --ci --require-clean" "$RUNBOOK"
+rg -q --fixed-strings "scripts/check_release_validate_ci.sh" "$RUNBOOK"
 
 echo "release contracts doc checks passed"
