@@ -42,6 +42,7 @@ scripts/dev.sh test
 
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`
+- systemd user unit template: `packaging/systemd/god-search-ui.service`
 - Notes: `docs/ARCH_PACKAGING.md`
 - Hypr/Waybar integration: `docs/HYPR_WAYBAR_INTEGRATION.md`
 - GTK rollout checklist: `docs/GTK_ROLLOUT_CHECKLIST.md`

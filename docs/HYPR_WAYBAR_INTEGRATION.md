@@ -39,7 +39,13 @@ In `config.jsonc`, point left launcher to the binary:
 
 If you want preloaded startup behavior, use a user service.
 
-Example `~/.config/systemd/user/god-search-ui.service`:
+Template provided in repo:
+- `packaging/systemd/god-search-ui.service`
+
+Install to:
+- `~/.config/systemd/user/god-search-ui.service`
+
+Unit content:
 
 ```ini
 [Unit]

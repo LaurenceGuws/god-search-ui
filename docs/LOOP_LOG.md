@@ -727,3 +727,21 @@
   - M5: Add async thread-based refresh worker (optional advanced path).
 
 ---
+## 2026-02-21 (Cycle 35)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add systemd user unit example file under `packaging/systemd/`
+- Changes:
+  - Added `packaging/systemd/god-search-ui.service` template.
+  - Updated `docs/HYPR_WAYBAR_INTEGRATION.md` to reference template path and install location.
+  - Added README packaging reference for systemd template.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Service runs continuously; users may prefer keybind-only launch depending on workflow.
+- Next slice:
+  - M5: Add async thread-based refresh worker (optional advanced path).
+
+---
