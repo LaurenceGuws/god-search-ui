@@ -1725,3 +1725,19 @@
   - M8: add explicit `v0.1.2` queue item for applying/publishing this candidate set.
 
 ---
+## 2026-02-21 (Cycle 81)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Queue `v0.1.2` dry-run cut using default-safe notes mode
+- Changes:
+  - Added ready queue item in `docs/TASK_QUEUE.md`:
+    - run `v0.1.2` cut dry-run and verify reuse-path behavior
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dry-run uses current release scripts and does not create tags.
+- Next slice:
+  - M8: execute `v0.1.2` dry-run cut and record outcome.
+
+---
