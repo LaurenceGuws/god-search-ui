@@ -2439,3 +2439,22 @@
   - M8: UX Phase 3 - add slight adaptive debounce (shorter delay after query idle) to improve perceived responsiveness.
 
 ---
+## 2026-02-21 (Cycle 117)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add adaptive query-length debounce for better responsiveness
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced fixed debounce delay with query-length adaptive timing
+    - short/empty queries keep conservative delay; longer queries trigger faster updates
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - debounce thresholds are heuristic and may need tuning from live usage.
+- Next slice:
+  - M8: UX Phase 3 - add max-height guard for status text to prevent layout jump on long messages.
+
+---

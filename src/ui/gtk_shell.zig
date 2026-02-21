@@ -204,7 +204,10 @@ pub const Shell = struct {
         if (ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "Searching...");
         }
-        ctx.search_debounce_id = c.g_timeout_add(90, onSearchDebounced, ctx);
+        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        const debounce_ms = searchDebounceMs(std.mem.trim(u8, query, " \t\r\n").len);
+        ctx.search_debounce_id = c.g_timeout_add(debounce_ms, onSearchDebounced, ctx);
     }
 
     fn onSearchDebounced(user_data: ?*anyopaque) callconv(.c) c.gboolean {
@@ -220,6 +223,13 @@ pub const Shell = struct {
         const query = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
         populateResults(ctx, query);
         return GFALSE;
+    }
+
+    fn searchDebounceMs(query_len: usize) c.guint {
+        if (query_len == 0) return 110;
+        if (query_len <= 2) return 90;
+        if (query_len <= 5) return 75;
+        return 60;
     }
 
     fn onRowActivated(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {
