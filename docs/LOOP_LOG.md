@@ -1304,3 +1304,23 @@
   - M8: queue first concrete triage item from real-world usage.
 
 ---
+## 2026-02-21 (Cycle 61)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add first concrete triage item from release publish session
+- Changes:
+  - Added `docs/TRIAGE_LOG.md` with first accepted issue:
+    - SSH key permission warning during initial remote push setup
+  - Linked triage log in:
+    - `README.md`
+    - `docs/V0_1_1_PATCH_PLAN.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - triage item is operational/documentation-focused, not product-code regression.
+- Next slice:
+  - M8: add runbook note for SSH key preflight check before publish.
+
+---

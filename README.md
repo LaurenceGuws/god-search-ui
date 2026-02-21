@@ -96,6 +96,7 @@ scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
 - Release tagging/rollback runbook: `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
 - v0.1.1 patch plan: `docs/V0_1_1_PATCH_PLAN.md`
 - Post-release triage template: `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`
+- Triage log: `docs/TRIAGE_LOG.md`
 
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.
