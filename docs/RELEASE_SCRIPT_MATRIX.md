@@ -6,6 +6,7 @@ Quick reference for release automation scripts.
 |---|---|---|---|
 | `scripts/release_smoke.sh` | End-to-end release sanity checks | `scripts/release_smoke.sh` | `scripts/release_smoke.sh --with-gtk-runtime` |
 | `scripts/release_smoke.sh` (CI preset) | CI-friendly smoke preset | `scripts/release_smoke.sh --ci` | `scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5` |
+| `scripts/release_validate.sh` | One-pass operator validation wrapper | `scripts/release_validate.sh` | `scripts/release_validate.sh --ci` |
 | `scripts/gen_release_notes.sh` | Draft release notes from template + commits | `scripts/gen_release_notes.sh v0.1.1` | edit generated notes and commit |
 | `scripts/cut_release_tag.sh` | Tag cut flow with preflight | `scripts/cut_release_tag.sh --version v0.1.1` | `scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --push` |
 | `scripts/publish_release_tag.sh` | Publish existing local tag | `scripts/publish_release_tag.sh --version v0.1.1` | `scripts/publish_release_tag.sh --version v0.1.1 --apply` |
@@ -21,8 +22,9 @@ Quick reference for release automation scripts.
 ## Recommended Order
 1. `scripts/release_smoke.sh`
 2. `scripts/release_smoke.sh --ci` (for CI/minimal-host parity)
-3. `scripts/gen_release_notes.sh vX.Y.Z`
-4. `scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push`
+3. `scripts/release_validate.sh --ci` (single-entrypoint operator preflight)
+4. `scripts/gen_release_notes.sh vX.Y.Z`
+5. `scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push`
 
 Default-safe note mode:
 - if `docs/release-notes-<version>.md` exists, apply mode reuses it.
@@ -32,4 +34,4 @@ Quick dry-run example:
 - Expected output includes either:
   - `[dry-run] would reuse: docs/release-notes-v0.1.2.md`
   - or regeneration command when notes file does not yet exist.
-5. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`
+6. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`

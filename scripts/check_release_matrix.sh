@@ -10,6 +10,7 @@ test -f "$MATRIX"
 # Ensure all scripts referenced in the matrix exist and are executable.
 scripts=(
   "scripts/release_smoke.sh"
+  "scripts/release_validate.sh"
   "scripts/gen_release_notes.sh"
   "scripts/cut_release_tag.sh"
   "scripts/publish_release_tag.sh"
@@ -31,6 +32,7 @@ done
 # Ensure recommended order section exists and includes tag/publish flow.
 rg -q --fixed-strings "## Recommended Order" "$MATRIX"
 rg -q --fixed-strings "scripts/release_smoke.sh --ci" "$MATRIX"
+rg -q --fixed-strings "scripts/release_validate.sh --ci" "$MATRIX"
 rg -q --fixed-strings "scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push" "$MATRIX"
 rg -q --fixed-strings -- "--regen-notes" "$MATRIX"
 rg -q --fixed-strings "scripts/publish_release_tag.sh --version vX.Y.Z --apply" "$MATRIX"

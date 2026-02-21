@@ -70,6 +70,10 @@ CI/minimal-host mode without GTK dev packages:
 ```bash
 scripts/release_smoke.sh --ci
 ```
+One-pass operator validation wrapper:
+```bash
+scripts/release_validate.sh --ci
+```
 Release smoke mode reference:
 - `docs/RELEASE_SMOKE_MODES.md`
 Optional GTK runtime launch smoke:

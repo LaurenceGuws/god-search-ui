@@ -2996,3 +2996,31 @@
   - M8: UX Phase 4 - add one-pass release validation script alias that chains smoke + docs contracts for operators.
 
 ---
+## 2026-02-21 (Cycle 140)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add one-pass `release_validate.sh` operator wrapper and matrix wiring
+- Changes:
+  - Added `scripts/release_validate.sh`:
+    - runs `release_smoke.sh` with forwarded args
+    - runs `check_release_docs_contracts.sh` after smoke
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added `release_validate.sh` row
+    - added `release_validate.sh --ci` in recommended order
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates `release_validate.sh` presence/reference
+  - Updated `README.md`:
+    - documented one-pass operator wrapper command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_validate.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - wrapper intentionally composes existing checks and does not add independent validation logic.
+- Next slice:
+  - M8: UX Phase 4 - add lightweight CI guard to ensure `release_validate.sh --ci` remains non-interactive.
+
+---
