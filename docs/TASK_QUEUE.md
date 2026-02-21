@@ -122,3 +122,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 3 - add explicit zero-results guidance with route suggestions.
 - [x] M8: UX Phase 3 - add explicit selected-row status summary in footer.
 - [x] M8: UX Phase 3 - adjust selected-row status copy to include source kind.
+- [x] M8: UX Phase 3 - add inline query-prefix cheat sheet to empty-query status.

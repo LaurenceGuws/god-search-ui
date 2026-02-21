@@ -2322,3 +2322,22 @@
   - M8: UX Phase 3 - add inline query-prefix cheat-sheet to status for empty query state.
 
 ---
+## 2026-02-21 (Cycle 111)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add inline query-prefix cheat sheet to empty-query status
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - expanded empty-query footer status with compact route prefixes (`@ # ~ > = ?`)
+    - preserved existing close/refresh controls in same status line
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - longer status text may truncate on narrow windows; list hint row still provides backup guidance.
+- Next slice:
+  - M8: UX Phase 3 - add concise post-launch status guidance for repeated Enter behavior.
+
+---

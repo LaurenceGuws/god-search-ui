@@ -340,7 +340,7 @@ pub const Shell = struct {
         } else if (ctx.service.last_query_refreshed_cache) {
             setStatus(ctx, "Snapshot refreshed");
         } else if (empty_query and ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "Esc to close, Ctrl+R to refresh");
+            setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs > run = calc ? web");
         } else if (ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "");
         }
