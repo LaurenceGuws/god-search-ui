@@ -3,7 +3,6 @@
 Use this as the authoritative queue for autonomous agent cycles.
 
 ## Ready
-- [ ] M3: Render real ranked candidate rows in GTK list (instead of placeholder).
 - [ ] M3: Connect GTK search entry changes to `SearchService.searchQuery`.
 - [ ] M3: Add action execution hook for selected result (`Enter`).
 
@@ -32,3 +31,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M3: Wire search service into UI update loop (query -> ranked rows).
 - [x] M3: Add fallback headless renderer mode for environments without GTK libs.
 - [x] M3: Add keyboard navigation behaviors (`Esc`, arrows, Enter) in GTK shell.
+- [x] M3: Render real ranked candidate rows in GTK list (instead of placeholder).

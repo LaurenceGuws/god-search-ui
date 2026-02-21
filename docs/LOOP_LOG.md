@@ -364,3 +364,22 @@
   - M3: Render real ranked candidate rows in GTK list (instead of placeholder).
 
 ---
+## 2026-02-21 (Cycle 18)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Render real ranked candidate rows in GTK list (instead of placeholder)
+- Changes:
+  - Updated `src/ui/gtk_shell.zig` to consume `SearchService` on activate.
+  - Added initial result population from `searchQuery("")`.
+  - Replaced static placeholder row with rendered ranked rows (`title — subtitle`).
+  - Added list clearing and re-selection helpers.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK rendering currently refreshes only on initial load; live query updates are next.
+- Next slice:
+  - M3: Connect GTK search entry changes to `SearchService.searchQuery`.
+
+---
