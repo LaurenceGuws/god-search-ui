@@ -1635,3 +1635,33 @@
   - M8: implement first `v0.1.2` candidate change (default-safe notes mode).
 
 ---
+## 2026-02-21 (Cycle 77)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Implement v0.1.2 candidate - default-safe notes mode
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - apply mode now defaults to reusing existing notes file when present
+    - added explicit `--regen-notes` override
+    - kept `--reuse-notes` explicit option
+    - added mutual-exclusion guard for `--reuse-notes` + `--regen-notes`
+  - Updated related docs/check scripts:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+    - `docs/RELEASE_SCRIPT_MATRIX.md`
+    - `scripts/check_release_helpers.sh`
+    - `scripts/check_release_matrix.sh`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --help`
+  - `scripts/check_release_helpers.sh`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - default behavior change should be communicated to maintainers using older apply workflow assumptions.
+- Next slice:
+  - M8: add explicit migration note in release-notes curation checklist for v0.1.2.
+
+---

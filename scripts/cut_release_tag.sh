@@ -8,11 +8,12 @@ DRY_RUN=1
 PUSH=0
 COMMIT_NOTES=0
 REUSE_NOTES=0
+REGEN_NOTES=0
 VERSION=""
 
 usage() {
   cat <<'EOF'
-Usage: scripts/cut_release_tag.sh --version vX.Y.Z [--apply] [--push] [--commit-notes] [--reuse-notes]
+Usage: scripts/cut_release_tag.sh --version vX.Y.Z [--apply] [--push] [--commit-notes] [--reuse-notes] [--regen-notes]
 
 Default mode is dry-run and prints planned actions.
 
@@ -22,6 +23,7 @@ Options:
   --push      push main + tag after creation (requires --apply)
   --commit-notes  commit generated release notes before tag creation (requires --apply)
   --reuse-notes   reuse existing docs/release-notes-<version>.md (requires --apply)
+  --regen-notes   force regenerate notes even if file already exists (requires --apply)
 EOF
 }
 
@@ -45,6 +47,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --reuse-notes)
       REUSE_NOTES=1
+      shift
+      ;;
+    --regen-notes)
+      REGEN_NOTES=1
       shift
       ;;
     -h|--help)
@@ -80,6 +86,16 @@ if [[ $REUSE_NOTES -eq 1 && $DRY_RUN -eq 1 ]]; then
   exit 1
 fi
 
+if [[ $REGEN_NOTES -eq 1 && $DRY_RUN -eq 1 ]]; then
+  echo "error: --regen-notes requires --apply" >&2
+  exit 1
+fi
+
+if [[ $REUSE_NOTES -eq 1 && $REGEN_NOTES -eq 1 ]]; then
+  echo "error: --reuse-notes and --regen-notes are mutually exclusive" >&2
+  exit 1
+fi
+
 if [[ -n "$(git status --short)" ]]; then
   echo "error: working tree is not clean" >&2
   exit 1
@@ -93,11 +109,23 @@ fi
 echo "[preflight] running release smoke"
 scripts/release_smoke.sh
 
+NOTES_PATH="docs/release-notes-${VERSION}.md"
+NOTES_MODE="regen"
+if [[ -f "$NOTES_PATH" && $REGEN_NOTES -eq 0 ]]; then
+  NOTES_MODE="reuse"
+fi
+if [[ $REUSE_NOTES -eq 1 ]]; then
+  NOTES_MODE="reuse"
+fi
+if [[ $REGEN_NOTES -eq 1 ]]; then
+  NOTES_MODE="regen"
+fi
+
 if [[ $DRY_RUN -eq 1 ]]; then
-  if [[ $REUSE_NOTES -eq 1 ]]; then
-    echo "[dry-run] would reuse: docs/release-notes-${VERSION}.md"
+  if [[ "$NOTES_MODE" == "reuse" ]]; then
+    echo "[dry-run] would reuse: $NOTES_PATH"
   else
-    echo "[dry-run] would run: scripts/gen_release_notes.sh $VERSION docs/release-notes-${VERSION}.md"
+    echo "[dry-run] would run: scripts/gen_release_notes.sh $VERSION $NOTES_PATH"
   fi
   if [[ $COMMIT_NOTES -eq 1 ]]; then
     echo "[dry-run] would run: git add docs/release-notes-${VERSION}.md"
@@ -111,20 +139,20 @@ if [[ $DRY_RUN -eq 1 ]]; then
   exit 0
 fi
 
-if [[ $REUSE_NOTES -eq 1 ]]; then
-  if [[ ! -f "docs/release-notes-${VERSION}.md" ]]; then
-    echo "error: --reuse-notes set but file missing: docs/release-notes-${VERSION}.md" >&2
+if [[ "$NOTES_MODE" == "reuse" ]]; then
+  if [[ ! -f "$NOTES_PATH" ]]; then
+    echo "error: notes reuse requested but file missing: $NOTES_PATH" >&2
     exit 1
   fi
-  echo "[apply] reusing existing release notes: docs/release-notes-${VERSION}.md"
+  echo "[apply] reusing existing release notes: $NOTES_PATH"
 else
   echo "[apply] generating release notes draft"
-  scripts/gen_release_notes.sh "$VERSION" "docs/release-notes-${VERSION}.md"
+  scripts/gen_release_notes.sh "$VERSION" "$NOTES_PATH"
 fi
 
 if [[ $COMMIT_NOTES -eq 1 ]]; then
   echo "[apply] committing release notes draft"
-  git add "docs/release-notes-${VERSION}.md"
+  git add "$NOTES_PATH"
   git commit -m "Add release notes draft for ${VERSION}"
 fi
 

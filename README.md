@@ -92,6 +92,10 @@ To preserve already-edited release notes during apply:
 ```bash
 scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --reuse-notes
 ```
+To force regeneration (override default-safe reuse):
+```bash
+scripts/cut_release_tag.sh --version v0.1.2 --apply --commit-notes --regen-notes
+```
 
 Publish existing local tag helper (dry-run by default):
 ```bash

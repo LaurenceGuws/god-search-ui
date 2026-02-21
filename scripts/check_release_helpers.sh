@@ -12,6 +12,7 @@ echo "$CUT_HELP" | rg -q -- '--apply'
 echo "$CUT_HELP" | rg -q -- '--push'
 echo "$CUT_HELP" | rg -q -- '--commit-notes'
 echo "$CUT_HELP" | rg -q -- '--reuse-notes'
+echo "$CUT_HELP" | rg -q -- '--regen-notes'
 
 echo "$PUB_HELP" | rg -q -- '--version vX.Y.Z'
 echo "$PUB_HELP" | rg -q -- '--remote name'
