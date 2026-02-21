@@ -28,9 +28,17 @@ For post-release patch cadence (`v0.1.1` and later), follow execution order in:
 ```bash
 git status --short
 scripts/release_smoke.sh
+scripts/release_validate.sh --ci
 ```
 
 Working tree must be clean before tagging.
+
+Expected success markers from `scripts/release_validate.sh --ci`:
+- `release smoke checks passed`
+- `release docs contract checks passed`
+- `release validation passed`
+
+If any marker is missing, stop and resolve before tagging.
 
 SSH preflight (before first push in a workspace):
 ```bash

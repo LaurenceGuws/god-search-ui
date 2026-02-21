@@ -101,6 +101,28 @@ Actions:
 2. Confirm process exits cleanly (history save is deferred on shutdown).
 3. Re-run one query and exit with `:q`, then re-check files.
 
+### F. Release validation preset fails (`scripts/release_validate.sh --ci`)
+
+Symptoms:
+- release validation exits non-zero
+- expected completion markers are missing
+
+Actions:
+1. Run with full output:
+   ```bash
+   scripts/release_validate.sh --ci
+   ```
+2. Confirm output includes all markers:
+   - `release smoke checks passed`
+   - `release docs contract checks passed`
+   - `release validation passed`
+3. If failure occurs in smoke stage, rerun sub-check directly:
+   - `scripts/release_smoke.sh --ci`
+4. If failure occurs in docs contract stage, rerun:
+   - `scripts/check_release_docs_contracts.sh`
+5. If CI guard times out, increase timeout temporarily:
+   - `RELEASE_VALIDATE_TIMEOUT_SECS=600 scripts/check_release_validate_ci.sh`
+
 ## 3) Recovery / Rollback
 
 If launcher is unstable in GTK mode:

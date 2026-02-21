@@ -16,3 +16,15 @@
   - strict icon threshold mode with default `5%`
 - `--icon-threshold=<N>` overrides the threshold in strict mode.
 - Run `scripts/release_smoke.sh --help` for full CLI help.
+
+## Operator Preset
+
+For one-pass release preflight with stable CI flags and docs contracts:
+```bash
+scripts/release_validate.sh --ci
+```
+
+Expected completion markers:
+- `release smoke checks passed`
+- `release docs contract checks passed`
+- `release validation passed`

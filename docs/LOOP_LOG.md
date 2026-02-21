@@ -3054,3 +3054,30 @@
   - M8: UX Phase 4 - add release-validation preset docs in runbook with expected output markers.
 
 ---
+## 2026-02-21 (Cycle 142)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add runbook guidance for `release_validate --ci` markers and triage
+- Changes:
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`:
+    - added `scripts/release_validate.sh --ci` to preflight sequence
+    - documented required success markers before tagging
+  - Updated `docs/RELEASE_SMOKE_MODES.md`:
+    - added operator preset section for `release_validate --ci`
+    - documented expected completion markers
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added failure section for `release_validate --ci` with staged triage steps
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_smoke_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/release_validate.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - expected markers are string-based and should be updated if output wording changes.
+- Next slice:
+  - M8: UX Phase 4 - add explicit “clean worktree required” guard script for release-validate preset.
+
+---
