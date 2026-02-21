@@ -11,6 +11,7 @@ Quick reference for release automation scripts.
 | `scripts/publish_release_tag.sh` | Publish existing local tag | `scripts/publish_release_tag.sh --version v0.1.1` | `scripts/publish_release_tag.sh --version v0.1.1 --apply` |
 | `scripts/arch_package_smoke.sh` | Arch package build/install smoke | `scripts/arch_package_smoke.sh` | `scripts/arch_package_smoke.sh --install --uninstall` |
 | `scripts/check_release_helpers.sh` | CLI contract checks for helpers | `scripts/check_release_helpers.sh` | (same command) |
+| `scripts/check_release_docs_contracts.sh` | Meta contract check for release docs/help/matrix | `scripts/check_release_docs_contracts.sh` | (same command) |
 | `scripts/check_release_smoke_contract.sh` | Release-smoke help/docs contract checks | `scripts/check_release_smoke_contract.sh` | (same command) |
 | `scripts/check_apps_cache_format.sh` | Apps cache format compatibility guard | `scripts/check_apps_cache_format.sh` | (same command) |
 | `scripts/check_icon_theme_env.sh` | Icon-theme environment diagnostics | `scripts/check_icon_theme_env.sh` | (same command) |

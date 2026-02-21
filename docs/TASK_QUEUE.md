@@ -152,3 +152,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 4 - add release-smoke mode reference table and `--help` CLI output.
 - [x] M8: UX Phase 4 - add guard script ensuring release-smoke docs and CLI help stay in sync.
 - [x] M8: UX Phase 4 - update release matrix docs/checks for new icon diagnostics guard scripts.
+- [x] M8: UX Phase 4 - add meta release-docs contract guard and wire it into smoke.

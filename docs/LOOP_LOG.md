@@ -2966,3 +2966,33 @@
   - M8: UX Phase 4 - add a single meta guard script that runs all release-doc contract checks together.
 
 ---
+## 2026-02-21 (Cycle 139)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - meta release-docs contract guard + smoke integration
+- Changes:
+  - Added `scripts/check_release_docs_contracts.sh`:
+    - runs `check_release_helpers`, `check_release_matrix`, and `check_release_smoke_contract`
+  - Updated `scripts/release_smoke.sh`:
+    - added meta-contract guard step
+    - updated smoke step numbering
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added meta-contract guard script row
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates meta-contract guard script reference/executability
+  - Updated `README.md`:
+    - documented meta-contract guard command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - meta guard is intentionally compositional and depends on underlying check scripts staying stable.
+- Next slice:
+  - M8: UX Phase 4 - add one-pass release validation script alias that chains smoke + docs contracts for operators.
+
+---

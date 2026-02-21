@@ -57,47 +57,50 @@ for arg in "$@"; do
   esac
 done
 
-echo "[1/12] full check"
+echo "[1/13] full check"
 scripts/dev.sh check
 
-echo "[2/12] headless smoke"
+echo "[2/13] headless smoke"
 printf ':refresh\n:icondiag\n:icondiag --json\nkitty\n:q\n' | zig build run -- --ui
 
 if [[ $SKIP_GTK_BUILD -eq 0 ]]; then
-  echo "[3/12] gtk build smoke"
+  echo "[3/13] gtk build smoke"
   zig build -Denable_gtk=true
 else
-  echo "[3/12] gtk build smoke (skipped)"
+  echo "[3/13] gtk build smoke (skipped)"
 fi
 
-echo "[4/12] release notes draft smoke"
+echo "[4/13] release notes draft smoke"
 TMP_NOTES="$(mktemp)"
 scripts/gen_release_notes.sh "SMOKE" "$TMP_NOTES" >/dev/null
 rm -f "$TMP_NOTES"
 
-echo "[5/12] release helper CLI contract smoke"
+echo "[5/13] release helper CLI contract smoke"
 scripts/check_release_helpers.sh
 
-echo "[6/12] release matrix reference smoke"
+echo "[6/13] release matrix reference smoke"
 scripts/check_release_matrix.sh
 
-echo "[7/12] cut dry-run default-safe smoke"
+echo "[7/13] cut dry-run default-safe smoke"
 scripts/check_cut_dryrun_default_safe.sh
 
-echo "[8/12] apps cache format smoke"
+echo "[8/13] apps cache format smoke"
 scripts/check_apps_cache_format.sh
 
-echo "[9/12] icon theme env preflight"
+echo "[9/13] icon theme env preflight"
 scripts/check_icon_theme_env.sh
 
-echo "[10/12] icondiag json schema smoke"
+echo "[10/13] icondiag json schema smoke"
 scripts/check_icondiag_json.sh
 
-echo "[11/12] icondiag fallback-threshold smoke"
+echo "[11/13] icondiag fallback-threshold smoke"
 MAX_GLYPH_FALLBACK_PCT="$ICON_THRESHOLD" scripts/check_icondiag_threshold.sh
 
-echo "[12/12] release smoke contract guard"
+echo "[12/13] release smoke contract guard"
 scripts/check_release_smoke_contract.sh
+
+echo "[13/13] release docs meta-contract guard"
+scripts/check_release_docs_contracts.sh
 
 if [[ $STRICT_ICON_THRESHOLD -eq 1 ]]; then
   echo "[strict] icon threshold mode enabled (limit=${ICON_THRESHOLD}%)"

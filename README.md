@@ -101,6 +101,10 @@ Release smoke help/docs contract check:
 ```bash
 scripts/check_release_smoke_contract.sh
 ```
+Meta guard for all release docs contracts:
+```bash
+scripts/check_release_docs_contracts.sh
+```
 Release script-matrix checks:
 ```bash
 scripts/check_release_matrix.sh
