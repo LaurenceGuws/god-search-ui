@@ -2051,3 +2051,23 @@
   - M8: UX Phase 2 - add lightweight visual separator between sections.
 
 ---
+## 2026-02-21 (Cycle 97)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - add lightweight visual separator between populated sections
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - inserted non-activatable separator rows between populated result sections
+    - added `gs-separator` CSS class for subtle spacing and contrast
+    - kept keyboard navigation actionable-row-only behavior unchanged
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - visual tone of separator may need theme-specific opacity tuning later.
+- Next slice:
+  - M8: UX Phase 2 - adaptive GTK window sizing for improved small-screen behavior.
+
+---

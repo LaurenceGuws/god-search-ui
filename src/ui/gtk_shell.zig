@@ -288,11 +288,12 @@ pub const Shell = struct {
     }
 
     fn appendGroupedRows(ctx: *UiContext, allocator: std.mem.Allocator, rows: []const @import("../search/mod.zig").ScoredCandidate) void {
-        appendGroup(ctx, allocator, rows, .app, "Apps");
-        appendGroup(ctx, allocator, rows, .window, "Windows");
-        appendGroup(ctx, allocator, rows, .dir, "Directories");
-        appendGroup(ctx, allocator, rows, .action, "Actions");
-        appendGroup(ctx, allocator, rows, .hint, "Hints");
+        var rendered_any = false;
+        rendered_any = appendGroup(ctx, allocator, rows, .app, "Apps", rendered_any) or rendered_any;
+        rendered_any = appendGroup(ctx, allocator, rows, .window, "Windows", rendered_any) or rendered_any;
+        rendered_any = appendGroup(ctx, allocator, rows, .dir, "Directories", rendered_any) or rendered_any;
+        rendered_any = appendGroup(ctx, allocator, rows, .action, "Actions", rendered_any) or rendered_any;
+        _ = appendGroup(ctx, allocator, rows, .hint, "Hints", rendered_any);
     }
 
     fn appendGroup(
@@ -301,7 +302,8 @@ pub const Shell = struct {
         rows: []const @import("../search/mod.zig").ScoredCandidate,
         kind: CandidateKind,
         title: []const u8,
-    ) void {
+        add_separator: bool,
+    ) bool {
         var has_any = false;
         for (rows) |row| {
             if (row.candidate.kind == kind) {
@@ -309,13 +311,15 @@ pub const Shell = struct {
                 break;
             }
         }
-        if (!has_any) return;
+        if (!has_any) return false;
 
+        if (add_separator) appendSectionSeparatorRow(ctx.list);
         appendHeaderRow(ctx.list, title);
         for (rows) |row| {
             if (row.candidate.kind != kind) continue;
             appendCandidateRow(ctx.list, allocator, row);
         }
+        return true;
     }
 
     fn appendHeaderRow(list: *c.GtkListBox, title: []const u8) void {
@@ -335,6 +339,17 @@ pub const Shell = struct {
 
         const row = c.gtk_list_box_row_new();
         c.gtk_list_box_row_set_child(@ptrCast(row), label);
+        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_append(@ptrCast(list), row);
+    }
+
+    fn appendSectionSeparatorRow(list: *c.GtkListBox) void {
+        const separator = c.gtk_separator_new(c.GTK_ORIENTATION_HORIZONTAL);
+        c.gtk_widget_add_css_class(separator, "gs-separator");
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_list_box_row_set_child(@ptrCast(row), separator);
         c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
         c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
         c.gtk_list_box_append(@ptrCast(list), row);
@@ -525,6 +540,7 @@ pub const Shell = struct {
             ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
             ".gs-header { color: #8b93a8; }\n" ++
             ".gs-info { color: #9aa1b5; }\n" ++
+            ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n";
 
