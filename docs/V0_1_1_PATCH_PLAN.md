@@ -41,3 +41,6 @@ Run in this order for each `v0.1.1` patch slice:
 Use:
 - `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`
 - `docs/TRIAGE_LOG.md` for accepted items
+
+## Release Ops Reference
+- `docs/RELEASE_SCRIPT_MATRIX.md`

@@ -1365,3 +1365,24 @@
   - M8: add quick script-usage matrix for release helper docs.
 
 ---
+## 2026-02-21 (Cycle 64)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add release-helper script usage matrix documentation
+- Changes:
+  - Added `docs/RELEASE_SCRIPT_MATRIX.md` with:
+    - script purpose/safe-default/apply-mode matrix
+    - recommended execution order
+  - Linked matrix in:
+    - `README.md`
+    - `docs/V0_1_1_PATCH_PLAN.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - matrix should be updated when helper script flags evolve.
+- Next slice:
+  - M8: add lightweight script to validate matrix links/commands exist.
+
+---

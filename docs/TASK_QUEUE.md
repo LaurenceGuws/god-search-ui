@@ -76,3 +76,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Add first concrete triage entry from release publish session.
 - [x] M8: Add SSH key preflight check step to release publish runbook.
 - [x] M8: Add optional GTK runtime launch smoke mode to `scripts/release_smoke.sh`.
+- [x] M8: Add release-helper script usage matrix documentation.
