@@ -574,3 +574,24 @@
   - M6: Add install/service integration docs for Hypr/Waybar bindings.
 
 ---
+## 2026-02-21 (Cycle 28)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add install/service integration docs for Hypr/Waybar bindings
+- Changes:
+  - Added `docs/HYPR_WAYBAR_INTEGRATION.md` with:
+    - Hypr keybind wiring
+    - Waybar launcher wiring
+    - optional systemd user service example
+    - validation checklist
+  - Linked integration guide in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Service example is optional; keybind integration remains primary path.
+- Next slice:
+  - M5: Add cache invalidation strategy for provider snapshot refresh.
+
+---
