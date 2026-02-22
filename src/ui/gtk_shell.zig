@@ -739,23 +739,27 @@ pub const Shell = struct {
         const frame = frames[ctx.async_spinner_phase % frames.len];
         ctx.async_spinner_phase +%= 1;
 
-        var msg_buf: [64]u8 = undefined;
-        const msg = std.fmt.bufPrint(&msg_buf, "{s} Searching modules...", .{frame}) catch "Searching modules...";
         var status_buf: [40]u8 = undefined;
         const status_msg = std.fmt.bufPrint(&status_buf, "{s} Searching...", .{frame}) catch "Searching...";
         clearAsyncRows(ctx.list);
-        appendAsyncRow(ctx.list, msg);
+        appendAsyncRow(ctx.list, frame, "Searching modules...");
         if (ctx.pending_power_confirm == GFALSE) setStatus(ctx, status_msg);
     }
 
-    fn appendAsyncRow(list: *c.GtkListBox, message: []const u8) void {
-        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
-        defer std.heap.page_allocator.free(msg_z);
+    fn appendAsyncRow(list: *c.GtkListBox, frame: []const u8, message: []const u8) void {
+        const markup = std.fmt.allocPrint(
+            std.heap.page_allocator,
+            "<span foreground=\"#b5d6ff\" size=\"x-large\" weight=\"700\">{s}</span> <span foreground=\"#aeb8cc\">{s}</span>",
+            .{ frame, message },
+        ) catch return;
+        defer std.heap.page_allocator.free(markup);
+        const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
+        defer std.heap.page_allocator.free(markup_z);
 
         const label = c.gtk_label_new(null);
-        c.gtk_label_set_text(@ptrCast(label), msg_z.ptr);
+        c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
         c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-        c.gtk_widget_add_css_class(label, "gs-info");
+        c.gtk_widget_add_css_class(label, "gs-async-search");
 
         const row = c.gtk_list_box_row_new();
         c.gtk_widget_add_css_class(row, "gs-meta-row");
@@ -1606,6 +1610,10 @@ pub const Shell = struct {
         c.gtk_widget_remove_css_class(status_widget, "gs-status-info");
         c.gtk_widget_remove_css_class(status_widget, "gs-status-success");
         c.gtk_widget_remove_css_class(status_widget, "gs-status-failure");
+        c.gtk_widget_remove_css_class(status_widget, "gs-status-searching");
+        if (std.mem.indexOf(u8, message, "Searching") != null) {
+            c.gtk_widget_add_css_class(status_widget, "gs-status-searching");
+        }
         switch (tone) {
             .info => c.gtk_widget_add_css_class(status_widget, "gs-status-info"),
             .success => c.gtk_widget_add_css_class(status_widget, "gs-status-success"),
@@ -1634,8 +1642,10 @@ pub const Shell = struct {
             ".gs-status-info { color: #80a6d8; }\n" ++
             ".gs-status-success { color: #87c97f; }\n" ++
             ".gs-status-failure { color: #e58a8a; }\n" ++
+            ".gs-status-searching { color: #c6e0ff; font-size: 1.02em; font-weight: 700; }\n" ++
             ".gs-header { color: #8b93a8; }\n" ++
             ".gs-info { color: #9aa1b5; }\n" ++
+            ".gs-async-search { color: #aeb8cc; }\n" ++
             ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
             ".gs-results > row { border-radius: 8px; padding: 4px 8px; }\n" ++
