@@ -4420,3 +4420,28 @@
   - M8: extract async spinner/worker callback bridge from shell into a dedicated coordinator.
 
 ---
+## 2026-02-22 (Cycle 195)
+- Milestone: M8 UX Modularization
+- Task slice: extract async spinner/worker coordination from shell
+- Changes:
+  - Added `src/ui/gtk/async_coordinator.zig`:
+    - async route start/cancel/launch-pending wrappers around `gtk/async_search.zig`
+    - spinner lifecycle management (`begin/end/tick/frame`) including status updates
+    - isolated async in-flight UI row maintenance (`appendAsyncRow`/`clearAsyncRows` via `widgets`)
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates async route/spinner entry points to `gtk_async_coord`
+    - removed shell-local spinner callbacks and helper wrappers
+    - removed now-unused shell imports tied to extracted behavior
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `onAsyncSearchReady` callback remains shell-owned but now depends on coordinator contract for spinner lifecycle.
+- Next slice:
+  - M8: optional final shell thinning pass by extracting refresh/bootstrap callbacks into a small façade module.
+
+---

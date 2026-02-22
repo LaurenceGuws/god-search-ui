@@ -3,12 +3,10 @@ const app_mod = @import("../app/mod.zig");
 const gtk_types = @import("gtk/types.zig");
 const gtk_styles = @import("gtk/styles.zig");
 const gtk_bootstrap = @import("gtk/bootstrap.zig");
-const gtk_widgets = @import("gtk/widgets.zig");
 const gtk_nav = @import("gtk/navigation.zig");
 const gtk_query = @import("gtk/query_helpers.zig");
 const gtk_async = @import("gtk/async_state.zig");
-const gtk_async_search = @import("gtk/async_search.zig");
-const gtk_render = @import("gtk/render.zig");
+const gtk_async_coord = @import("gtk/async_coordinator.zig");
 const gtk_menus = @import("gtk/menus.zig");
 const gtk_status = @import("gtk/status.zig");
 const gtk_icons = @import("gtk/icons.zig");
@@ -186,13 +184,7 @@ pub const Shell = struct {
     }
 
     fn startAsyncRouteSearch(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) void {
-        gtk_async_search.startAsyncRouteSearch(
-            ctx,
-            allocator,
-            query_trimmed,
-            .{ .begin = beginAsyncSpinner, .end = endAsyncSpinner },
-            onAsyncSearchReady,
-        );
+        gtk_async_coord.startAsyncRouteSearch(ctx, allocator, query_trimmed, onAsyncSearchReady);
     }
 
     fn onAsyncSearchReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
@@ -209,7 +201,7 @@ pub const Shell = struct {
             return GFALSE;
         }
 
-        endAsyncSpinner(ctx);
+        gtk_async_coord.endAsyncSpinner(ctx);
         var scored = allocator.alloc(ScoredCandidate, payload.rows.len) catch return GFALSE;
         defer allocator.free(scored);
         for (payload.rows, 0..) |row, idx| {
@@ -231,71 +223,11 @@ pub const Shell = struct {
     }
 
     fn cancelAsyncRouteSearch(ctx: *UiContext) void {
-        gtk_async_search.cancelAsyncRouteSearch(ctx, .{ .begin = beginAsyncSpinner, .end = endAsyncSpinner });
+        gtk_async_coord.cancelAsyncRouteSearch(ctx);
     }
 
     fn launchPendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator) bool {
-        return gtk_async_search.launchPendingAsyncQuery(
-            ctx,
-            allocator,
-            .{ .begin = beginAsyncSpinner, .end = endAsyncSpinner },
-            onAsyncSearchReady,
-        );
-    }
-
-    fn beginAsyncSpinner(ctx: *UiContext) void {
-        ctx.async_inflight = GTRUE;
-        if (ctx.async_spinner_id != 0) {
-            _ = c.g_source_remove(ctx.async_spinner_id);
-            ctx.async_spinner_id = 0;
-        }
-        ctx.async_spinner_phase = 0;
-        updateAsyncSpinnerFrame(ctx);
-        ctx.async_spinner_id = c.g_timeout_add(120, onAsyncSpinnerTick, ctx);
-    }
-
-    fn endAsyncSpinner(ctx: *UiContext) void {
-        ctx.async_inflight = GFALSE;
-        if (ctx.async_spinner_id != 0) {
-            _ = c.g_source_remove(ctx.async_spinner_id);
-            ctx.async_spinner_id = 0;
-        }
-        clearAsyncRows(ctx.list);
-    }
-
-    fn onAsyncSpinnerTick(user_data: ?*anyopaque) callconv(.c) c.gboolean {
-        if (user_data == null) return GFALSE;
-        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        if (ctx.async_inflight == GFALSE) {
-            ctx.async_spinner_id = 0;
-            return GFALSE;
-        }
-        updateAsyncSpinnerFrame(ctx);
-        return GTRUE;
-    }
-
-    fn updateAsyncSpinnerFrame(ctx: *UiContext) void {
-        const frames = [_][]const u8{ "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "⠋", "⠙" };
-        const frame = frames[ctx.async_spinner_phase % frames.len];
-        ctx.async_spinner_phase +%= 1;
-
-        var status_buf: [40]u8 = undefined;
-        const status_msg = std.fmt.bufPrint(&status_buf, "{s} Searching...", .{frame}) catch "Searching...";
-        clearAsyncRows(ctx.list);
-        appendAsyncRow(ctx.list, frame, "Searching modules...");
-        if (ctx.pending_power_confirm == GFALSE) setStatus(ctx, status_msg);
-    }
-
-    fn appendAsyncRow(list: *c.GtkListBox, frame: []const u8, message: []const u8) void {
-        gtk_widgets.appendAsyncRow(list, frame, message);
-    }
-
-    fn clearAsyncRows(list: *c.GtkListBox) void {
-        gtk_widgets.clearAsyncRows(list);
-    }
-
-    fn appendLegendRow(list: *c.GtkListBox, message: []const u8) void {
-        gtk_widgets.appendLegendRow(list, message);
+        return gtk_async_coord.launchPendingAsyncQuery(ctx, allocator, onAsyncSearchReady);
     }
 
     fn refreshSnapshot(ctx: *UiContext) void {
