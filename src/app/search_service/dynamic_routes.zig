@@ -28,6 +28,12 @@ pub fn clearOwned(dynamic_owned: *std.ArrayListUnmanaged([]u8), allocator: std.m
     dynamic_owned.clearRetainingCapacity();
 }
 
+const ParsedRgRow = struct {
+    path: []const u8,
+    line_num: []const u8,
+    snippet: []const u8,
+};
+
 fn collectFdCandidates(
     tool_state: *ToolState,
     dynamic_owned: *std.ArrayListUnmanaged([]u8),
@@ -69,12 +75,8 @@ fn collectFdTypeCandidates(
     defer allocator.free(rows);
     var lines = std.mem.splitScalar(u8, rows, '\n');
     while (lines.next()) |line| {
-        const path = std.mem.trim(u8, line, " \t\r");
-        if (path.len == 0) continue;
-        const title = std.fs.path.basename(path);
-        const kept_title = try keepDynamicString(dynamic_owned, allocator, title);
-        const kept_path = try keepDynamicString(dynamic_owned, allocator, path);
-        try out.append(allocator, search.Candidate.init(kind, kept_title, kept_path, kept_path));
+        const path = parseFdOutputRow(line) orelse continue;
+        try appendFdCandidate(dynamic_owned, allocator, path, kind, out);
     }
 }
 
@@ -106,31 +108,67 @@ fn collectRgCandidates(
     var lines = std.mem.splitScalar(u8, rows, '\n');
     var count: usize = 0;
     while (lines.next()) |line| {
-        const row = std.mem.trim(u8, line, " \t\r");
-        if (row.len == 0) continue;
-        const first_colon = std.mem.indexOfScalar(u8, row, ':') orelse continue;
-        const second_colon_rel = std.mem.indexOfScalar(u8, row[first_colon + 1 ..], ':') orelse continue;
-        const second_colon = first_colon + 1 + second_colon_rel;
-        const path = row[0..first_colon];
-        const line_num = row[first_colon + 1 .. second_colon];
-        const snippet = std.mem.trim(u8, row[second_colon + 1 ..], " \t");
-        const base = std.fs.path.basename(path);
-        const title = try std.fmt.allocPrint(allocator, "{s}:{s}", .{ base, line_num });
-        defer allocator.free(title);
-        const subtitle = if (snippet.len > 0)
-            try std.fmt.allocPrint(allocator, "{s} | {s}", .{ path, snippet })
-        else
-            try allocator.dupe(u8, path);
-        defer allocator.free(subtitle);
-        const action = try std.fmt.allocPrint(allocator, "{s}:{s}", .{ path, line_num });
-        defer allocator.free(action);
-        const kept_title = try keepDynamicString(dynamic_owned, allocator, title);
-        const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, subtitle);
-        const kept_action = try keepDynamicString(dynamic_owned, allocator, action);
-        try out.append(allocator, search.Candidate.init(.grep, kept_title, kept_subtitle, kept_action));
+        const parsed = parseRgOutputRow(line) orelse continue;
+        try appendRgCandidate(dynamic_owned, allocator, parsed, out);
         count += 1;
         if (count >= 200) break;
     }
+}
+
+fn parseFdOutputRow(line: []const u8) ?[]const u8 {
+    const path = std.mem.trim(u8, line, " \t\r");
+    if (path.len == 0) return null;
+    return path;
+}
+
+fn parseRgOutputRow(line: []const u8) ?ParsedRgRow {
+    const row = std.mem.trim(u8, line, " \t\r");
+    if (row.len == 0) return null;
+
+    const first_colon = std.mem.indexOfScalar(u8, row, ':') orelse return null;
+    const second_colon_rel = std.mem.indexOfScalar(u8, row[first_colon + 1 ..], ':') orelse return null;
+    const second_colon = first_colon + 1 + second_colon_rel;
+
+    return .{
+        .path = row[0..first_colon],
+        .line_num = row[first_colon + 1 .. second_colon],
+        .snippet = std.mem.trim(u8, row[second_colon + 1 ..], " \t"),
+    };
+}
+
+fn appendFdCandidate(
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    path: []const u8,
+    kind: search.CandidateKind,
+    out: *search.CandidateList,
+) !void {
+    const title = std.fs.path.basename(path);
+    const kept_title = try keepDynamicString(dynamic_owned, allocator, title);
+    const kept_path = try keepDynamicString(dynamic_owned, allocator, path);
+    try out.append(allocator, search.Candidate.init(kind, kept_title, kept_path, kept_path));
+}
+
+fn appendRgCandidate(
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    parsed: ParsedRgRow,
+    out: *search.CandidateList,
+) !void {
+    const base = std.fs.path.basename(parsed.path);
+    const title = try std.fmt.allocPrint(allocator, "{s}:{s}", .{ base, parsed.line_num });
+    defer allocator.free(title);
+    const subtitle = if (parsed.snippet.len > 0)
+        try std.fmt.allocPrint(allocator, "{s} | {s}", .{ parsed.path, parsed.snippet })
+    else
+        try allocator.dupe(u8, parsed.path);
+    defer allocator.free(subtitle);
+    const action = try std.fmt.allocPrint(allocator, "{s}:{s}", .{ parsed.path, parsed.line_num });
+    defer allocator.free(action);
+    const kept_title = try keepDynamicString(dynamic_owned, allocator, title);
+    const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, subtitle);
+    const kept_action = try keepDynamicString(dynamic_owned, allocator, action);
+    try out.append(allocator, search.Candidate.init(.grep, kept_title, kept_subtitle, kept_action));
 }
 
 fn keepDynamicString(
@@ -234,6 +272,82 @@ test "clearOwned frees entries and resets logical length" {
 
     clearOwned(&owned, allocator);
     try std.testing.expectEqual(@as(usize, 0), owned.items.len);
+}
+
+test "parseFdOutputRow trims and skips blanks" {
+    try std.testing.expectEqualStrings("/tmp/demo", parseFdOutputRow(" \t/tmp/demo\r ") orelse unreachable);
+    try std.testing.expect(parseFdOutputRow("") == null);
+    try std.testing.expect(parseFdOutputRow(" \t\r ") == null);
+}
+
+test "parseRgOutputRow trims fields and preserves colons in snippet" {
+    const parsed = parseRgOutputRow("  /tmp/file.txt:42:  alpha:beta  \r") orelse unreachable;
+    try std.testing.expectEqualStrings("/tmp/file.txt", parsed.path);
+    try std.testing.expectEqualStrings("42", parsed.line_num);
+    try std.testing.expectEqualStrings("alpha:beta", parsed.snippet);
+}
+
+test "parseRgOutputRow rejects malformed rows" {
+    try std.testing.expect(parseRgOutputRow("") == null);
+    try std.testing.expect(parseRgOutputRow(" /tmp/file ") == null);
+    try std.testing.expect(parseRgOutputRow("/tmp/file:42") == null);
+}
+
+test "appendFdCandidate copies dynamic strings" {
+    const allocator = std.testing.allocator;
+
+    var owned = std.ArrayListUnmanaged([]u8){};
+    defer {
+        clearOwned(&owned, allocator);
+        owned.deinit(allocator);
+    }
+
+    var out = search.CandidateList.empty;
+    defer out.deinit(allocator);
+
+    const row_buf = try allocator.dupe(u8, "  /tmp/example.txt  ");
+    defer allocator.free(row_buf);
+    const path = parseFdOutputRow(row_buf) orelse unreachable;
+
+    try appendFdCandidate(&owned, allocator, path, .file, &out);
+    try std.testing.expectEqual(@as(usize, 1), out.items.len);
+    try std.testing.expectEqual(@as(usize, 2), owned.items.len);
+    try std.testing.expectEqualStrings("example.txt", out.items[0].title);
+    try std.testing.expectEqualStrings("/tmp/example.txt", out.items[0].subtitle);
+    try std.testing.expect(out.items[0].subtitle.ptr == out.items[0].action.ptr);
+
+    @memset(row_buf, 'x');
+    try std.testing.expectEqualStrings("example.txt", out.items[0].title);
+    try std.testing.expectEqualStrings("/tmp/example.txt", out.items[0].subtitle);
+}
+
+test "appendRgCandidate copies parsed data and handles empty snippet" {
+    const allocator = std.testing.allocator;
+
+    var owned = std.ArrayListUnmanaged([]u8){};
+    defer {
+        clearOwned(&owned, allocator);
+        owned.deinit(allocator);
+    }
+
+    var out = search.CandidateList.empty;
+    defer out.deinit(allocator);
+
+    const row_buf = try allocator.dupe(u8, "/tmp/note.md:7:   ");
+    defer allocator.free(row_buf);
+    const parsed = parseRgOutputRow(row_buf) orelse unreachable;
+
+    try appendRgCandidate(&owned, allocator, parsed, &out);
+    try std.testing.expectEqual(@as(usize, 1), out.items.len);
+    try std.testing.expectEqual(@as(usize, 3), owned.items.len);
+    try std.testing.expectEqualStrings("note.md:7", out.items[0].title);
+    try std.testing.expectEqualStrings("/tmp/note.md", out.items[0].subtitle);
+    try std.testing.expectEqualStrings("/tmp/note.md:7", out.items[0].action);
+
+    @memset(row_buf, 'y');
+    try std.testing.expectEqualStrings("note.md:7", out.items[0].title);
+    try std.testing.expectEqualStrings("/tmp/note.md", out.items[0].subtitle);
+    try std.testing.expectEqualStrings("/tmp/note.md:7", out.items[0].action);
 }
 
 test "collectForRoute skips dynamic tools when cached unavailable" {
