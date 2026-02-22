@@ -1744,9 +1744,10 @@ pub const Shell = struct {
             "}\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-primary { color: #f5f8ff; }\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-secondary { color: #d6def1; }\n" ++
-            ".gs-kind-icon { color: #a9b1c7; font-size: 2em; margin-right: 6px; }\n" ++
+            ".gs-kind-icon { color: #a9b1c7; font-size: 2.35em; margin-right: 8px; }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; transition: color 120ms ease; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; transition: color 120ms ease; }\n" ++
+            ".gs-candidate-content > .gs-candidate-secondary { margin-left: 44px; }\n" ++
             ".gs-primary-row { min-height: 20px; }\n" ++
             ".gs-chip { font-size: 0.72em; font-weight: 700; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; }\n" ++
             ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
@@ -1886,7 +1887,7 @@ pub const Shell = struct {
             if (resolveAppIconName(allocator, icon, action)) |icon_name_z| {
                 defer allocator.free(icon_name_z);
                 const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
-                c.gtk_image_set_pixel_size(@ptrCast(image), 24);
+                c.gtk_image_set_pixel_size(@ptrCast(image), 30);
                 c.gtk_widget_add_css_class(image, "gs-kind-icon");
                 return @ptrCast(image);
             }
