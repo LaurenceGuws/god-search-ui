@@ -6,6 +6,7 @@ const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
 const UiContext = gtk_types.UiContext;
+const POWER_CONFIRM_STATUS = "Press Enter again to confirm Power menu";
 
 pub const Hooks = struct {
     select_first: *const fn (*UiContext) void,
@@ -19,6 +20,7 @@ const StatusTone = enum {
 };
 
 pub fn setStatus(ctx: *UiContext, message: []const u8) void {
+    if (!shouldAllowStatusWhilePowerConfirm(ctx.pending_power_confirm, message)) return;
     setStatusWithTone(ctx, message, launchStatusTone(message));
 }
 
@@ -35,14 +37,28 @@ fn scheduleStatusReset(ctx: *UiContext) void {
         _ = c.g_source_remove(ctx.status_reset_id);
         ctx.status_reset_id = 0;
     }
-    ctx.status_reset_id = c.g_timeout_add(1700, onStatusReset, ctx);
+    const reset_ctx_raw = c.g_malloc0(@sizeOf(StatusResetContext)) orelse return;
+    const reset_ctx: *StatusResetContext = @ptrCast(@alignCast(reset_ctx_raw));
+    reset_ctx.* = .{
+        .ctx = ctx,
+        .status_hash = ctx.last_status_hash,
+        .status_tone = ctx.last_status_tone,
+    };
+    ctx.status_reset_id = c.g_timeout_add_full(c.G_PRIORITY_DEFAULT, 1700, onStatusReset, reset_ctx, c.g_free);
 }
 
 fn onStatusReset(user_data: ?*anyopaque) callconv(.c) c.gboolean {
     if (user_data == null) return GFALSE;
-    const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+    const reset_ctx: *StatusResetContext = @ptrCast(@alignCast(user_data.?));
+    const ctx = reset_ctx.ctx;
     ctx.status_reset_id = 0;
-    if (ctx.pending_power_confirm == GTRUE) return GFALSE;
+    if (!shouldRunStatusReset(
+        ctx.pending_power_confirm,
+        ctx.last_status_hash,
+        ctx.last_status_tone,
+        reset_ctx.status_hash,
+        reset_ctx.status_tone,
+    )) return GFALSE;
 
     const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
     const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
@@ -53,6 +69,27 @@ fn onStatusReset(user_data: ?*anyopaque) callconv(.c) c.gboolean {
         setStatus(ctx, "");
     }
     return GFALSE;
+}
+
+const StatusResetContext = struct {
+    ctx: *UiContext,
+    status_hash: u64,
+    status_tone: u8,
+};
+
+fn shouldAllowStatusWhilePowerConfirm(pending_power_confirm: c.gboolean, message: []const u8) bool {
+    return pending_power_confirm == GFALSE or std.mem.eql(u8, message, POWER_CONFIRM_STATUS);
+}
+
+fn shouldRunStatusReset(
+    pending_power_confirm: c.gboolean,
+    current_hash: u64,
+    current_tone: u8,
+    scheduled_hash: u64,
+    scheduled_tone: u8,
+) bool {
+    if (pending_power_confirm == GTRUE) return false;
+    return current_hash == scheduled_hash and current_tone == scheduled_tone;
 }
 
 fn clearLaunchFeedbackRows(list: *c.GtkListBox) void {
@@ -167,4 +204,17 @@ test "statusPrefix maps tone markers" {
 
 test "launchStatusTone keeps failure precedence over success tokens" {
     try std.testing.expectEqual(StatusTone.failure, launchStatusTone("opened but failed"));
+}
+
+test "power confirm only allows power confirmation prompt status updates" {
+    try std.testing.expect(shouldAllowStatusWhilePowerConfirm(GFALSE, "Searching..."));
+    try std.testing.expect(shouldAllowStatusWhilePowerConfirm(GTRUE, POWER_CONFIRM_STATUS));
+    try std.testing.expect(!shouldAllowStatusWhilePowerConfirm(GTRUE, "Searching..."));
+}
+
+test "status reset guard rejects stale or blocked timer callbacks" {
+    try std.testing.expect(shouldRunStatusReset(GFALSE, 10, 2, 10, 2));
+    try std.testing.expect(!shouldRunStatusReset(GTRUE, 10, 2, 10, 2));
+    try std.testing.expect(!shouldRunStatusReset(GFALSE, 11, 2, 10, 2));
+    try std.testing.expect(!shouldRunStatusReset(GFALSE, 10, 1, 10, 2));
 }

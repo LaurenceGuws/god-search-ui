@@ -1,6 +1,4 @@
 const std = @import("std");
-const gtk_types = @import("types.zig");
-const c = gtk_types.c;
 
 pub const ParsedFileAction = struct {
     path: []const u8,
@@ -8,13 +6,18 @@ pub const ParsedFileAction = struct {
 };
 
 pub fn runShellCommand(command: []const u8) !void {
-    const command_z = try std.heap.page_allocator.dupeZ(u8, command);
-    defer std.heap.page_allocator.free(command_z);
+    const launch_probe =
+        "sh -lc \"$1\" & pid=$!; i=0; while [ \"$i\" -lt 10 ]; do if ! kill -0 \"$pid\" 2>/dev/null; then wait \"$pid\"; exit $?; fi; i=$((i + 1)); sleep 0.02; done; exit 0";
 
-    var gerr: ?*c.GError = null;
-    const ok = c.g_spawn_command_line_async(command_z.ptr, &gerr);
-    if (ok == 0) {
-        if (gerr != null) c.g_error_free(gerr);
+    const result = try std.process.Child.run(.{
+        .allocator = std.heap.page_allocator,
+        .argv = &.{ "sh", "-lc", launch_probe, "_", command },
+    });
+    defer {
+        std.heap.page_allocator.free(result.stdout);
+        std.heap.page_allocator.free(result.stderr);
+    }
+    if (result.term != .Exited or result.term.Exited != 0) {
         return error.CommandFailed;
     }
 }
@@ -130,4 +133,12 @@ fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
     }
     try out.append(allocator, '\'');
     return out.toOwnedSlice(allocator);
+}
+
+test "runShellCommand reports non-zero exits as CommandFailed" {
+    try std.testing.expectError(error.CommandFailed, runShellCommand("exit 7"));
+}
+
+test "runShellCommand still returns for long-running launches" {
+    try runShellCommand("sleep 1");
 }

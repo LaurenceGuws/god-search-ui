@@ -99,19 +99,20 @@ pub const SearchService = struct {
 
         self.cache_mu.lock();
         const cache_view = cache_read.readViewLocked(self.cache_ready, &self.cached_rank_generations);
-        const cache_snapshot_had_provider_runtime_failure = self.cache_snapshot_had_provider_runtime_failure;
-        self.cache_mu.unlock();
         if (cache_view.ready) {
+            const cache_snapshot_had_provider_runtime_failure = self.cache_snapshot_had_provider_runtime_failure;
             var had_provider_runtime_failure = false;
-            const ranked_cache_or_collect = try query_engine.rankFromCacheOrCollect(
+            const ranked_cache_or_collect = query_engine.rankFromCacheSnapshot(
                 allocator,
-                self.registry,
                 dispatch.parsed,
                 recent,
                 cache_view.snapshot,
-                &query_candidates,
                 &had_provider_runtime_failure,
-            );
+            ) catch |err| {
+                self.cache_mu.unlock();
+                return err;
+            };
+            self.cache_mu.unlock();
             self.query_mu.lock();
             self.last_query_had_provider_runtime_failure =
                 cache_snapshot_had_provider_runtime_failure or had_provider_runtime_failure;
@@ -119,14 +120,14 @@ pub const SearchService = struct {
             query_metrics_access.setElapsed(&self.query_mu, &self.last_query_elapsed_ns, sw.elapsedNs());
             return ranked_cache_or_collect;
         }
+        self.cache_mu.unlock();
 
         var had_provider_runtime_failure = false;
-        const ranked = try query_engine.rankFromCacheOrCollect(
+        const ranked = try query_engine.collectAndRank(
             allocator,
             self.registry,
             dispatch.parsed,
             recent,
-            &.{},
             &query_candidates,
             &had_provider_runtime_failure,
         );

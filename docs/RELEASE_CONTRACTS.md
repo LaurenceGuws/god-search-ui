@@ -74,3 +74,4 @@ Local default recommendation:
 Warning:
 - Do not use dirty-worktree override in CI or release cut/tag workflows.
 - For release cutovers, run `scripts/release_validate.sh --ci --require-clean` from a clean worktree.
+- `CUT_RELEASE_SKIP_PREFLIGHT=1` is an automation-only escape hatch for internal checks; do not use it for real release cuts.

@@ -1,5 +1,6 @@
 const std = @import("std");
 const search = @import("../search/mod.zig");
+const tool_check = @import("tool_check.zig");
 
 pub const DirsProvider = struct {
     owned_strings_current: std.ArrayListUnmanaged([]u8) = .{},
@@ -59,7 +60,7 @@ pub const DirsProvider = struct {
 
     fn health(context: *anyopaque) search.ProviderHealth {
         const self: *DirsProvider = @ptrCast(@alignCast(context));
-        if (!self.has_tools_fn()) return .degraded;
+        if (!self.has_tools_fn()) return .unavailable;
         if (self.had_runtime_failure) return .degraded;
         return .ready;
     }
@@ -88,22 +89,7 @@ pub const DirsProvider = struct {
 };
 
 fn hasSystemTools() bool {
-    return commandExists("zoxide");
-}
-
-fn commandExists(name: []const u8) bool {
-    const check_cmd = std.fmt.allocPrint(std.heap.page_allocator, "{s} --help >/dev/null 2>&1", .{name}) catch return false;
-    defer std.heap.page_allocator.free(check_cmd);
-
-    const result = std.process.Child.run(.{
-        .allocator = std.heap.page_allocator,
-        .argv = &.{ "sh", "-lc", check_cmd },
-    }) catch return false;
-    defer {
-        std.heap.page_allocator.free(result.stdout);
-        std.heap.page_allocator.free(result.stderr);
-    }
-    return result.term == .Exited and result.term.Exited == 0;
+    return tool_check.commandExistsCached("zoxide");
 }
 
 fn listDirsWithSystemTools(allocator: std.mem.Allocator) ![]u8 {
@@ -154,7 +140,7 @@ test "dirs provider parses zoxide rows into candidates" {
     try std.testing.expectEqualStrings("/home/home/personal", list.items[0].action);
 }
 
-test "dirs provider degrades when zoxide is unavailable" {
+test "dirs provider reports unavailable when zoxide is unavailable" {
     const Fake = struct {
         fn hasTools() bool {
             return false;
@@ -177,7 +163,7 @@ test "dirs provider degrades when zoxide is unavailable" {
     const provider = provider_impl.provider();
     try provider.collect(std.testing.allocator, &list);
 
-    try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
+    try std.testing.expectEqual(search.ProviderHealth.unavailable, provider.health());
     try std.testing.expectEqual(@as(usize, 0), list.items.len);
 }
 

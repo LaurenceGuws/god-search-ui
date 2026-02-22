@@ -10,6 +10,7 @@ const gtk_status = @import("status.zig");
 
 const UiContext = gtk_types.UiContext;
 const GFALSE = gtk_types.GFALSE;
+const GTRUE = gtk_types.GTRUE;
 
 pub const AsyncHooks = struct {
     start_async_route_search: *const fn (*UiContext, std.mem.Allocator, []const u8) void,
@@ -60,7 +61,9 @@ pub fn renderSearchError(ctx: *UiContext, allocator: std.mem.Allocator, err: any
     gtk_widgets.clearList(ctx.list);
     gtk_widgets.appendInfoRow(ctx.list, msg);
     ctx.last_render_hash = std.hash.Wyhash.hash(0x5ea2c8d7, msg);
-    gtk_status.setStatus(ctx, "Search failed");
+    if (ctx.pending_power_confirm == GFALSE) {
+        gtk_status.setStatus(ctx, "Search failed");
+    }
 }
 
 pub fn renderRankedRows(
@@ -94,17 +97,20 @@ pub fn renderRankedRows(
         ctx.last_render_hash = render_hash;
     }
     const query_flags = ctx.service.queryFlagsSnapshot();
+    if (ctx.pending_power_confirm == GTRUE) {
+        return;
+    }
     if (query_flags.last_query_had_provider_runtime_failure) {
         gtk_status.setStatus(ctx, "Some providers failed; results may be incomplete");
     } else if (query_flags.last_query_used_stale_cache) {
         gtk_status.setStatus(ctx, "Refresh scheduled");
     } else if (query_flags.last_query_refreshed_cache) {
         gtk_status.setStatus(ctx, "Snapshot refreshed");
-    } else if (empty_query and has_app_glyph_fallback and ctx.pending_power_confirm == GFALSE) {
+    } else if (empty_query and has_app_glyph_fallback) {
         gtk_status.setStatus(ctx, "App icon fallback active (headless :icondiag for breakdown)");
-    } else if (empty_query and ctx.pending_power_confirm == GFALSE) {
+    } else if (empty_query) {
         gtk_status.setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs % files & grep > run = calc ? web");
-    } else if (ctx.pending_power_confirm == GFALSE) {
+    } else {
         gtk_status.setStatus(ctx, "");
     }
 }

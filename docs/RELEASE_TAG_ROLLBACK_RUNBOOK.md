@@ -14,6 +14,7 @@ Notes:
 - Use `--reuse-notes` with `--apply` to avoid overwriting manually edited release notes.
 - Apply default behavior now reuses existing notes file when present.
 - Use `--regen-notes` to force regeneration when you intentionally want a fresh draft.
+- `CUT_RELEASE_SKIP_PREFLIGHT=1` is an automation-only escape hatch for internal checks; do not use it for real release cuts.
 - Curate notes using checklist before final apply cut:
   - `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`
 

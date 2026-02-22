@@ -460,6 +460,75 @@ test "concurrent query and drainScheduledRefresh does not deadlock" {
     try std.testing.expect(Fake.collect_calls > 0);
 }
 
+test "cached ranking holds cache generation lock against concurrent refresh churn" {
+    const Fake = struct {
+        fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+            _ = context;
+            var i: usize = 0;
+            while (i < 40_000) : (i += 1) {
+                try out.append(allocator, search.Candidate.init(.action, "Entry", "System", "entry-action"));
+            }
+        }
+
+        fn health(_: *anyopaque) search.ProviderHealth {
+            return .ready;
+        }
+    };
+
+    const Workers = struct {
+        fn queryWorker(service: *SearchService, done: *std.atomic.Value(bool), failed: *std.atomic.Value(bool)) void {
+            const ranked = service.searchQuery(std.heap.page_allocator, "entry") catch {
+                failed.store(true, .release);
+                return;
+            };
+            std.heap.page_allocator.free(ranked);
+            done.store(true, .release);
+        }
+
+        fn refreshWorker(service: *SearchService, done: *std.atomic.Value(bool), failed: *std.atomic.Value(bool)) void {
+            service.invalidateSnapshot();
+            service.prewarmProviders(std.heap.page_allocator) catch {
+                failed.store(true, .release);
+                return;
+            };
+            done.store(true, .release);
+        }
+    };
+
+    var dummy: u8 = 0;
+    const source = [_]search.Provider{
+        .{
+            .name = "fake",
+            .context = &dummy,
+            .vtable = &.{ .collect = Fake.collect, .health = Fake.health },
+        },
+    };
+
+    const registry = providers.ProviderRegistry.init(&source);
+    var service = SearchService.init(registry);
+    defer service.deinit(std.testing.allocator);
+    service.cache_generation_keep = 1;
+
+    try service.prewarmProviders(std.testing.allocator);
+    var query_done = std.atomic.Value(bool).init(false);
+    var refresh_done = std.atomic.Value(bool).init(false);
+    var failed = std.atomic.Value(bool).init(false);
+
+    const query_thread = try std.Thread.spawn(.{}, Workers.queryWorker, .{ &service, &query_done, &failed });
+    std.time.sleep(1 * std.time.ns_per_ms);
+    const refresh_thread = try std.Thread.spawn(.{}, Workers.refreshWorker, .{ &service, &refresh_done, &failed });
+
+    std.time.sleep(2 * std.time.ns_per_ms);
+    try std.testing.expect(!refresh_done.load(.acquire));
+
+    query_thread.join();
+    refresh_thread.join();
+
+    try std.testing.expect(query_done.load(.acquire));
+    try std.testing.expect(refresh_done.load(.acquire));
+    try std.testing.expect(!failed.load(.acquire));
+}
+
 test "cache generation clear releases backing storage and is idempotent" {
     var generations: std.ArrayListUnmanaged([]search.Candidate) = .{};
 

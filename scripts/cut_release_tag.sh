@@ -101,7 +101,7 @@ if [[ -n "$(git status --short)" ]]; then
   exit 1
 fi
 
-if git rev-parse "$VERSION" >/dev/null 2>&1; then
+if git rev-parse -- "$VERSION" >/dev/null 2>&1; then
   echo "error: tag already exists: $VERSION" >&2
   exit 1
 fi
@@ -127,7 +127,11 @@ fi
 
 if [[ $DRY_RUN -eq 1 ]]; then
   if [[ "$NOTES_MODE" == "reuse" ]]; then
-    echo "[dry-run] would reuse: $NOTES_PATH"
+    if [[ -f "$NOTES_PATH" ]]; then
+      echo "[dry-run] would reuse: $NOTES_PATH"
+    else
+      echo "[dry-run] would fail: notes reuse requested but file missing: $NOTES_PATH"
+    fi
   else
     echo "[dry-run] would run: scripts/gen_release_notes.sh $VERSION $NOTES_PATH"
   fi
@@ -135,10 +139,10 @@ if [[ $DRY_RUN -eq 1 ]]; then
     echo "[dry-run] would run: git add docs/release-notes-${VERSION}.md"
     echo "[dry-run] would run: git commit -m \"Add release notes draft for $VERSION\""
   fi
-  echo "[dry-run] would run: git tag -a $VERSION -m \"god-search-ui $VERSION\""
+  echo "[dry-run] would run: git tag -a -m \"god-search-ui $VERSION\" -- $VERSION"
   if [[ $PUSH -eq 1 ]]; then
     echo "[dry-run] would run: git push origin main"
-    echo "[dry-run] would run: git push origin $VERSION"
+    echo "[dry-run] would run: git push origin -- $VERSION"
   fi
   exit 0
 fi
@@ -165,13 +169,13 @@ if [[ $COMMIT_NOTES -eq 1 ]]; then
 fi
 
 echo "[apply] creating annotated tag"
-git tag -a "$VERSION" -m "god-search-ui $VERSION"
-git show "$VERSION" --no-patch
+git tag -a -m "god-search-ui $VERSION" -- "$VERSION"
+git show "$VERSION" --no-patch --
 
 if [[ $PUSH -eq 1 ]]; then
   echo "[apply] pushing main and tag"
   git push origin main
-  git push origin "$VERSION"
+  git push origin -- "$VERSION"
 fi
 
 echo "release tag flow complete"
