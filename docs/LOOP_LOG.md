@@ -4236,3 +4236,29 @@
   - M8: extract render/grouping pipeline into `gtk/render.zig`.
 
 ---
+## 2026-02-22 (Cycle 188)
+- Milestone: M8 UX Modularization
+- Task slice: extract grouped render pipeline from shell
+- Changes:
+  - Added `src/ui/gtk/render.zig`:
+    - render-hash calculation
+    - grouped section rendering (`Apps/Windows/Directories/Files/Code Search/Actions/Hints`)
+    - candidate row rendering + row metadata/tooltips
+    - hook-based icon widget resolution from shell
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates render hash and grouped row rendering to `gtk_render`
+    - removed in-file grouped render and candidate row builder implementations
+    - removed now-unused local kind tagging/chip wrapper helpers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - render module now owns row metadata keys (`gs-kind`, `gs-action`, `gs-title`), so future schema changes should be centralized there.
+- Next slice:
+  - M8: extract action-menu presentation/dispatch (`dir/file` option menu rows) into `gtk/menus.zig`.
+
+---
