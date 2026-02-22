@@ -258,3 +258,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Hygiene - extract cache refresh orchestration glue (`prewarm/invalidate/drain`) into `search_service/cache_coordinator.zig`.
 - [x] M8: Hygiene - extract non-dynamic query ranking orchestration into `search_service/query_engine.zig`.
 - [x] M8: Hygiene - extract history lock choreography into `search_service/history_access.zig`.
+- [x] M8: Hygiene - extract cache snapshot read view helper into `search_service/cache_read.zig`.

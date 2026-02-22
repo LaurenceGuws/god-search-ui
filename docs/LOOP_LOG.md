@@ -5008,3 +5008,26 @@
   - M8: extract cache-hit snapshot selection + cache lock read helper into `search_service/cache_read.zig` to further thin `searchQuery`.
 
 ---
+## 2026-02-22 (Cycle 219)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract cache snapshot read helper used by query orchestration
+- Changes:
+  - Added `src/app/search_service/cache_read.zig`:
+    - `CacheReadView` contract for cache readiness + latest snapshot
+    - `readViewLocked(...)` helper to centralize lock-protected cache view read
+  - Updated `src/app/search_service.zig`:
+    - `searchQuery` cache-read section now delegates to `cache_read.readViewLocked(...)`
+    - reduced inline cache read/selection boilerplate in core query path
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/cache_read.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no semantic change intended; this extraction reduces coordination noise in `searchQuery`.
+- Next slice:
+  - M8: extract dynamic route orchestration (`searchDynamicRoute`) into `search_service/dynamic_query_engine.zig` so `SearchService` remains a thin top-level coordinator.
+
+---
