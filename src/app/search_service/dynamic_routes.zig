@@ -200,3 +200,69 @@ fn runShellCapture(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
     }
     return result.stdout;
 }
+
+test "shellSingleQuote wraps and escapes apostrophes" {
+    const allocator = std.testing.allocator;
+
+    const simple = try shellSingleQuote(allocator, "alpha");
+    defer allocator.free(simple);
+    try std.testing.expectEqualStrings("'alpha'", simple);
+
+    const escaped = try shellSingleQuote(allocator, "a'b");
+    defer allocator.free(escaped);
+    try std.testing.expectEqualStrings("'a'\\''b'", escaped);
+}
+
+test "runShellCapture returns stdout for successful command" {
+    const allocator = std.testing.allocator;
+    const out = try runShellCapture(allocator, "printf 'ok\\n'");
+    defer allocator.free(out);
+    try std.testing.expectEqualStrings("ok\n", out);
+}
+
+test "runShellCapture returns CommandFailed on non-zero exit" {
+    try std.testing.expectError(error.CommandFailed, runShellCapture(std.testing.allocator, "exit 7"));
+}
+
+test "clearOwned frees entries and resets logical length" {
+    const allocator = std.testing.allocator;
+    var owned = std.ArrayListUnmanaged([]u8){};
+    defer owned.deinit(allocator);
+
+    try owned.append(allocator, try allocator.dupe(u8, "first"));
+    try owned.append(allocator, try allocator.dupe(u8, "second"));
+
+    clearOwned(&owned, allocator);
+    try std.testing.expectEqual(@as(usize, 0), owned.items.len);
+}
+
+test "collectForRoute skips dynamic tools when cached unavailable" {
+    const allocator = std.testing.allocator;
+    var state = ToolState{
+        .fd_available = false,
+        .rg_available = false,
+    };
+    var owned = std.ArrayListUnmanaged([]u8){};
+    defer owned.deinit(allocator);
+
+    var out = search.CandidateList.empty;
+    defer out.deinit(allocator);
+
+    const files_query = search.Query{
+        .raw = "% abc",
+        .route = .files,
+        .term = "abc",
+    };
+    try collectForRoute(&state, &owned, allocator, files_query, &out);
+    try std.testing.expectEqual(@as(usize, 0), out.items.len);
+    try std.testing.expectEqual(@as(usize, 0), owned.items.len);
+
+    const grep_query = search.Query{
+        .raw = "& xyz",
+        .route = .grep,
+        .term = "xyz",
+    };
+    try collectForRoute(&state, &owned, allocator, grep_query, &out);
+    try std.testing.expectEqual(@as(usize, 0), out.items.len);
+    try std.testing.expectEqual(@as(usize, 0), owned.items.len);
+}

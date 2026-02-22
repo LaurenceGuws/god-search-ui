@@ -78,6 +78,10 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.async_worker_active = gtk_types.GFALSE;
     ctx.async_pending_query_ptr = null;
     ctx.async_pending_query_len = 0;
+    ctx.async_shutdown = gtk_types.GFALSE;
+    ctx.async_worker_count = 0;
+    c.g_mutex_init(&ctx.async_worker_lock);
+    c.g_cond_init(&ctx.async_worker_cond);
 
     const key_controller = c.gtk_event_controller_key_new();
     _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(hooks.on_key_pressed), ctx, null, 0);

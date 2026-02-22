@@ -75,9 +75,9 @@ pub const Shell = struct {
             _ = c.g_source_remove(ctx.async_spinner_id);
             ctx.async_spinner_id = 0;
         }
+        gtk_async_coord.beginAsyncShutdown(ctx);
+        ctx.async_worker_active = GFALSE;
         gtk_async.freePendingAsyncQuery(ctx);
-        // Intentionally keep UiContext alive until process exit.
-        // Async route worker callbacks may still complete after destroy.
     }
 
     fn onKeyPressed(
@@ -192,6 +192,7 @@ pub const Shell = struct {
         const allocator = allocator_ptr.*;
 
         defer gtk_async.freeAsyncSearchResult(allocator, payload);
+        if (gtk_async_coord.isAsyncShuttingDown(ctx)) return GFALSE;
         ctx.async_worker_active = GFALSE;
         if (payload.generation != ctx.async_search_generation) {
             _ = launchPendingAsyncQuery(ctx, allocator);

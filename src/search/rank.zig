@@ -24,8 +24,13 @@ pub fn rankCandidatesWithHistory(
     var scored = std.ArrayList(ScoredCandidate).empty;
     defer scored.deinit(allocator);
 
-    const needle = lowerAsciiLossyAlloc(allocator, query.term) catch "";
-    defer if (needle.len > 0) allocator.free(needle);
+    var owned_needle: ?[]u8 = null;
+    var needle: []const u8 = "";
+    if (lowerAsciiLossyAlloc(allocator, query.term)) |buf| {
+        owned_needle = buf;
+        needle = buf;
+    } else |_| {}
+    defer if (owned_needle) |buf| allocator.free(buf);
 
     for (candidates) |candidate| {
         if (!matchesRoute(query.route, candidate.kind)) continue;
@@ -151,6 +156,24 @@ test "route filter limits result kinds" {
 
     try std.testing.expectEqual(@as(usize, 1), ranked.len);
     try std.testing.expectEqual(types.CandidateKind.app, ranked[0].candidate.kind);
+}
+
+test "empty apps route keeps app-only scoring order" {
+    const candidates = [_]types.Candidate{
+        .init(.app, "Firefox", "Browser", "firefox"),
+        .init(.action, "Focus Firefox", "Window action", "focus-firefox"),
+        .init(.app, "Alacritty", "Terminal", "alacritty"),
+    };
+
+    const query = query_mod.parse("@ ");
+    const ranked = try rankCandidates(std.testing.allocator, query, &candidates);
+    defer std.testing.allocator.free(ranked);
+
+    try std.testing.expectEqual(@as(usize, 2), ranked.len);
+    try std.testing.expectEqual(types.CandidateKind.app, ranked[0].candidate.kind);
+    try std.testing.expectEqual(types.CandidateKind.app, ranked[1].candidate.kind);
+    try std.testing.expectEqualStrings("Alacritty", ranked[0].candidate.title);
+    try std.testing.expectEqualStrings("Firefox", ranked[1].candidate.title);
 }
 
 test "files route includes file and directory candidates" {

@@ -31,4 +31,8 @@ pub const UiContext = extern struct {
     async_worker_active: c.gboolean,
     async_pending_query_ptr: ?[*]u8,
     async_pending_query_len: usize,
+    async_shutdown: c.gboolean,
+    async_worker_count: c.guint,
+    async_worker_lock: c.GMutex,
+    async_worker_cond: c.GCond,
 };

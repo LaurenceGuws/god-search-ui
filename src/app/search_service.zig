@@ -52,8 +52,19 @@ pub const SearchService = struct {
     }
 
     pub fn deinit(self: *SearchService, allocator: std.mem.Allocator) void {
-        if (self.refresh_thread) |t| t.join();
+        if (self.refresh_thread) |t| {
+            t.join();
+            self.refresh_thread = null;
+        }
+        self.refresh_thread_running = false;
+
+        self.cache_mu.lock();
         cache_snapshots.clearGenerations(&self.cached_rank_generations, allocator);
+        self.cache_ready = false;
+        self.refresh_requested = false;
+        self.cache_last_refresh_ns = 0;
+        self.cache_mu.unlock();
+
         dynamic_generations.clear(&self.dynamic_generations, allocator);
         history_access.deinitHistory(&self.history, allocator);
         self.cached_candidates.deinit(allocator);

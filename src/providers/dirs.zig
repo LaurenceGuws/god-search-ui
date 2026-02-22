@@ -3,6 +3,7 @@ const search = @import("../search/mod.zig");
 
 pub const DirsProvider = struct {
     owned_strings: std.ArrayListUnmanaged([]u8) = .{},
+    had_runtime_failure: bool = false,
     list_dirs_fn: *const fn (allocator: std.mem.Allocator) anyerror![]u8 = listDirsWithSystemTools,
     has_tools_fn: *const fn () bool = hasSystemTools,
 
@@ -28,7 +29,12 @@ pub const DirsProvider = struct {
             return;
         }
 
-        const rows = self.list_dirs_fn(allocator) catch return;
+        const rows = self.list_dirs_fn(allocator) catch |err| {
+            self.had_runtime_failure = true;
+            std.log.warn("dirs provider query failed: {s}", .{@errorName(err)});
+            return;
+        };
+        self.had_runtime_failure = false;
         defer allocator.free(rows);
 
         var lines = std.mem.splitScalar(u8, rows, '\n');
@@ -49,6 +55,7 @@ pub const DirsProvider = struct {
     fn health(context: *anyopaque) search.ProviderHealth {
         const self: *DirsProvider = @ptrCast(@alignCast(context));
         if (!self.has_tools_fn()) return .degraded;
+        if (self.had_runtime_failure) return .degraded;
         return .ready;
     }
 
@@ -182,4 +189,31 @@ test "dirs provider keeps full path when spaces exist" {
     try std.testing.expectEqual(@as(usize, 1), list.items.len);
     try std.testing.expectEqualStrings("space path", list.items[0].title);
     try std.testing.expectEqualStrings("/home/home/personal/space path", list.items[0].action);
+}
+
+test "dirs provider runtime query failure degrades health while keeping UX graceful" {
+    const Fake = struct {
+        fn hasTools() bool {
+            return true;
+        }
+
+        fn listDirs(_: std.mem.Allocator) ![]u8 {
+            return error.DirQueryFailed;
+        }
+    };
+
+    var provider_impl = DirsProvider{
+        .list_dirs_fn = Fake.listDirs,
+        .has_tools_fn = Fake.hasTools,
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 0), list.items.len);
+    try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
 }

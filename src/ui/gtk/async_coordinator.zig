@@ -28,6 +28,14 @@ pub fn cancelAsyncRouteSearch(ctx: *UiContext) void {
     gtk_async_search.cancelAsyncRouteSearch(ctx, .{ .begin = beginAsyncSpinner, .end = endAsyncSpinner });
 }
 
+pub fn beginAsyncShutdown(ctx: *UiContext) void {
+    gtk_async_search.beginAsyncShutdown(ctx);
+}
+
+pub fn isAsyncShuttingDown(ctx: *UiContext) bool {
+    return gtk_async_search.isAsyncShuttingDown(ctx);
+}
+
 pub fn launchPendingAsyncQuery(
     ctx: *UiContext,
     allocator: std.mem.Allocator,

@@ -29,3 +29,43 @@ pub fn clear(
     }
     generations.deinit(allocator);
 }
+
+test "begin appends a new generation and returns it" {
+    const allocator = std.testing.allocator;
+    var generations = std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)){};
+    defer clear(&generations, allocator);
+
+    const first = try begin(&generations, allocator);
+    try first.append(allocator, try allocator.dupe(u8, "one"));
+
+    try std.testing.expectEqual(@as(usize, 1), generations.items.len);
+    try std.testing.expectEqual(@as(usize, 1), generations.items[0].items.len);
+}
+
+test "prune removes oldest generations and preserves newest" {
+    const allocator = std.testing.allocator;
+    var generations = std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)){};
+    defer clear(&generations, allocator);
+
+    const first = try begin(&generations, allocator);
+    try first.append(allocator, try allocator.dupe(u8, "oldest"));
+    const second = try begin(&generations, allocator);
+    try second.append(allocator, try allocator.dupe(u8, "newest"));
+
+    prune(&generations, 1, allocator);
+    try std.testing.expectEqual(@as(usize, 1), generations.items.len);
+    try std.testing.expectEqualStrings("newest", generations.items[0].items[0]);
+}
+
+test "clear releases all generations and resets list" {
+    const allocator = std.testing.allocator;
+    var generations = std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)){};
+
+    const first = try begin(&generations, allocator);
+    try first.append(allocator, try allocator.dupe(u8, "a"));
+    const second = try begin(&generations, allocator);
+    try second.append(allocator, try allocator.dupe(u8, "b"));
+
+    clear(&generations, allocator);
+    try std.testing.expectEqual(@as(usize, 0), generations.items.len);
+}

@@ -15,7 +15,10 @@ pub const ProviderRegistry = struct {
 
     pub fn collectAll(self: ProviderRegistry, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
         for (self.providers) |provider| {
-            provider.collect(allocator, out) catch {};
+            provider.collect(allocator, out) catch |err| switch (err) {
+                error.OutOfMemory => return error.OutOfMemory,
+                else => std.log.warn("provider '{s}' collect failed: {s}", .{ provider.name, @errorName(err) }),
+            };
         }
     }
 
@@ -108,4 +111,50 @@ test "registry aggregates provider candidates and reports health" {
     defer std.testing.allocator.free(report);
     try std.testing.expect(std.mem.indexOf(u8, report, "one: ready") != null);
     try std.testing.expect(std.mem.indexOf(u8, report, "two: degraded") != null);
+}
+
+test "registry continues after provider runtime failure" {
+    const Fake = struct {
+        const OkCtx = struct {
+            title: []const u8,
+        };
+
+        fn collectOk(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+            const ctx: *OkCtx = @ptrCast(@alignCast(context));
+            try out.append(allocator, search.Candidate.init(.hint, ctx.title, "Provider", "noop"));
+        }
+
+        fn collectFail(_: *anyopaque, _: std.mem.Allocator, _: *search.CandidateList) !void {
+            return error.RuntimeFailure;
+        }
+
+        fn healthReady(_: *anyopaque) search.ProviderHealth {
+            return .ready;
+        }
+    };
+
+    var ok = Fake.OkCtx{ .title = "ok" };
+    var dummy_ctx: u8 = 0;
+
+    const providers = [_]search.Provider{
+        .{
+            .name = "broken",
+            .context = &dummy_ctx,
+            .vtable = &.{ .collect = Fake.collectFail, .health = Fake.healthReady },
+        },
+        .{
+            .name = "healthy",
+            .context = &ok,
+            .vtable = &.{ .collect = Fake.collectOk, .health = Fake.healthReady },
+        },
+    };
+
+    const registry = ProviderRegistry.init(&providers);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    try registry.collectAll(std.testing.allocator, &list);
+    try std.testing.expectEqual(@as(usize, 1), list.items.len);
+    try std.testing.expectEqualStrings("ok", list.items[0].title);
 }

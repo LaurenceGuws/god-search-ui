@@ -1,6 +1,7 @@
 const std = @import("std");
 const providers = @import("../providers/mod.zig");
 const search = @import("../search/mod.zig");
+const cache_snapshots = @import("search_service/cache_snapshots.zig");
 const SearchService = @import("search_service.zig").SearchService;
 
 test "search service applies history boost through ranking" {
@@ -313,4 +314,26 @@ test "concurrent query and drainScheduledRefresh does not deadlock" {
 
     try std.testing.expect(!failed.load(.acquire));
     try std.testing.expect(Fake.collect_calls > 0);
+}
+
+test "cache generation clear releases backing storage and is idempotent" {
+    var generations: std.ArrayListUnmanaged([]search.Candidate) = .{};
+
+    var snapshot = try std.testing.allocator.alloc(search.Candidate, 1);
+    snapshot[0] = .{
+        .kind = .action,
+        .title = try std.testing.allocator.dupe(u8, "Settings"),
+        .subtitle = try std.testing.allocator.dupe(u8, "System"),
+        .action = try std.testing.allocator.dupe(u8, "settings"),
+        .icon = try std.testing.allocator.dupe(u8, ""),
+    };
+
+    try generations.append(std.testing.allocator, snapshot);
+    try std.testing.expect(generations.capacity > 0);
+
+    cache_snapshots.clearGenerations(&generations, std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 0), generations.items.len);
+    try std.testing.expectEqual(@as(usize, 0), generations.capacity);
+
+    cache_snapshots.clearGenerations(&generations, std.testing.allocator);
 }

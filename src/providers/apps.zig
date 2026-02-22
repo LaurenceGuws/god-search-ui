@@ -4,6 +4,7 @@ const search = @import("../search/mod.zig");
 pub const AppsProvider = struct {
     cache_path: []const u8,
     owned_strings: std.ArrayListUnmanaged([]u8) = .{},
+    had_runtime_failure: bool = false,
 
     pub fn init(cache_path: []const u8) AppsProvider {
         return .{
@@ -31,10 +32,16 @@ pub const AppsProvider = struct {
         const self: *AppsProvider = @ptrCast(@alignCast(context));
         const data = std.fs.cwd().readFileAlloc(allocator, self.cache_path, 2 * 1024 * 1024) catch |err| switch (err) {
             error.FileNotFound => {
+                self.had_runtime_failure = false;
                 try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
                 return;
             },
-            else => return err,
+            else => {
+                self.had_runtime_failure = true;
+                std.log.warn("apps provider cache read failed: {s}", .{@errorName(err)});
+                try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
+                return;
+            },
         };
         defer allocator.free(data);
 
@@ -57,13 +64,17 @@ pub const AppsProvider = struct {
         }
 
         if (count == 0) {
+            self.had_runtime_failure = true;
             try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
+            return;
         }
+        self.had_runtime_failure = false;
     }
 
     fn health(context: *anyopaque) search.ProviderHealth {
         const self: *AppsProvider = @ptrCast(@alignCast(context));
         std.fs.cwd().access(self.cache_path, .{}) catch return .degraded;
+        if (self.had_runtime_failure) return .degraded;
         return .ready;
     }
 
@@ -151,4 +162,34 @@ test "apps provider falls back when cache is missing" {
     try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
     try std.testing.expectEqual(@as(usize, 1), list.items.len);
     try std.testing.expectEqualStrings("__drun__", list.items[0].action);
+}
+
+test "apps provider degrades when cache exists but no valid rows are parsed" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.writeFile(.{
+        .sub_path = "apps.tsv",
+        .data =
+        \\bad row
+        \\still bad
+        \\
+        ,
+    });
+
+    const cache_path = try tmp.dir.realpathAlloc(std.testing.allocator, "apps.tsv");
+    defer std.testing.allocator.free(cache_path);
+
+    var apps = AppsProvider.init(cache_path);
+    defer apps.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = apps.provider();
+    try provider.collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 1), list.items.len);
+    try std.testing.expectEqualStrings("__drun__", list.items[0].action);
+    try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
 }

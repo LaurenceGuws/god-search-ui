@@ -3,6 +3,7 @@ const search = @import("../search/mod.zig");
 
 pub const WindowsProvider = struct {
     owned_strings: std.ArrayListUnmanaged([]u8) = .{},
+    had_runtime_failure: bool = false,
     list_windows_fn: *const fn (allocator: std.mem.Allocator) anyerror![]u8 = listWindowsWithSystemTools,
     has_tools_fn: *const fn () bool = hasSystemTools,
 
@@ -28,7 +29,12 @@ pub const WindowsProvider = struct {
             return;
         }
 
-        const rows = self.list_windows_fn(allocator) catch return;
+        const rows = self.list_windows_fn(allocator) catch |err| {
+            self.had_runtime_failure = true;
+            std.log.warn("windows provider query failed: {s}", .{@errorName(err)});
+            return;
+        };
+        self.had_runtime_failure = false;
         defer allocator.free(rows);
 
         var lines = std.mem.splitScalar(u8, rows, '\n');
@@ -49,6 +55,7 @@ pub const WindowsProvider = struct {
     fn health(context: *anyopaque) search.ProviderHealth {
         const self: *WindowsProvider = @ptrCast(@alignCast(context));
         if (!self.has_tools_fn()) return .degraded;
+        if (self.had_runtime_failure) return .degraded;
         return .ready;
     }
 
@@ -154,4 +161,31 @@ test "windows provider degrades when tools are unavailable" {
 
     try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
     try std.testing.expectEqual(@as(usize, 0), list.items.len);
+}
+
+test "windows provider runtime query failure degrades health while keeping UX graceful" {
+    const Fake = struct {
+        fn hasTools() bool {
+            return true;
+        }
+
+        fn listWindows(_: std.mem.Allocator) ![]u8 {
+            return error.WindowQueryFailed;
+        }
+    };
+
+    var provider_impl = WindowsProvider{
+        .list_windows_fn = Fake.listWindows,
+        .has_tools_fn = Fake.hasTools,
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 0), list.items.len);
+    try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
 }
