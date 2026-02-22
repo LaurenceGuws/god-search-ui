@@ -47,7 +47,7 @@ pub fn saveHistory(history: []const []u8, history_path: ?[]const u8, allocator: 
     for (history) |entry| {
         try writer.print("{s}\\n", .{entry});
     }
-    try writeFileAnyPath(path, out.items);
+    try writeFileAnyPathAtomic(allocator, path, out.items);
 }
 
 pub fn historyViewNewestFirst(history: []const []u8, allocator: std.mem.Allocator) ![]const []const u8 {
@@ -61,6 +61,28 @@ pub fn historyViewNewestFirst(history: []const []u8, allocator: std.mem.Allocato
     return out.toOwnedSlice(allocator);
 }
 
+pub fn historySnapshotNewestFirstOwned(history: []const []u8, allocator: std.mem.Allocator) ![]const []const u8 {
+    var out = try allocator.alloc([]const u8, history.len);
+    errdefer allocator.free(out);
+
+    var out_idx: usize = 0;
+    var idx = history.len;
+    while (idx > 0) : (idx -= 1) {
+        const dup = allocator.dupe(u8, history[idx - 1]) catch |err| {
+            for (out[0..out_idx]) |entry| allocator.free(@constCast(entry));
+            return err;
+        };
+        out[out_idx] = dup;
+        out_idx += 1;
+    }
+    return out;
+}
+
+pub fn freeOwnedHistorySnapshot(allocator: std.mem.Allocator, history_snapshot: []const []const u8) void {
+    for (history_snapshot) |entry| allocator.free(@constCast(entry));
+    allocator.free(history_snapshot);
+}
+
 fn readFileAnyPath(allocator: std.mem.Allocator, path: []const u8, max_bytes: usize) ![]u8 {
     if (std.fs.path.isAbsolute(path)) {
         const file = try std.fs.openFileAbsolute(path, .{});
@@ -70,18 +92,23 @@ fn readFileAnyPath(allocator: std.mem.Allocator, path: []const u8, max_bytes: us
     return std.fs.cwd().readFileAlloc(allocator, path, max_bytes);
 }
 
-fn writeFileAnyPath(path: []const u8, data: []const u8) !void {
+fn writeFileAnyPathAtomic(allocator: std.mem.Allocator, path: []const u8, data: []const u8) !void {
+    const tmp_path = try std.fmt.allocPrint(allocator, "{s}.tmp", .{path});
+    defer allocator.free(tmp_path);
+
     if (std.fs.path.isAbsolute(path)) {
-        try ensureParentDirAbsolute(path);
-        const file = try std.fs.createFileAbsolute(path, .{ .truncate = true });
+        try ensureParentDirAbsolute(tmp_path);
+        const file = try std.fs.createFileAbsolute(tmp_path, .{ .truncate = true });
         defer file.close();
         try file.writeAll(data);
+        try std.fs.renameAbsolute(tmp_path, path);
         return;
     }
     try std.fs.cwd().writeFile(.{
-        .sub_path = path,
+        .sub_path = tmp_path,
         .data = data,
     });
+    try std.fs.cwd().rename(tmp_path, path);
 }
 
 fn ensureParentDirAbsolute(path: []const u8) !void {

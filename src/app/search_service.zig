@@ -19,6 +19,8 @@ pub const SearchService = struct {
     refresh_requested: bool = false,
     refresh_thread_running: bool = false,
     refresh_thread: ?std.Thread = null,
+    dynamic_mu: std.Thread.Mutex = .{},
+    dynamic_tool_state: dynamic_routes.ToolState = .{},
     dynamic_owned: std.ArrayListUnmanaged([]u8) = .{},
     max_history: usize = 32,
     last_query_elapsed_ns: u64 = 0,
@@ -45,16 +47,13 @@ pub const SearchService = struct {
     }
 
     pub fn searchQuery(self: *SearchService, allocator: std.mem.Allocator, raw_query: []const u8) ![]search.ScoredCandidate {
-        self.query_mu.lock();
-        defer self.query_mu.unlock();
         const sw = @import("metrics.zig").Stopwatch.start();
-        self.last_query_refreshed_cache = false;
-        self.last_query_used_stale_cache = false;
+        self.resetLastQueryFlags();
 
         const parsed = search.parseQuery(raw_query);
         if (parsed.route == .files or parsed.route == .grep) {
             const ranked_dynamic = try self.searchDynamicRoute(allocator, parsed);
-            self.last_query_elapsed_ns = sw.elapsedNs();
+            self.setLastQueryElapsed(sw.elapsedNs());
             return ranked_dynamic;
         }
 
@@ -63,8 +62,8 @@ pub const SearchService = struct {
         var query_candidates = search.CandidateList.empty;
         defer query_candidates.deinit(allocator);
 
-        const recent = try self.historyViewNewestFirst(allocator);
-        defer allocator.free(recent);
+        const recent = try self.historySnapshotNewestFirstOwned(allocator);
+        defer history_store.freeOwnedHistorySnapshot(allocator, recent);
 
         self.cache_mu.lock();
         if (self.cache_ready) {
@@ -73,14 +72,14 @@ pub const SearchService = struct {
                 return err;
             };
             self.cache_mu.unlock();
-            self.last_query_elapsed_ns = sw.elapsedNs();
+            self.setLastQueryElapsed(sw.elapsedNs());
             return ranked_cached;
         }
         self.cache_mu.unlock();
 
         try self.registry.collectAll(allocator, &query_candidates);
         const ranked = try search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
-        self.last_query_elapsed_ns = sw.elapsedNs();
+        self.setLastQueryElapsed(sw.elapsedNs());
         return ranked;
     }
 
@@ -92,10 +91,12 @@ pub const SearchService = struct {
         defer dynamic_candidates.deinit(allocator);
         const term = std.mem.trim(u8, query.term, " \t\r\n");
         if (term.len == 0) return allocator.alloc(search.ScoredCandidate, 0);
-        dynamic_routes.collectForRoute(&self.dynamic_owned, allocator, query, &dynamic_candidates) catch {};
+        self.dynamic_mu.lock();
+        dynamic_routes.collectForRoute(&self.dynamic_tool_state, &self.dynamic_owned, allocator, query, &dynamic_candidates) catch {};
+        self.dynamic_mu.unlock();
 
-        const recent = try self.historyViewNewestFirst(allocator);
-        defer allocator.free(recent);
+        const recent = try self.historySnapshotNewestFirstOwned(allocator);
+        defer history_store.freeOwnedHistorySnapshot(allocator, recent);
         return search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);
     }
 
@@ -181,8 +182,23 @@ pub const SearchService = struct {
         try history_store.saveHistory(self.history.items, self.history_path, allocator);
     }
 
-    fn historyViewNewestFirst(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {
-        return history_store.historyViewNewestFirst(self.history.items, allocator);
+    fn historySnapshotNewestFirstOwned(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
+        return history_store.historySnapshotNewestFirstOwned(self.history.items, allocator);
+    }
+
+    fn setLastQueryElapsed(self: *SearchService, elapsed_ns: u64) void {
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
+        self.last_query_elapsed_ns = elapsed_ns;
+    }
+
+    fn resetLastQueryFlags(self: *SearchService) void {
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
+        self.last_query_refreshed_cache = false;
+        self.last_query_used_stale_cache = false;
     }
 };
 

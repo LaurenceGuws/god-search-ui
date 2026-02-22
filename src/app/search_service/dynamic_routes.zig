@@ -1,7 +1,13 @@
 const std = @import("std");
 const search = @import("../../search/mod.zig");
 
+pub const ToolState = struct {
+    fd_available: ?bool = null,
+    rg_available: ?bool = null,
+};
+
 pub fn collectForRoute(
+    tool_state: *ToolState,
     dynamic_owned: *std.ArrayListUnmanaged([]u8),
     allocator: std.mem.Allocator,
     query: search.Query,
@@ -11,8 +17,8 @@ pub fn collectForRoute(
     if (term.len == 0) return;
 
     switch (query.route) {
-        .files => try collectFdCandidates(dynamic_owned, allocator, term, out),
-        .grep => try collectRgCandidates(dynamic_owned, allocator, term, out),
+        .files => try collectFdCandidates(tool_state, dynamic_owned, allocator, term, out),
+        .grep => try collectRgCandidates(tool_state, dynamic_owned, allocator, term, out),
         else => {},
     }
 }
@@ -23,12 +29,13 @@ pub fn clearOwned(dynamic_owned: *std.ArrayListUnmanaged([]u8), allocator: std.m
 }
 
 fn collectFdCandidates(
+    tool_state: *ToolState,
     dynamic_owned: *std.ArrayListUnmanaged([]u8),
     allocator: std.mem.Allocator,
     term: []const u8,
     out: *search.CandidateList,
 ) !void {
-    if (!commandExists("fd")) return;
+    if (!fdAvailable(tool_state)) return;
     const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
     defer allocator.free(home);
 
@@ -72,12 +79,13 @@ fn collectFdTypeCandidates(
 }
 
 fn collectRgCandidates(
+    tool_state: *ToolState,
     dynamic_owned: *std.ArrayListUnmanaged([]u8),
     allocator: std.mem.Allocator,
     term: []const u8,
     out: *search.CandidateList,
 ) !void {
-    if (!commandExists("rg")) return;
+    if (!rgAvailable(tool_state)) return;
     const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
     defer allocator.free(home);
 
@@ -148,6 +156,20 @@ fn commandExists(name: []const u8) bool {
         std.heap.page_allocator.free(result.stderr);
     }
     return result.term == .Exited and result.term.Exited == 0;
+}
+
+fn fdAvailable(state: *ToolState) bool {
+    if (state.fd_available) |value| return value;
+    const value = commandExists("fd");
+    state.fd_available = value;
+    return value;
+}
+
+fn rgAvailable(state: *ToolState) bool {
+    if (state.rg_available) |value| return value;
+    const value = commandExists("rg");
+    state.rg_available = value;
+    return value;
 }
 
 fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {

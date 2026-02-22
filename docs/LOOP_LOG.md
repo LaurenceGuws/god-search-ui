@@ -4729,3 +4729,29 @@
   - M8: add focused unit tests for `ui/common/{dispatch,execute,actions,kinds}` and `gtk/row_data` behavior to lock contracts before AI/browser module growth.
 
 ---
+## 2026-02-22 (Cycle 207)
+- Milestone: M8 Code Hygiene / SearchService Concurrency + Persistence
+- Task slice: reduce search lock contention and harden dynamic-route/history infrastructure
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - narrowed `query_mu` usage in `searchQuery` to short state updates/snapshots instead of whole-query execution
+    - added dedicated `dynamic_mu` and `dynamic_tool_state` ownership for dynamic-route collection path
+    - switched history ranking inputs to owned history snapshots (safe without long-lived global lock)
+    - added explicit helpers for last-query flag/timing updates under lock
+  - Updated `src/app/search_service/dynamic_routes.zig`:
+    - added cached dynamic-tool availability state (`fd`/`rg`) to avoid repeated shell probes on hot query path
+  - Updated `src/app/search_service/history_store.zig`:
+    - added owned history snapshot API + cleanup helper
+    - switched history persistence to atomic writes (`.tmp` + rename)
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_store.zig src/app/search_service/dynamic_routes.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dynamic route string retention is still process-lifetime by design; this pass reduces contention and shell overhead but does not yet solve long-session growth of `dynamic_owned`.
+- Next slice:
+  - M8: introduce bounded dynamic string interning/generation cleanup strategy so `%`/`&` route memory cannot grow indefinitely in long-running sessions.
+
+---
