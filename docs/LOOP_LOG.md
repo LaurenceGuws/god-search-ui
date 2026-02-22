@@ -4870,3 +4870,25 @@
   - M8: extract remaining `SearchService` orchestration helpers (query flag/timing + dynamic generation policy) into submodules to push `search_service.zig` further toward thin composition.
 
 ---
+## 2026-02-22 (Cycle 213)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract dynamic generation lifecycle policy into dedicated module
+- Changes:
+  - Added `src/app/search_service/dynamic_generations.zig`:
+    - generation `begin`, `prune`, and `clear` lifecycle helpers for `%`/`&` dynamic-owned strings
+  - Updated `src/app/search_service.zig`:
+    - delegates dynamic generation lifecycle to `dynamic_generations` module
+    - removed in-file begin/prune helper methods
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/dynamic_generations.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior unchanged by intent; this continues reducing service-file responsibility density.
+- Next slice:
+  - M8: extract query timing/flag mutation helpers into a minimal `search_service/query_metrics.zig` helper to keep `SearchService` orchestration thin.
+
+---

@@ -4,6 +4,7 @@ const search = @import("../search/mod.zig");
 const history_store = @import("search_service/history_store.zig");
 const cache_refresh = @import("search_service/cache_refresh.zig");
 const cache_snapshots = @import("search_service/cache_snapshots.zig");
+const dynamic_generations = @import("search_service/dynamic_generations.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
 
 pub const SearchService = struct {
@@ -45,10 +46,7 @@ pub const SearchService = struct {
     pub fn deinit(self: *SearchService, allocator: std.mem.Allocator) void {
         if (self.refresh_thread) |t| t.join();
         cache_snapshots.clearGenerations(&self.cached_rank_generations, allocator);
-        for (self.dynamic_generations.items) |*generation| {
-            dynamic_routes.clearOwned(generation, allocator);
-        }
-        self.dynamic_generations.deinit(allocator);
+        dynamic_generations.clear(&self.dynamic_generations, allocator);
         for (self.history.items) |item| allocator.free(item);
         self.history.deinit(allocator);
         self.cached_candidates.deinit(allocator);
@@ -107,9 +105,9 @@ pub const SearchService = struct {
             self.dynamic_mu.lock();
             defer self.dynamic_mu.unlock();
 
-            const generation = try self.beginDynamicGeneration(allocator);
+            const generation = try dynamic_generations.begin(&self.dynamic_generations, allocator);
             dynamic_routes.collectForRoute(&self.dynamic_tool_state, generation, allocator, query, &dynamic_candidates) catch {};
-            self.pruneDynamicGenerations(allocator);
+            dynamic_generations.prune(&self.dynamic_generations, self.dynamic_generation_keep, allocator);
         }
 
         const recent = try self.historySnapshotNewestFirstOwned(allocator);
@@ -219,18 +217,6 @@ pub const SearchService = struct {
         defer self.query_mu.unlock();
         self.last_query_refreshed_cache = false;
         self.last_query_used_stale_cache = false;
-    }
-
-    fn beginDynamicGeneration(self: *SearchService, allocator: std.mem.Allocator) !*std.ArrayListUnmanaged([]u8) {
-        try self.dynamic_generations.append(allocator, .{});
-        return &self.dynamic_generations.items[self.dynamic_generations.items.len - 1];
-    }
-
-    fn pruneDynamicGenerations(self: *SearchService, allocator: std.mem.Allocator) void {
-        while (self.dynamic_generations.items.len > self.dynamic_generation_keep) {
-            var oldest = self.dynamic_generations.orderedRemove(0);
-            dynamic_routes.clearOwned(&oldest, allocator);
-        }
     }
 };
 
