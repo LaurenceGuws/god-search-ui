@@ -508,7 +508,7 @@ pub const Shell = struct {
                 ctx.last_render_hash = empty_hash;
             }
             if (ctx.pending_power_confirm == GFALSE) {
-                setStatus(ctx, "Choose a module filter or type without prefix for blended search");
+                setStatus(ctx, "Pick a module (Enter) or type directly for blended search");
             }
             selectFirstActionableRow(ctx);
             return;
@@ -852,18 +852,18 @@ pub const Shell = struct {
     }
 
     fn appendModuleFilterMenu(ctx: *UiContext, allocator: std.mem.Allocator) void {
-        appendHeaderRow(ctx.list, "Module Filters");
-        appendInfoRow(ctx.list, "Select a module (Enter) or type directly for blended search.");
+        appendHeaderRow(ctx.list, "Quick Modules");
+        appendInfoRow(ctx.list, "Pick a module (Enter) or type directly for blended search.");
         appendLegendRow(ctx.list, "Hotkeys: Enter select | Ctrl+L focus | PgUp/PgDn move | Home/End jump | Ctrl+R refresh | Esc close");
 
-        appendModuleFilterRow(ctx.list, allocator, "Apps", "Filter installed applications", "@", .app);
-        appendModuleFilterRow(ctx.list, allocator, "Windows", "Filter open windows", "#", .window);
-        appendModuleFilterRow(ctx.list, allocator, "Directories", "Filter recent directories", "~", .dir);
-        appendModuleFilterRow(ctx.list, allocator, "Files", "Advanced file finder (fd)", "%", .file);
-        appendModuleFilterRow(ctx.list, allocator, "Code Search", "Text search (rg)", "&", .grep);
-        appendModuleFilterRow(ctx.list, allocator, "Run", "Run command route", ">", .action);
-        appendModuleFilterRow(ctx.list, allocator, "Calc", "Calculator route", "=", .action);
-        appendModuleFilterRow(ctx.list, allocator, "Web", "Web search route", "?", .action);
+        appendModuleFilterRow(ctx.list, allocator, "Apps", "Launch installed applications", "@", "@", .app);
+        appendModuleFilterRow(ctx.list, allocator, "Windows", "Focus open windows", "#", "#", .window);
+        appendModuleFilterRow(ctx.list, allocator, "Recent Dirs", "Jump to zoxide terminal locations", "~", "~", .dir);
+        appendModuleFilterRow(ctx.list, allocator, "Files + Folders", "Find paths with fd", "%", "%", .file);
+        appendModuleFilterRow(ctx.list, allocator, "Code Search", "Search file contents with rg", "&", "&", .grep);
+        appendModuleFilterRow(ctx.list, allocator, "Run Command", "Execute a shell command", ">", ">", .action);
+        appendModuleFilterRow(ctx.list, allocator, "Calculator", "Evaluate an expression", "=", "=", .action);
+        appendModuleFilterRow(ctx.list, allocator, "Web Search", "Search the web", "?", "?", .action);
     }
 
     fn appendModuleFilterRow(
@@ -872,6 +872,7 @@ pub const Shell = struct {
         title: []const u8,
         subtitle: []const u8,
         route: []const u8,
+        chip_text: []const u8,
         kind: CandidateKind,
     ) void {
         const title_markup = std.fmt.allocPrint(allocator, "<span weight=\"600\">{s}</span>", .{title}) catch return;
@@ -893,7 +894,7 @@ pub const Shell = struct {
         c.gtk_widget_add_css_class(icon, "gs-kind-icon");
         c.gtk_widget_set_valign(icon, c.GTK_ALIGN_CENTER);
 
-        const chip = kindChipWidget(kind);
+        const chip = moduleChipWidget(allocator, chip_text, kind);
         c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
 
         const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
@@ -1767,6 +1768,7 @@ pub const Shell = struct {
             ".gs-entry-layout > .gs-candidate-content { min-width: 0; }\n" ++
             ".gs-primary-row { min-height: 20px; }\n" ++
             ".gs-chip { font-size: 0.72em; font-weight: 700; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; }\n" ++
+            ".gs-chip-module-key { min-width: 1.8em; text-align: center; font-size: 0.78em; }\n" ++
             ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
             ".gs-chip-window { color: #78d2c7; background: rgba(120, 210, 199, 0.16); }\n" ++
             ".gs-chip-dir { color: #ddb26f; background: rgba(221, 178, 111, 0.16); }\n" ++
@@ -1794,8 +1796,8 @@ pub const Shell = struct {
         return switch (query_trimmed[0]) {
             '@' => "Apps route active: type app name after @",
             '#' => "Windows route active: type window title/class after #",
-            '~' => "Directories route active: type folder name after ~",
-            '%' => "Files route active: type file name after %",
+            '~' => "Recent dirs route active: zoxide terminal locations after ~",
+            '%' => "Files route active: find files and folders after %",
             '&' => "Grep route active: type text to search after &",
             '>' => "Run route active: type command after >",
             '=' => "Calc route active: type expression after =",
@@ -2075,6 +2077,28 @@ pub const Shell = struct {
     fn kindChipWidget(kind: @import("../search/mod.zig").CandidateKind) *c.GtkWidget {
         const label = c.gtk_label_new(kindChipText(kind).ptr);
         c.gtk_widget_add_css_class(label, "gs-chip");
+        switch (kind) {
+            .app => c.gtk_widget_add_css_class(label, "gs-chip-app"),
+            .window => c.gtk_widget_add_css_class(label, "gs-chip-window"),
+            .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
+            .file => c.gtk_widget_add_css_class(label, "gs-chip-file"),
+            .grep => c.gtk_widget_add_css_class(label, "gs-chip-grep"),
+            .action => c.gtk_widget_add_css_class(label, "gs-chip-action"),
+            .hint => c.gtk_widget_add_css_class(label, "gs-chip-hint"),
+        }
+        return @ptrCast(label);
+    }
+
+    fn moduleChipWidget(
+        allocator: std.mem.Allocator,
+        chip_text: []const u8,
+        kind: @import("../search/mod.zig").CandidateKind,
+    ) *c.GtkWidget {
+        const chip_text_z = allocator.dupeZ(u8, chip_text) catch return kindChipWidget(kind);
+        defer allocator.free(chip_text_z);
+        const label = c.gtk_label_new(chip_text_z.ptr);
+        c.gtk_widget_add_css_class(label, "gs-chip");
+        c.gtk_widget_add_css_class(label, "gs-chip-module-key");
         switch (kind) {
             .app => c.gtk_widget_add_css_class(label, "gs-chip-app"),
             .window => c.gtk_widget_add_css_class(label, "gs-chip-window"),
