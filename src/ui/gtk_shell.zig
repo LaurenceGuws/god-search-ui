@@ -1744,7 +1744,7 @@ pub const Shell = struct {
             "}\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-primary { color: #f5f8ff; }\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-secondary { color: #d6def1; }\n" ++
-            ".gs-kind-icon { color: #a9b1c7; font-size: 2em; }\n" ++
+            ".gs-kind-icon { color: #a9b1c7; font-size: 2em; margin-right: 6px; }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; transition: color 120ms ease; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; transition: color 120ms ease; }\n" ++
             ".gs-primary-row { min-height: 20px; }\n" ++
