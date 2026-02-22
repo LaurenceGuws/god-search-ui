@@ -35,11 +35,14 @@ pub const DirsProvider = struct {
         while (lines.next()) |line| {
             const trimmed = std.mem.trim(u8, line, " \t");
             if (trimmed.len == 0) continue;
+            const split_idx = std.mem.indexOfAny(u8, trimmed, " \t") orelse continue;
+            const path = std.mem.trimLeft(u8, trimmed[split_idx + 1 ..], " \t");
+            if (path.len == 0) continue;
 
-            const base = std.fs.path.basename(trimmed);
+            const base = std.fs.path.basename(path);
             const kept_base = try self.keepString(allocator, base);
-            const kept_path = try self.keepString(allocator, trimmed);
-            try out.append(allocator, search.Candidate.init(.dir, kept_base, "Directory", kept_path));
+            const kept_path = try self.keepString(allocator, path);
+            try out.append(allocator, search.Candidate.init(.dir, kept_base, "Recent terminal location", kept_path));
         }
     }
 
@@ -78,7 +81,7 @@ fn commandExists(name: []const u8) bool {
 fn listDirsWithSystemTools(allocator: std.mem.Allocator) ![]u8 {
     const result = try std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &.{ "zoxide", "query", "-l" },
+        .argv = &.{ "zoxide", "query", "-ls" },
     });
     if (result.term != .Exited or result.term.Exited != 0) {
         allocator.free(result.stdout);
@@ -97,8 +100,8 @@ test "dirs provider parses zoxide rows into candidates" {
 
         fn listDirs(allocator: std.mem.Allocator) ![]u8 {
             return allocator.dupe(u8,
-                \\/home/home/personal
-                \\/home/home/.config/hypr
+                \\1226.0 /home/home/personal
+                \\  94.5 /home/home/.config/hypr
                 \\
             );
         }
@@ -148,4 +151,35 @@ test "dirs provider degrades when zoxide is unavailable" {
 
     try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
     try std.testing.expectEqual(@as(usize, 0), list.items.len);
+}
+
+test "dirs provider keeps full path when spaces exist" {
+    const Fake = struct {
+        fn hasTools() bool {
+            return true;
+        }
+
+        fn listDirs(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8,
+                \\  92.0 /home/home/personal/space path
+                \\
+            );
+        }
+    };
+
+    var provider_impl = DirsProvider{
+        .list_dirs_fn = Fake.listDirs,
+        .has_tools_fn = Fake.hasTools,
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 1), list.items.len);
+    try std.testing.expectEqualStrings("space path", list.items[0].title);
+    try std.testing.expectEqualStrings("/home/home/personal/space path", list.items[0].action);
 }

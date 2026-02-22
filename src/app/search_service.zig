@@ -111,10 +111,24 @@ pub const SearchService = struct {
         const home_q = try shellSingleQuote(allocator, home);
         defer allocator.free(home_q);
 
+        try self.collectFdTypeCandidates(allocator, term_q, home_q, "d", .dir, 120, out);
+        try self.collectFdTypeCandidates(allocator, term_q, home_q, "f", .file, 180, out);
+    }
+
+    fn collectFdTypeCandidates(
+        self: *SearchService,
+        allocator: std.mem.Allocator,
+        term_q: []const u8,
+        home_q: []const u8,
+        fd_type: []const u8,
+        kind: search.CandidateKind,
+        max_results: usize,
+        out: *search.CandidateList,
+    ) !void {
         const cmd = try std.fmt.allocPrint(
             allocator,
-            "fd --type f --hidden --follow --color never --ignore-case --max-results 200 --exclude .git --exclude node_modules --exclude .cache --exclude .codex --exclude .local/share/Trash --exclude .local/share/opencode --exclude .local/share/containers {s} {s}",
-            .{ term_q, home_q },
+            "fd --type {s} --hidden --follow --color never --ignore-case --max-results {d} --exclude .git --exclude node_modules --exclude .cache --exclude .codex --exclude .local/share/Trash --exclude .local/share/opencode --exclude .local/share/containers {s} {s}",
+            .{ fd_type, max_results, term_q, home_q },
         );
         defer allocator.free(cmd);
 
@@ -127,7 +141,7 @@ pub const SearchService = struct {
             const title = std.fs.path.basename(path);
             const kept_title = try self.keepDynamicString(allocator, title);
             const kept_path = try self.keepDynamicString(allocator, path);
-            try out.append(allocator, search.Candidate.init(.file, kept_title, kept_path, kept_path));
+            try out.append(allocator, search.Candidate.init(kind, kept_title, kept_path, kept_path));
         }
     }
 

@@ -49,7 +49,7 @@ fn matchesRoute(route: query_mod.Route, kind: types.CandidateKind) bool {
         .apps => kind == .app,
         .windows => kind == .window,
         .dirs => kind == .dir,
-        .files => kind == .file,
+        .files => kind == .file or kind == .dir,
         .grep => kind == .grep,
         .run, .calc, .web => true,
     };
@@ -151,6 +151,22 @@ test "route filter limits result kinds" {
 
     try std.testing.expectEqual(@as(usize, 1), ranked.len);
     try std.testing.expectEqual(types.CandidateKind.app, ranked[0].candidate.kind);
+}
+
+test "files route includes file and directory candidates" {
+    const candidates = [_]types.Candidate{
+        .init(.file, "main.zig", "/tmp/main.zig", "/tmp/main.zig"),
+        .init(.dir, "src", "/tmp/src", "/tmp/src"),
+        .init(.app, "kitty", "Terminal", "kitty"),
+    };
+
+    const query = query_mod.parse("% ");
+    const ranked = try rankCandidates(std.testing.allocator, query, &candidates);
+    defer std.testing.allocator.free(ranked);
+
+    try std.testing.expectEqual(@as(usize, 2), ranked.len);
+    try std.testing.expectEqual(types.CandidateKind.dir, ranked[0].candidate.kind);
+    try std.testing.expectEqual(types.CandidateKind.file, ranked[1].candidate.kind);
 }
 
 test "recency history boosts repeated action candidates" {
