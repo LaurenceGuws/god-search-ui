@@ -4601,3 +4601,25 @@
   - M8: add shared candidate kind codec (`ui/common/kinds.zig`) to remove string-kind branching (`\"app\"`, `\"dir\"`, etc.) from GTK path.
 
 ---
+## 2026-02-22 (Cycle 202)
+- Milestone: M8 Code Hygiene / Shared Kind Codec
+- Task slice: add typed UI-kind codec and route dispatch primitives through it
+- Changes:
+  - Added `src/ui/common/kinds.zig`:
+    - canonical `UiKind` enum for shell row kinds and parser from row-kind strings
+  - Updated `src/ui/common/dispatch.zig`:
+    - switched helper predicates (`shouldRecordSelection`, `requiresConfirmation`, module/menu checks) to enum-based kind matching
+    - switched command planning branch logic to `switch (UiKind)` instead of repeated string equality chains
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/kinds.zig src/ui/common/dispatch.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this is a structural primitive change; behavior should remain equivalent while reducing string-branch duplication.
+- Next slice:
+  - M8: route `gtk/selection.zig` kind handling to `UiKind` directly and reduce remaining raw `kind` string handling in the GTK path.
+
+---
