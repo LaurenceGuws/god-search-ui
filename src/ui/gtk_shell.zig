@@ -1683,6 +1683,9 @@ pub const Shell = struct {
             ".gs-async-search { color: #aeb8cc; }\n" ++
             ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
+            ".gs-results-scroll, .gs-results-scroll > viewport { background: transparent; border: none; box-shadow: none; }\n" ++
+            ".gs-results-scroll junction { background: transparent; border: none; box-shadow: none; }\n" ++
+            ".gs-results-scroll undershoot.left, .gs-results-scroll undershoot.right { background-image: none; background: transparent; }\n" ++
             ".gs-results-scroll scrollbar { min-width: 8px; border: none; box-shadow: none; background: transparent; }\n" ++
             ".gs-results-scroll scrollbar separator { min-width: 0; min-height: 0; background: transparent; }\n" ++
             ".gs-results-scroll scrollbar trough { background: rgba(140, 170, 235, 0.14); border: none; box-shadow: none; border-radius: 999px; }\n" ++
