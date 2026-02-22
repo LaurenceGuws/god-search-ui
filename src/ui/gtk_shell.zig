@@ -98,8 +98,6 @@ pub const Shell = struct {
         c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
         const scroller = c.gtk_scrolled_window_new();
         c.gtk_widget_set_vexpand(scroller, GTRUE);
-        c.gtk_widget_set_margin_end(scroller, -12);
-        c.gtk_widget_add_css_class(scroller, "gs-results-scroll");
         c.gtk_scrolled_window_set_policy(@ptrCast(scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
         c.gtk_scrolled_window_set_overlay_scrolling(@ptrCast(scroller), GFALSE);
         c.gtk_scrolled_window_set_child(@ptrCast(scroller), list);
@@ -1684,8 +1682,6 @@ pub const Shell = struct {
             ".gs-async-search { color: #aeb8cc; }\n" ++
             ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
-            ".gs-results-scroll scrollbar { min-width: 7px; }\n" ++
-            ".gs-results-scroll scrollbar slider { min-width: 7px; border-radius: 999px; }\n" ++
             ".gs-results > row { border-radius: 8px; padding: 4px 8px; }\n" ++
             ".gs-results > row > box { margin-right: 14px; }\n" ++
             ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
