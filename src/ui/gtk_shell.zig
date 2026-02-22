@@ -123,6 +123,7 @@ pub const Shell = struct {
         ctx.async_worker_active = GFALSE;
         ctx.async_pending_query_ptr = null;
         ctx.async_pending_query_len = 0;
+        updateEntryRouteIcon(ctx, "");
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -283,6 +284,7 @@ pub const Shell = struct {
         }
         const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
         const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        updateEntryRouteIcon(ctx, query);
         if (std.mem.trim(u8, query, " \t\r\n").len == 0) {
             cancelAsyncRouteSearch(ctx);
         }
@@ -320,6 +322,35 @@ pub const Shell = struct {
         if (query_len <= 2) return 90;
         if (query_len <= 5) return 75;
         return 60;
+    }
+
+    fn updateEntryRouteIcon(ctx: *UiContext, query: []const u8) void {
+        const entry: *c.GtkEntry = @ptrCast(@alignCast(ctx.entry));
+        const route_icon = routeIconForLeadingPrefix(query);
+        if (route_icon) |icon_name| {
+            const icon_z = std.heap.page_allocator.dupeZ(u8, icon_name) catch return;
+            defer std.heap.page_allocator.free(icon_z);
+            c.gtk_entry_set_icon_from_icon_name(entry, c.GTK_ENTRY_ICON_PRIMARY, icon_z.ptr);
+            c.gtk_entry_set_icon_sensitive(entry, c.GTK_ENTRY_ICON_PRIMARY, GFALSE);
+            c.gtk_entry_set_icon_activatable(entry, c.GTK_ENTRY_ICON_PRIMARY, GFALSE);
+            return;
+        }
+        c.gtk_entry_set_icon_from_icon_name(entry, c.GTK_ENTRY_ICON_PRIMARY, null);
+    }
+
+    fn routeIconForLeadingPrefix(query: []const u8) ?[]const u8 {
+        if (query.len == 0) return null;
+        return switch (query[0]) {
+            '@' => "applications-system-symbolic",
+            '#' => "window-new-symbolic",
+            '~' => "folder-symbolic",
+            '%' => "text-x-generic-symbolic",
+            '&' => "edit-find-symbolic",
+            '>' => "utilities-terminal-symbolic",
+            '=' => "accessories-calculator-symbolic",
+            '?' => "web-browser-symbolic",
+            else => null,
+        };
     }
 
     fn onRowActivated(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {
