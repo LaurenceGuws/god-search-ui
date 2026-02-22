@@ -1715,15 +1715,16 @@ pub const Shell = struct {
             ".gs-results-scroll scrollbar separator { min-width: 0; min-height: 0; background: transparent; }\n" ++
             ".gs-results-scroll scrollbar trough { background: rgba(140, 170, 235, 0.14); border: none; box-shadow: none; border-radius: 999px; }\n" ++
             ".gs-results-scroll scrollbar slider { min-width: 8px; min-height: 24px; background: rgba(140, 170, 235, 0.30); border: none; box-shadow: none; border-radius: 999px; }\n" ++
-            ".gs-results > row { border-radius: 8px; padding: 4px 8px; }\n" ++
+            ".gs-results > row { background: transparent; border: none; padding: 4px 8px; }\n" ++
+            ".gs-results > row > box { border-radius: 8px; }\n" ++
             ".gs-results.gs-scroll-active > row > box { margin-right: 12px; }\n" ++
             ".gs-results.gs-scroll-active .gs-kind-icon { margin-left: -2px; }\n" ++
             ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
             ".gs-results > row.gs-meta-row { padding-top: 2px; padding-bottom: 2px; }\n" ++
-            ".gs-results > row.gs-actionable-row:hover,\n" ++
-            ".gs-results > row.gs-actionable-row:selected,\n" ++
-            ".gs-results > row.gs-actionable-row:selected:focus,\n" ++
-            ".gs-results > row.gs-actionable-row:focus-within {\n" ++
+            ".gs-results > row.gs-actionable-row:hover > box,\n" ++
+            ".gs-results > row.gs-actionable-row:selected > box,\n" ++
+            ".gs-results > row.gs-actionable-row:selected:focus > box,\n" ++
+            ".gs-results > row.gs-actionable-row:focus-within > box {\n" ++
             "  background: rgba(140, 170, 235, 0.20);\n" ++
             "  border: 1px solid rgba(164, 192, 255, 0.55);\n" ++
             "  border-radius: 8px;\n" ++
