@@ -3,6 +3,7 @@ const providers = @import("../providers/mod.zig");
 const search = @import("../search/mod.zig");
 const history_store = @import("search_service/history_store.zig");
 const cache_refresh = @import("search_service/cache_refresh.zig");
+const cache_snapshots = @import("search_service/cache_snapshots.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
 
 pub const SearchService = struct {
@@ -43,7 +44,7 @@ pub const SearchService = struct {
 
     pub fn deinit(self: *SearchService, allocator: std.mem.Allocator) void {
         if (self.refresh_thread) |t| t.join();
-        self.clearCachedRankGenerations(allocator);
+        cache_snapshots.clearGenerations(&self.cached_rank_generations, allocator);
         for (self.dynamic_generations.items) |*generation| {
             dynamic_routes.clearOwned(generation, allocator);
         }
@@ -74,10 +75,7 @@ pub const SearchService = struct {
 
         self.cache_mu.lock();
         if (self.cache_ready) {
-            const cache_snapshot = if (self.cached_rank_generations.items.len > 0)
-                self.cached_rank_generations.items[self.cached_rank_generations.items.len - 1]
-            else
-                &.{};
+            const cache_snapshot = cache_snapshots.latest(self.cached_rank_generations.items);
             if (cache_snapshot.len == 0) {
                 self.cache_mu.unlock();
                 try self.registry.collectAll(allocator, &query_candidates);
@@ -132,9 +130,9 @@ pub const SearchService = struct {
             &self.cache_last_refresh_ns,
             &self.refresh_requested,
         );
-        const snapshot = try cloneCandidatesOwned(allocator, self.cached_candidates.items);
+        const snapshot = try cache_snapshots.cloneCandidatesOwned(allocator, self.cached_candidates.items);
         try self.cached_rank_generations.append(allocator, snapshot);
-        self.pruneCachedRankGenerations(allocator);
+        cache_snapshots.pruneGenerations(&self.cached_rank_generations, self.cache_generation_keep, allocator);
     }
 
     pub fn invalidateSnapshot(self: *SearchService) void {
@@ -233,72 +231,6 @@ pub const SearchService = struct {
             var oldest = self.dynamic_generations.orderedRemove(0);
             dynamic_routes.clearOwned(&oldest, allocator);
         }
-    }
-
-    fn cloneCandidatesOwned(allocator: std.mem.Allocator, source: []const search.Candidate) ![]search.Candidate {
-        var out = try allocator.alloc(search.Candidate, source.len);
-        errdefer allocator.free(out);
-
-        var idx: usize = 0;
-        while (idx < source.len) : (idx += 1) {
-            const row = source[idx];
-            const title = allocator.dupe(u8, row.title) catch |err| {
-                freeCandidatesOwnedPartial(allocator, out[0..idx]);
-                return err;
-            };
-            const subtitle = allocator.dupe(u8, row.subtitle) catch |err| {
-                allocator.free(title);
-                freeCandidatesOwnedPartial(allocator, out[0..idx]);
-                return err;
-            };
-            const action = allocator.dupe(u8, row.action) catch |err| {
-                allocator.free(title);
-                allocator.free(subtitle);
-                freeCandidatesOwnedPartial(allocator, out[0..idx]);
-                return err;
-            };
-            const icon = allocator.dupe(u8, row.icon) catch |err| {
-                allocator.free(title);
-                allocator.free(subtitle);
-                allocator.free(action);
-                freeCandidatesOwnedPartial(allocator, out[0..idx]);
-                return err;
-            };
-            out[idx] = .{
-                .kind = row.kind,
-                .title = title,
-                .subtitle = subtitle,
-                .action = action,
-                .icon = icon,
-            };
-        }
-        return out;
-    }
-
-    fn freeCandidatesOwned(allocator: std.mem.Allocator, rows: []const search.Candidate) void {
-        freeCandidatesOwnedPartial(allocator, rows);
-        allocator.free(rows);
-    }
-
-    fn freeCandidatesOwnedPartial(allocator: std.mem.Allocator, rows: []const search.Candidate) void {
-        for (rows) |row| {
-            allocator.free(@constCast(row.title));
-            allocator.free(@constCast(row.subtitle));
-            allocator.free(@constCast(row.action));
-            allocator.free(@constCast(row.icon));
-        }
-    }
-
-    fn pruneCachedRankGenerations(self: *SearchService, allocator: std.mem.Allocator) void {
-        while (self.cached_rank_generations.items.len > self.cache_generation_keep) {
-            const oldest = self.cached_rank_generations.orderedRemove(0);
-            freeCandidatesOwned(allocator, oldest);
-        }
-    }
-
-    fn clearCachedRankGenerations(self: *SearchService, allocator: std.mem.Allocator) void {
-        for (self.cached_rank_generations.items) |snapshot| freeCandidatesOwned(allocator, snapshot);
-        self.cached_rank_generations.clearRetainingCapacity();
     }
 };
 

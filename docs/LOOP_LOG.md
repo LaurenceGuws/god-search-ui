@@ -4824,3 +4824,27 @@
   - M8: slim `search_service.zig` by extracting cache snapshot generation lifecycle into `search_service/cache_snapshots.zig`.
 
 ---
+## 2026-02-22 (Cycle 211)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract cache snapshot generation lifecycle into dedicated module
+- Changes:
+  - Added `src/app/search_service/cache_snapshots.zig`:
+    - owned candidate snapshot clone helper
+    - latest snapshot selector
+    - generation prune and clear lifecycle helpers
+  - Updated `src/app/search_service.zig`:
+    - delegates snapshot clone/latest/prune/clear behavior to `cache_snapshots` module
+    - removed in-file snapshot clone/free/prune helper implementations
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/cache_snapshots.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior should remain unchanged; this is responsibility extraction to keep service orchestration lean.
+- Next slice:
+  - M8: extract `SearchService` tests into dedicated `src/app/search_service_test.zig` to reduce production-file density and improve navigation.
+
+---
