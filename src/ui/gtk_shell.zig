@@ -1718,7 +1718,10 @@ pub const Shell = struct {
             ".gs-results > row { background: transparent !important; background-image: none !important; border: none !important; padding: 4px 8px; border-radius: 8px; overflow: hidden; }\n" ++
             ".gs-results > row:selected,\n" ++
             ".gs-results > row:selected:focus,\n" ++
+            ".gs-results > row:selected:focus-visible,\n" ++
             ".gs-results > row:hover,\n" ++
+            ".gs-results > row:focus,\n" ++
+            ".gs-results > row:focus-visible,\n" ++
             ".gs-results > row:focus-within { background: transparent !important; background-image: none !important; border: none !important; box-shadow: none !important; outline: none !important; }\n" ++
             ".gs-results > row > box { border-radius: 8px; }\n" ++
             ".gs-results.gs-scroll-active > row > box { margin-right: 12px; }\n" ++
@@ -1728,6 +1731,9 @@ pub const Shell = struct {
             ".gs-results > row.gs-actionable-row:hover > box,\n" ++
             ".gs-results > row.gs-actionable-row:selected > box,\n" ++
             ".gs-results > row.gs-actionable-row:selected:focus > box,\n" ++
+            ".gs-results > row.gs-actionable-row:selected:focus-visible > box,\n" ++
+            ".gs-results > row.gs-actionable-row:focus > box,\n" ++
+            ".gs-results > row.gs-actionable-row:focus-visible > box,\n" ++
             ".gs-results > row.gs-actionable-row:focus-within > box {\n" ++
             "  background: rgba(140, 170, 235, 0.20);\n" ++
             "  border: 1px solid rgba(164, 192, 255, 0.55);\n" ++
