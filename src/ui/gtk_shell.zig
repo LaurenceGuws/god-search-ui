@@ -10,10 +10,10 @@ const gtk_async_coord = @import("gtk/async_coordinator.zig");
 const gtk_menus = @import("gtk/menus.zig");
 const gtk_status = @import("gtk/status.zig");
 const gtk_icons = @import("gtk/icons.zig");
+const gtk_row_data = @import("gtk/row_data.zig");
 const gtk_selection = @import("gtk/selection.zig");
 const gtk_controller = @import("gtk/controller.zig");
 const gtk_results_flow = @import("gtk/results_flow.zig");
-const common_dispatch = @import("common/dispatch.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -23,7 +23,6 @@ const LaunchContext = gtk_bootstrap.LaunchContext;
 const UiContext = gtk_types.UiContext;
 const AsyncSearchResult = gtk_async.AsyncSearchResult;
 const ScoredCandidate = @import("../search/mod.zig").ScoredCandidate;
-const UiKind = common_dispatch.kinds.UiKind;
 
 pub const Shell = struct {
     pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink) !void {
@@ -153,11 +152,8 @@ pub const Shell = struct {
         if (row == null or user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
 
-        const action_ptr = c.g_object_get_data(@ptrCast(row), "gs-action");
-        if (action_ptr == null) return;
-
-        const action = std.mem.span(@as([*:0]const u8, @ptrCast(action_ptr)));
-        const kind = rowKindFromData(row.?);
+        const action = gtk_row_data.action(row.?) orelse return;
+        const kind = gtk_row_data.kind(row.?);
         gtk_selection.executeSelected(ctx, kind, action, .{
             .set_status = setStatus,
             .show_launch_feedback = showLaunchFeedback,
@@ -167,20 +163,6 @@ pub const Shell = struct {
             .show_dir_action_menu = showDirActionMenu,
             .show_file_action_menu = showFileActionMenu,
         });
-    }
-
-    fn rowKindFromData(row: *c.GtkListBoxRow) UiKind {
-        const kind_id_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind-id");
-        if (kind_id_ptr != null) {
-            const raw = @as(usize, @intFromPtr(kind_id_ptr));
-            if (raw > 0) {
-                const idx = raw - 1;
-                if (idx <= @intFromEnum(UiKind.file_option)) {
-                    return @enumFromInt(idx);
-                }
-            }
-        }
-        return .unknown;
     }
 
     fn onRowSelected(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {

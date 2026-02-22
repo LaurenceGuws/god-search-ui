@@ -1,5 +1,6 @@
 const std = @import("std");
 const gtk_types = @import("types.zig");
+const gtk_row_data = @import("row_data.zig");
 const c = gtk_types.c;
 const UiContext = gtk_types.UiContext;
 
@@ -46,7 +47,7 @@ pub fn selectActionableDelta(ctx: *UiContext, delta: i32) void {
     while (idx >= 0) : (idx += step) {
         const target = c.gtk_list_box_get_row_at_index(ctx.list, idx);
         if (target == null) return;
-        if (c.g_object_get_data(@ptrCast(target), "gs-action") != null) {
+        if (gtk_row_data.action(target) != null) {
             moved += 1;
             if (moved >= target_moves) {
                 c.gtk_list_box_select_row(ctx.list, target);
@@ -62,7 +63,7 @@ pub fn selectFirstActionableRow(ctx: *UiContext) void {
     while (true) : (idx += 1) {
         const row = c.gtk_list_box_get_row_at_index(ctx.list, idx);
         if (row == null) break;
-        if (c.g_object_get_data(@ptrCast(row), "gs-action") != null) {
+        if (gtk_row_data.action(row) != null) {
             c.gtk_list_box_select_row(ctx.list, row);
             ensureSelectedRowVisible(ctx);
             return;
@@ -78,7 +79,7 @@ pub fn selectLastActionableRow(ctx: *UiContext) void {
     while (idx >= 0) : (idx -= 1) {
         const row = c.gtk_list_box_get_row_at_index(ctx.list, idx);
         if (row == null) break;
-        if (c.g_object_get_data(@ptrCast(row), "gs-action") != null) {
+        if (gtk_row_data.action(row) != null) {
             c.gtk_list_box_select_row(ctx.list, row);
             ensureSelectedRowVisible(ctx);
             return;

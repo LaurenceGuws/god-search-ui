@@ -1,6 +1,7 @@
 const std = @import("std");
 const common_dispatch = @import("../common/dispatch.zig");
 const gtk_types = @import("types.zig");
+const gtk_row_data = @import("row_data.zig");
 const gtk_widgets = @import("widgets.zig");
 const gtk_query = @import("query_helpers.zig");
 const c = gtk_types.c;
@@ -146,18 +147,7 @@ fn appendCandidateRow(
     c.gtk_list_box_row_set_child(@ptrCast(list_row), content);
 
     const ui_kind = common_dispatch.kinds.fromCandidateKind(row.candidate.kind);
-    const action_c = std.fmt.allocPrint(allocator, "{s}", .{row.candidate.action}) catch return;
-    defer allocator.free(action_c);
-    const title_c = std.fmt.allocPrint(allocator, "{s}", .{row.candidate.title}) catch return;
-    defer allocator.free(title_c);
-    const action_z = allocator.dupeZ(u8, action_c) catch return;
-    defer allocator.free(action_z);
-    const title_z = allocator.dupeZ(u8, title_c) catch return;
-    defer allocator.free(title_z);
-
-    c.g_object_set_data(@ptrCast(list_row), "gs-kind-id", @ptrFromInt(@intFromEnum(ui_kind) + 1));
-    c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
-    c.g_object_set_data_full(@ptrCast(list_row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
+    gtk_row_data.setActionableData(@ptrCast(@alignCast(list_row)), allocator, ui_kind, row.candidate.action, row.candidate.title);
     const title_tip = allocator.dupeZ(u8, row.candidate.title) catch null;
     if (title_tip) |tip| {
         defer allocator.free(tip);

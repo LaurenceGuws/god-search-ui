@@ -1,6 +1,7 @@
 const std = @import("std");
 const common_dispatch = @import("../common/dispatch.zig");
 const gtk_types = @import("types.zig");
+const gtk_row_data = @import("row_data.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -82,13 +83,13 @@ fn appendModuleFilterRow(
     c.gtk_widget_add_css_class(row, "gs-actionable-row");
     c.gtk_list_box_row_set_child(@ptrCast(row), content);
 
-    const action_z = allocator.dupeZ(u8, route) catch return;
-    defer allocator.free(action_z);
-    const title_z = allocator.dupeZ(u8, title) catch return;
-    defer allocator.free(title_z);
-    c.g_object_set_data(@ptrCast(row), "gs-kind-id", @ptrFromInt(@intFromEnum(common_dispatch.kinds.UiKind.module) + 1));
-    c.g_object_set_data_full(@ptrCast(row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
-    c.g_object_set_data_full(@ptrCast(row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
+    gtk_row_data.setActionableData(
+        @ptrCast(@alignCast(row)),
+        allocator,
+        common_dispatch.kinds.UiKind.module,
+        route,
+        title,
+    );
     c.gtk_list_box_append(@ptrCast(list), row);
 }
 

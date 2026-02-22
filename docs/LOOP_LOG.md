@@ -4703,3 +4703,29 @@
   - M8: add a shared row-metadata helper (`gtk/row_data.zig`) to centralize action/title/kind-id read/write and eliminate duplicated key strings.
 
 ---
+## 2026-02-22 (Cycle 206)
+- Milestone: M8 Code Hygiene / GTK Row Metadata Consolidation
+- Task slice: centralize actionable row metadata read/write behind a shared GTK helper
+- Changes:
+  - Added `src/ui/gtk/row_data.zig`:
+    - canonical row metadata writer for actionable rows (`kind-id`, `action`, `title`)
+    - canonical metadata readers for `kind`, `action`, and `title`
+  - Updated `src/ui/gtk/render.zig`, `src/ui/gtk/widgets.zig`, and `src/ui/gtk/menus.zig`:
+    - switched actionable row metadata writes to `gtk_row_data.setActionableData(...)`
+  - Updated `src/ui/gtk_shell.zig` and `src/ui/gtk/controller.zig`:
+    - switched actionable row metadata reads to `gtk_row_data.{kind,action,title}(...)`
+  - Updated `src/ui/gtk/navigation.zig`:
+    - switched actionable-row detection checks to `gtk_row_data.action(...) != null`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/gtk/row_data.zig src/ui/gtk/render.zig src/ui/gtk/widgets.zig src/ui/gtk/menus.zig src/ui/gtk_shell.zig src/ui/gtk/controller.zig src/ui/gtk/navigation.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - row metadata key strings now live in one module, reducing drift when new row fields are introduced.
+- Next slice:
+  - M8: add focused unit tests for `ui/common/{dispatch,execute,actions,kinds}` and `gtk/row_data` behavior to lock contracts before AI/browser module growth.
+
+---

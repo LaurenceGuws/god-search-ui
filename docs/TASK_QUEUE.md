@@ -245,3 +245,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 9 - parse row kind once in `ui/common/execute.zig` and use enum-based dispatch primitives.
 - [x] M8: UX Phase 9 - add typed GTK row kind metadata (`gs-kind-id`) and route selection/status paths through `UiKind`.
 - [x] M8: UX Phase 9 - remove `gs-kind` string fallback path and rely on typed `gs-kind-id` for actionable GTK rows.
+- [x] M8: UX Phase 9 - add centralized GTK row metadata helper (`gtk/row_data.zig`) for typed kind/action/title read/write.
