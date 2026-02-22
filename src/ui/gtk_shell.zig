@@ -1742,7 +1742,7 @@ pub const Shell = struct {
             ".gs-results > row:focus-visible,\n" ++
             ".gs-results > row:focus-within { background: transparent; background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; }\n" ++
             ".gs-results > row > box { border-radius: 8px; }\n" ++
-            ".gs-results.gs-scroll-active > row > box { margin-right: 12px; }\n" ++
+            ".gs-results.gs-scroll-active > row > box { margin-right: 4px; }\n" ++
             ".gs-results.gs-scroll-active .gs-kind-icon { margin-left: -2px; }\n" ++
             ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
             ".gs-results > row.gs-meta-row { padding-top: 2px; padding-bottom: 2px; }\n" ++
