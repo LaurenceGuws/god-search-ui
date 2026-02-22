@@ -8,6 +8,7 @@ const cache_snapshots = @import("search_service/cache_snapshots.zig");
 const dynamic_generations = @import("search_service/dynamic_generations.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
 const query_metrics = @import("search_service/query_metrics.zig");
+const query_engine = @import("search_service/query_engine.zig");
 const refresh_worker = @import("search_service/refresh_worker.zig");
 
 pub const SearchService = struct {
@@ -77,22 +78,28 @@ pub const SearchService = struct {
         self.cache_mu.lock();
         if (self.cache_ready) {
             const cache_snapshot = cache_snapshots.latest(self.cached_rank_generations.items);
-            if (cache_snapshot.len == 0) {
-                self.cache_mu.unlock();
-                try self.registry.collectAll(allocator, &query_candidates);
-                const ranked_fallback = try search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
-                self.setQueryElapsed(sw.elapsedNs());
-                return ranked_fallback;
-            }
             self.cache_mu.unlock();
-            const ranked_cached = try search.rankCandidatesWithHistory(allocator, parsed, cache_snapshot, recent);
+            const ranked_cache_or_collect = try query_engine.rankFromCacheOrCollect(
+                allocator,
+                self.registry,
+                parsed,
+                recent,
+                cache_snapshot,
+                &query_candidates,
+            );
             self.setQueryElapsed(sw.elapsedNs());
-            return ranked_cached;
+            return ranked_cache_or_collect;
         }
         self.cache_mu.unlock();
 
-        try self.registry.collectAll(allocator, &query_candidates);
-        const ranked = try search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
+        const ranked = try query_engine.rankFromCacheOrCollect(
+            allocator,
+            self.registry,
+            parsed,
+            recent,
+            &.{},
+            &query_candidates,
+        );
         self.setQueryElapsed(sw.elapsedNs());
         return ranked;
     }

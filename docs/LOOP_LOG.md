@@ -4963,3 +4963,25 @@
   - M8: extract `searchQuery` non-route orchestration into `search_service/query_engine.zig` and keep `SearchService` as thin state/coordination façade.
 
 ---
+## 2026-02-22 (Cycle 217)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract non-dynamic query orchestration into dedicated query engine module
+- Changes:
+  - Added `src/app/search_service/query_engine.zig`:
+    - `rankFromCacheOrCollect(...)` helper encapsulating cache-snapshot ranking vs provider collection fallback
+  - Updated `src/app/search_service.zig`:
+    - `searchQuery` non-dynamic path now delegates cache/collect ranking decision to query engine helper
+    - removed duplicate inline cache-fallback ranking branching
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_engine.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - semantics unchanged by intent; this is an orchestration extraction to keep core service path thinner.
+- Next slice:
+  - M8: extract history-facing lock helpers (`load/save/record/historySnapshot`) into a `search_service/history_access.zig` helper to reduce direct lock choreography in `SearchService`.
+
+---
