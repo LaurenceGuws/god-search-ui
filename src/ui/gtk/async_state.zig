@@ -18,6 +18,7 @@ pub const AsyncSearchResult = struct {
     total_len: usize,
     query: []u8,
     rows: []AsyncRenderedRow,
+    on_ready: *const fn (?*anyopaque) callconv(.c) gtk_types.c.gboolean,
 };
 
 pub fn queuePendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator, query_owned: []u8) void {

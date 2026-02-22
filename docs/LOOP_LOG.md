@@ -4210,3 +4210,29 @@
   - M8: extract async worker orchestration (`start/spawn/on-ready/spinner`) into `gtk/async_search.zig`.
 
 ---
+## 2026-02-22 (Cycle 187)
+- Milestone: M8 UX Modularization
+- Task slice: extract async route worker orchestration from shell
+- Changes:
+  - Added `src/ui/gtk/async_search.zig`:
+    - async start/cancel/launch-pending orchestration
+    - worker spawn + threaded query execution
+    - idle-loop handoff via payload-owned `on_ready` callback
+  - Updated `src/ui/gtk/async_state.zig`:
+    - added `on_ready` callback pointer on async payload struct
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates async orchestration to `gtk_async_search`
+    - removed in-file worker spawn/thread function implementations
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - shell still contains render pipeline + action menu code; next extraction should target result row rendering and action-menu controllers.
+- Next slice:
+  - M8: extract render/grouping pipeline into `gtk/render.zig`.
+
+---

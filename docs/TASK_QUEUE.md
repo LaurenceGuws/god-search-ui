@@ -226,3 +226,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 8 - modularize GTK shell into shared `gtk/` modules (`types`, `styles`, `widgets`, `actions`).
 - [x] M8: UX Phase 8 - extract navigation and query helper logic into `gtk/navigation.zig` and `gtk/query_helpers.zig`.
 - [x] M8: UX Phase 8 - extract async payload/pending-query lifecycle into `gtk/async_state.zig`.
+- [x] M8: UX Phase 8 - extract async worker orchestration into `gtk/async_search.zig`.
