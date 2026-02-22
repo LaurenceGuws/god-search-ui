@@ -669,7 +669,9 @@ pub const Shell = struct {
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const allocator = allocator_ptr.*;
 
-        ctx.service.recordSelection(allocator, action) catch {};
+        if (!std.mem.eql(u8, kind, "dir_option")) {
+            ctx.service.recordSelection(allocator, action) catch {};
+        }
 
         if (std.mem.eql(u8, kind, "action")) {
             if (providers_mod.requiresConfirmation(action)) {
@@ -696,6 +698,16 @@ pub const Shell = struct {
             c.gtk_window_close(@ptrCast(ctx.window));
             return;
         }
+        if (std.mem.eql(u8, kind, "dir_option")) {
+            runShellCommand(action) catch {
+                emitTelemetry(ctx, "dir", action, "error", "command-failed");
+                showLaunchFeedback(ctx, "Directory action failed");
+                return;
+            };
+            emitTelemetry(ctx, "dir", action, "ok", "option-command");
+            c.gtk_window_close(@ptrCast(ctx.window));
+            return;
+        }
         clearPowerConfirmation(ctx);
         if (std.mem.eql(u8, kind, "app")) {
             if (!std.mem.eql(u8, action, "__drun__")) {
@@ -710,15 +722,7 @@ pub const Shell = struct {
             return;
         }
         if (std.mem.eql(u8, kind, "dir")) {
-            const cmd = std.fmt.allocPrint(allocator, "xdg-open \"{s}\"", .{action}) catch return;
-            defer allocator.free(cmd);
-            runShellCommand(cmd) catch {
-                emitTelemetry(ctx, "dir", action, "error", "command-failed");
-                showLaunchFeedback(ctx, "Directory open failed");
-                return;
-            };
-            emitTelemetry(ctx, "dir", action, "ok", cmd);
-            c.gtk_window_close(@ptrCast(ctx.window));
+            showDirActionMenu(ctx, allocator, action);
             return;
         }
         if (std.mem.eql(u8, kind, "window")) {
@@ -733,6 +737,156 @@ pub const Shell = struct {
             c.gtk_window_close(@ptrCast(ctx.window));
             return;
         }
+    }
+
+    fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path: []const u8) void {
+        clearList(ctx.list);
+        appendHeaderRow(ctx.list, "Directory Actions");
+        const path_msg = std.fmt.allocPrint(allocator, "Target: {s}", .{dir_path}) catch return;
+        defer allocator.free(path_msg);
+        appendInfoRow(ctx.list, path_msg);
+        appendInfoRow(ctx.list, "Enter to run selected action | Esc to close | Type to return to search");
+
+        const term_cmd = buildDirTerminalCommand(allocator, dir_path) catch null;
+        if (term_cmd) |cmd| {
+            defer allocator.free(cmd);
+            appendDirOptionRow(ctx.list, allocator, "Open Terminal Here", "Launch terminal in this folder", cmd);
+        }
+
+        const explorer_cmd = buildDirExplorerCommand(allocator, dir_path) catch null;
+        if (explorer_cmd) |cmd| {
+            defer allocator.free(cmd);
+            appendDirOptionRow(ctx.list, allocator, "Open in File Explorer", "Use default file manager", cmd);
+        }
+
+        const editor_cmd = buildDirEditorCommand(allocator, dir_path) catch null;
+        if (editor_cmd) |cmd| {
+            defer allocator.free(cmd);
+            appendDirOptionRow(ctx.list, allocator, "Open in Editor", "Use $VISUAL/$EDITOR fallback", cmd);
+        }
+
+        const copy_cmd = buildDirCopyPathCommand(allocator, dir_path) catch null;
+        if (copy_cmd) |cmd| {
+            defer allocator.free(cmd);
+            appendDirOptionRow(ctx.list, allocator, "Copy Path", "Copy directory path to clipboard", cmd);
+        }
+
+        setStatus(ctx, "Directory action menu");
+        selectFirstActionableRow(ctx);
+    }
+
+    fn appendDirOptionRow(list: *c.GtkListBox, allocator: std.mem.Allocator, title: []const u8, subtitle: []const u8, command: []const u8) void {
+        const title_markup = std.fmt.allocPrint(allocator, "<span weight=\"600\">{s}</span>", .{title}) catch return;
+        defer allocator.free(title_markup);
+        const title_markup_z = allocator.dupeZ(u8, title_markup) catch return;
+        defer allocator.free(title_markup_z);
+
+        const primary_label = c.gtk_label_new(null);
+        c.gtk_label_set_markup(@ptrCast(primary_label), title_markup_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
+        c.gtk_label_set_ellipsize(@ptrCast(primary_label), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_single_line_mode(@ptrCast(primary_label), GTRUE);
+        c.gtk_widget_set_hexpand(primary_label, GTRUE);
+        c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
+
+        const icon_text_z = allocator.dupeZ(u8, kindIcon(.dir)) catch return;
+        defer allocator.free(icon_text_z);
+        const icon = c.gtk_label_new(icon_text_z.ptr);
+        c.gtk_widget_add_css_class(icon, "gs-kind-icon");
+        c.gtk_widget_set_valign(icon, c.GTK_ALIGN_CENTER);
+
+        const chip = c.gtk_label_new("DIR".ptr);
+        c.gtk_widget_add_css_class(chip, "gs-chip");
+        c.gtk_widget_add_css_class(chip, "gs-chip-dir");
+        c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
+
+        const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
+        c.gtk_box_append(@ptrCast(primary_row), icon);
+        c.gtk_box_append(@ptrCast(primary_row), primary_label);
+        c.gtk_box_append(@ptrCast(primary_row), chip);
+
+        const subtitle_z = allocator.dupeZ(u8, subtitle) catch return;
+        defer allocator.free(subtitle_z);
+        const secondary_label = c.gtk_label_new(subtitle_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
+        c.gtk_label_set_ellipsize(@ptrCast(secondary_label), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_single_line_mode(@ptrCast(secondary_label), GTRUE);
+        c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
+        c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_widget_set_margin_top(content, 2);
+        c.gtk_widget_set_margin_bottom(content, 2);
+        c.gtk_widget_add_css_class(content, "gs-candidate-content");
+        c.gtk_box_append(@ptrCast(content), primary_row);
+        c.gtk_box_append(@ptrCast(content), secondary_label);
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-actionable-row");
+        c.gtk_list_box_row_set_child(@ptrCast(row), content);
+
+        const kind_z = allocator.dupeZ(u8, "dir_option") catch return;
+        defer allocator.free(kind_z);
+        const action_z = allocator.dupeZ(u8, command) catch return;
+        defer allocator.free(action_z);
+        const title_z = allocator.dupeZ(u8, title) catch return;
+        defer allocator.free(title_z);
+        c.g_object_set_data_full(@ptrCast(row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
+        c.gtk_list_box_append(@ptrCast(list), row);
+    }
+
+    fn buildDirTerminalCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
+        const quoted = try shellSingleQuote(allocator, dir_path);
+        defer allocator.free(quoted);
+        return std.fmt.allocPrint(
+            allocator,
+            "sh -lc 'cd -- \"$1\" && exec \"${{TERMINAL:-xterm}}\"' _ {s}",
+            .{quoted},
+        );
+    }
+
+    fn buildDirExplorerCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
+        const quoted = try shellSingleQuote(allocator, dir_path);
+        defer allocator.free(quoted);
+        return std.fmt.allocPrint(allocator, "xdg-open {s}", .{quoted});
+    }
+
+    fn buildDirEditorCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
+        const quoted = try shellSingleQuote(allocator, dir_path);
+        defer allocator.free(quoted);
+        return std.fmt.allocPrint(
+            allocator,
+            "sh -lc 'if [ -n \"$VISUAL\" ]; then exec \"$VISUAL\" \"$1\"; elif [ -n \"$EDITOR\" ]; then exec \"$EDITOR\" \"$1\"; else exec xdg-open \"$1\"; fi' _ {s}",
+            .{quoted},
+        );
+    }
+
+    fn buildDirCopyPathCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
+        const quoted = try shellSingleQuote(allocator, dir_path);
+        defer allocator.free(quoted);
+        return std.fmt.allocPrint(
+            allocator,
+            "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard' _ {s}",
+            .{quoted},
+        );
+    }
+
+    fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
+        var out = std.ArrayList(u8).empty;
+        defer out.deinit(allocator);
+        try out.append(allocator, '\'');
+        for (value) |ch| {
+            if (ch == '\'') {
+                try out.appendSlice(allocator, "'\\''");
+            } else {
+                try out.append(allocator, ch);
+            }
+        }
+        try out.append(allocator, '\'');
+        return out.toOwnedSlice(allocator);
     }
 
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {

@@ -3802,3 +3802,32 @@
   - M8: UX Phase 5 - add theme-friendly fallback selection profile and reduce hardcoded color reliance.
 
 ---
+## 2026-02-21 (Cycle 173)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 5 bundle - directory action menu instead of forced file-manager open
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - changed `dir` activation behavior from immediate `xdg-open` to in-place action menu
+    - added directory action options:
+      - Open Terminal Here
+      - Open in File Explorer
+      - Open in Editor
+      - Copy Path
+    - added shell-safe single-quote escaping helper for directory path command arguments
+    - added `dir_option` execution path:
+      - execute selected directory option command
+      - close window on success
+      - keep window open with feedback on failure
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - terminal option uses `${TERMINAL:-xterm}` fallback and may require local terminal env tuning.
+  - copy-path option prefers `wl-copy` then falls back to `xclip`.
+- Next slice:
+  - M8: UX Phase 5 - add configurable default directory action profile and env/doc wiring.
+
+---
