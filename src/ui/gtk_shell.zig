@@ -180,10 +180,7 @@ pub const Shell = struct {
                 }
             }
         }
-        const kind_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind");
-        if (kind_ptr == null) return .unknown;
-        const kind_tag = std.mem.span(@as([*:0]const u8, @ptrCast(kind_ptr)));
-        return common_dispatch.kinds.parse(kind_tag);
+        return .unknown;
     }
 
     fn onRowSelected(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {

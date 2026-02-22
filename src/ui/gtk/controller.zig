@@ -117,7 +117,5 @@ fn kindFromRow(row: *c.GtkListBoxRow) UiKind {
             }
         }
     }
-    const kind_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind");
-    if (kind_ptr == null) return .unknown;
-    return common_dispatch.kinds.parse(std.mem.span(@as([*:0]const u8, @ptrCast(kind_ptr))));
+    return .unknown;
 }

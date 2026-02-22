@@ -4678,3 +4678,28 @@
   - M8: remove remaining `gs-kind` fallback usage after confirming all row producers consistently set `gs-kind-id`.
 
 ---
+## 2026-02-22 (Cycle 205)
+- Milestone: M8 Code Hygiene / Typed Kind Finalization
+- Task slice: remove legacy `gs-kind` fallback path and rely on typed row kind IDs
+- Changes:
+  - Updated `src/ui/gtk/render.zig`, `src/ui/gtk/widgets.zig`, and `src/ui/gtk/menus.zig`:
+    - actionable rows no longer store legacy `gs-kind` string metadata
+    - actionable rows now rely on `gs-kind-id` as canonical row kind metadata
+  - Updated `src/ui/gtk_shell.zig` and `src/ui/gtk/controller.zig`:
+    - removed fallback parsing of `gs-kind` string metadata
+    - row kind resolution now uses `gs-kind-id` only (falls back to `.unknown` if missing)
+  - Updated `src/ui/gtk/query_helpers.zig`:
+    - removed now-unused string-based `kindStatusLabel` helper
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/gtk_shell.zig src/ui/gtk/controller.zig src/ui/gtk/render.zig src/ui/gtk/widgets.zig src/ui/gtk/menus.zig src/ui/gtk/query_helpers.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this assumes all actionable row producers correctly set `gs-kind-id`; meta/info rows remain non-actionable and unaffected.
+- Next slice:
+  - M8: add a shared row-metadata helper (`gtk/row_data.zig`) to centralize action/title/kind-id read/write and eliminate duplicated key strings.
+
+---

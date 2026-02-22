@@ -146,21 +146,15 @@ fn appendCandidateRow(
     c.gtk_list_box_row_set_child(@ptrCast(list_row), content);
 
     const ui_kind = common_dispatch.kinds.fromCandidateKind(row.candidate.kind);
-    const kind = common_dispatch.kinds.tag(ui_kind);
-    const kind_c = std.fmt.allocPrint(allocator, "{s}", .{kind}) catch return;
-    defer allocator.free(kind_c);
     const action_c = std.fmt.allocPrint(allocator, "{s}", .{row.candidate.action}) catch return;
     defer allocator.free(action_c);
     const title_c = std.fmt.allocPrint(allocator, "{s}", .{row.candidate.title}) catch return;
     defer allocator.free(title_c);
-    const kind_z = allocator.dupeZ(u8, kind_c) catch return;
-    defer allocator.free(kind_z);
     const action_z = allocator.dupeZ(u8, action_c) catch return;
     defer allocator.free(action_z);
     const title_z = allocator.dupeZ(u8, title_c) catch return;
     defer allocator.free(title_z);
 
-    c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
     c.g_object_set_data(@ptrCast(list_row), "gs-kind-id", @ptrFromInt(@intFromEnum(ui_kind) + 1));
     c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
     c.g_object_set_data_full(@ptrCast(list_row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);

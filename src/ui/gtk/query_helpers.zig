@@ -82,18 +82,6 @@ pub fn highlightedMarkup(allocator: std.mem.Allocator, text: []const u8, token: 
     return std.fmt.allocPrint(allocator, "{s}<b>{s}</b>{s}", .{ head, hit, tail });
 }
 
-pub fn kindStatusLabel(kind: []const u8) []const u8 {
-    if (std.mem.eql(u8, kind, "app")) return "app";
-    if (std.mem.eql(u8, kind, "window")) return "window";
-    if (std.mem.eql(u8, kind, "dir")) return "directory";
-    if (std.mem.eql(u8, kind, "file")) return "file";
-    if (std.mem.eql(u8, kind, "grep")) return "match";
-    if (std.mem.eql(u8, kind, "module")) return "module filter";
-    if (std.mem.eql(u8, kind, "action")) return "action";
-    if (std.mem.eql(u8, kind, "hint")) return "hint";
-    return "item";
-}
-
 pub fn postLaunchStatus(message: []const u8) []const u8 {
     if (std.mem.eql(u8, message, "Action launched")) return "Action launched | Enter repeats selected action";
     if (std.mem.eql(u8, message, "App launched")) return "App launched | Enter repeats selected app";
