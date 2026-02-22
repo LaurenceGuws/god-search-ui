@@ -108,7 +108,7 @@ pub const SearchService = struct {
 
         const cmd = try std.fmt.allocPrint(
             allocator,
-            "fd --type f --hidden --follow --color never --ignore-case --max-results 200 --exclude .git --exclude node_modules {s} {s}",
+            "fd --type f --hidden --follow --color never --ignore-case --max-results 200 --exclude .git --exclude node_modules --exclude .cache --exclude .codex --exclude .local/share/Trash --exclude .local/share/opencode --exclude .local/share/containers {s} {s}",
             .{ term_q, home_q },
         );
         defer allocator.free(cmd);
@@ -138,7 +138,7 @@ pub const SearchService = struct {
 
         const cmd = try std.fmt.allocPrint(
             allocator,
-            "rg --line-number --no-heading --color never --smart-case --hidden --glob '!.git' --glob '!node_modules' {s} {s} 2>/dev/null || true",
+            "rg --line-number --no-heading --color never --smart-case --hidden --max-count 200 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null || true",
             .{ term_q, home_q },
         );
         defer allocator.free(cmd);

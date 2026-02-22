@@ -210,3 +210,5 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 6 - show module filter list as default actionable suggestions on empty query.
 - [x] M8: UX Phase 6 - activate module filter rows by injecting route prefixes into search entry.
 - [x] M8: UX Phase 6 - preserve blended no-prefix behavior for typed queries.
+- [x] M8: UX Phase 6 - stabilize `rg` route for large-result terms using bounded output and parser-side caps.
+- [x] M8: UX Phase 6 - reduce `%`/`&` home-scan noise by excluding codex/cache/trash/opencode paths.

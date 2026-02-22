@@ -3989,3 +3989,35 @@
   - M8: UX Phase 6 - add optional desktop-file icon enrichment when cache icon column is missing.
 
 ---
+## 2026-02-22 (Cycle 179)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - fix `&` route misses on `comb-migration-api` query and reduce home-scan noise
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - hardened `rg` route command for large-output terms:
+      - added bounded search output controls:
+        - `--max-count 200`
+        - `--max-columns 300`
+        - `--max-columns-preview`
+      - kept Zig-side parsing cap and tolerant command completion
+    - expanded dynamic search exclusions for both `%` (fd) and `&` (rg):
+      - `.cache`
+      - `.codex`
+      - `.local/share/Trash`
+      - `.local/share/opencode`
+      - `.local/share/containers`
+      - existing `.git` / `node_modules` exclusions remain
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf '& : comb-migration-api\n:q\n' | zig build run -- --ui`
+  - `printf '& comb-migration-api\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - default search root is still `$HOME`; exclusions are tuned to reduce noise, not a full project-root scoping feature.
+- Next slice:
+  - M8: UX Phase 6 - add configurable search roots for `%`/`&` (cwd-first or env-configured roots).
+
+---
