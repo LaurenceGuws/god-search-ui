@@ -238,3 +238,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 9 - modularize `SearchService` internals into `search_service/{dynamic_routes,history_store,cache_refresh}.zig`.
 - [x] M8: UX Phase 9 - split headless shell into `ui/headless/{controller,render,icon_diag}.zig` with thin `stub_shell.zig`.
 - [x] M8: UX Phase 9 - add shared dispatch contract in `ui/common/dispatch.zig` and route GTK/headless through it.
+- [x] M8: UX Phase 9 - add shared command router in `ui/common/commands.zig` and wire headless command parsing through it.

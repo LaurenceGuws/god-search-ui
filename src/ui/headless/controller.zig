@@ -1,5 +1,6 @@
 const std = @import("std");
 const app = @import("../../app/mod.zig");
+const common_commands = @import("../common/commands.zig");
 const common_dispatch = @import("../common/dispatch.zig");
 const render = @import("render.zig");
 const icon_diag = @import("icon_diag.zig");
@@ -16,17 +17,19 @@ pub fn run(allocator: std.mem.Allocator, service: *app.SearchService) !void {
         defer if (line_opt) |line| allocator.free(line);
         const line = line_opt orelse break;
         const query = std.mem.trim(u8, line, " \t\r\n");
-        if (std.mem.eql(u8, query, ":q")) break;
-        if (std.mem.eql(u8, query, ":refresh")) {
-            service.invalidateSnapshot();
-            try service.prewarmProviders(allocator);
-            try stdout.print("  snapshot refreshed\n", .{});
-            continue;
-        }
-        if (std.mem.startsWith(u8, query, ":icondiag")) {
-            const json = std.mem.eql(u8, query, ":icondiag --json");
-            try icon_diag.printIconDiagnostics(allocator, stdout, service, json);
-            continue;
+        switch (common_commands.parse(query)) {
+            .quit => break,
+            .refresh => {
+                service.invalidateSnapshot();
+                try service.prewarmProviders(allocator);
+                try stdout.print("  snapshot refreshed\n", .{});
+                continue;
+            },
+            .icon_diag => |json| {
+                try icon_diag.printIconDiagnostics(allocator, stdout, service, json);
+                continue;
+            },
+            .none => {},
         }
 
         const ranked = try service.searchQuery(allocator, query);

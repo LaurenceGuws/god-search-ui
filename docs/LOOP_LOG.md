@@ -4529,3 +4529,25 @@
   - M8: extract a small `ui/common/commands.zig` command-router (`:refresh`, `:icondiag`, future AI/browser commands) and reuse it in headless + upcoming GTK command palette paths.
 
 ---
+## 2026-02-22 (Cycle 199)
+- Milestone: M8 Code Hygiene / Shared Commands
+- Task slice: extract shared command router for headless shell commands
+- Changes:
+  - Added `src/ui/common/commands.zig`:
+    - command parse contract for `:q`, `:refresh`, `:icondiag`, and `:icondiag --json`
+  - Updated `src/ui/headless/controller.zig`:
+    - replaced inline string-command branching with `common_commands.parse(...)` switch
+    - preserved existing behavior and output text
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/commands.zig src/ui/headless/controller.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this isolates command parsing logic for future reuse in GTK command-palette paths.
+- Next slice:
+  - M8: begin extracting a shared execution adapter (`ui/common/execute.zig`) that maps ranked candidates to launch/menu intents for both shells.
+
+---
