@@ -4802,3 +4802,25 @@
   - M8: unify candidate ownership semantics to avoid deep-copy churn on cache hits (immutable snapshot swap + ref-counted slabs).
 
 ---
+## 2026-02-22 (Cycle 210)
+- Milestone: M8 Code Hygiene / Immutable Cache Snapshot Path
+- Task slice: remove per-query cache deep-copy churn using retained immutable cache snapshots
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - added retained `cached_rank_generations` with bounded retention (`cache_generation_keep`)
+    - prewarm now clones collected candidates once into immutable snapshot generations
+    - cache-hit query path now ranks against latest retained snapshot outside `cache_mu` without per-query deep-copy
+    - added cache snapshot generation prune/cleanup helpers for owned candidate slices
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this favors lower lock contention and lower steady-state query allocation pressure; retained snapshot generations trade a bounded amount of memory for safety and throughput.
+- Next slice:
+  - M8: slim `search_service.zig` by extracting cache snapshot generation lifecycle into `search_service/cache_snapshots.zig`.
+
+---

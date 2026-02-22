@@ -12,6 +12,8 @@ pub const SearchService = struct {
     history: std.ArrayListUnmanaged([]u8) = .{},
     cache_mu: std.Thread.Mutex = .{},
     cached_candidates: search.CandidateList = .empty,
+    cached_rank_generations: std.ArrayListUnmanaged([]search.Candidate) = .{},
+    cache_generation_keep: usize = 4,
     cache_ready: bool = false,
     cache_last_refresh_ns: i128 = 0,
     cache_ttl_ns: u64 = 30 * std.time.ns_per_s,
@@ -41,6 +43,7 @@ pub const SearchService = struct {
 
     pub fn deinit(self: *SearchService, allocator: std.mem.Allocator) void {
         if (self.refresh_thread) |t| t.join();
+        self.clearCachedRankGenerations(allocator);
         for (self.dynamic_generations.items) |*generation| {
             dynamic_routes.clearOwned(generation, allocator);
         }
@@ -71,12 +74,18 @@ pub const SearchService = struct {
 
         self.cache_mu.lock();
         if (self.cache_ready) {
-            const cache_snapshot = copyCandidatesOwned(allocator, self.cached_candidates.items) catch |err| {
+            const cache_snapshot = if (self.cached_rank_generations.items.len > 0)
+                self.cached_rank_generations.items[self.cached_rank_generations.items.len - 1]
+            else
+                &.{};
+            if (cache_snapshot.len == 0) {
                 self.cache_mu.unlock();
-                return err;
-            };
+                try self.registry.collectAll(allocator, &query_candidates);
+                const ranked_fallback = try search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
+                self.setLastQueryElapsed(sw.elapsedNs());
+                return ranked_fallback;
+            }
             self.cache_mu.unlock();
-            defer freeCandidatesOwned(allocator, cache_snapshot);
             const ranked_cached = try search.rankCandidatesWithHistory(allocator, parsed, cache_snapshot, recent);
             self.setLastQueryElapsed(sw.elapsedNs());
             return ranked_cached;
@@ -123,6 +132,9 @@ pub const SearchService = struct {
             &self.cache_last_refresh_ns,
             &self.refresh_requested,
         );
+        const snapshot = try cloneCandidatesOwned(allocator, self.cached_candidates.items);
+        try self.cached_rank_generations.append(allocator, snapshot);
+        self.pruneCachedRankGenerations(allocator);
     }
 
     pub fn invalidateSnapshot(self: *SearchService) void {
@@ -223,7 +235,7 @@ pub const SearchService = struct {
         }
     }
 
-    fn copyCandidatesOwned(allocator: std.mem.Allocator, source: []const search.Candidate) ![]search.Candidate {
+    fn cloneCandidatesOwned(allocator: std.mem.Allocator, source: []const search.Candidate) ![]search.Candidate {
         var out = try allocator.alloc(search.Candidate, source.len);
         errdefer allocator.free(out);
 
@@ -275,6 +287,18 @@ pub const SearchService = struct {
             allocator.free(@constCast(row.action));
             allocator.free(@constCast(row.icon));
         }
+    }
+
+    fn pruneCachedRankGenerations(self: *SearchService, allocator: std.mem.Allocator) void {
+        while (self.cached_rank_generations.items.len > self.cache_generation_keep) {
+            const oldest = self.cached_rank_generations.orderedRemove(0);
+            freeCandidatesOwned(allocator, oldest);
+        }
+    }
+
+    fn clearCachedRankGenerations(self: *SearchService, allocator: std.mem.Allocator) void {
+        for (self.cached_rank_generations.items) |snapshot| freeCandidatesOwned(allocator, snapshot);
+        self.cached_rank_generations.clearRetainingCapacity();
     }
 };
 
