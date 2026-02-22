@@ -331,7 +331,7 @@ pub const Shell = struct {
             const icon_z = std.heap.page_allocator.dupeZ(u8, icon_name) catch return;
             defer std.heap.page_allocator.free(icon_z);
             c.gtk_entry_set_icon_from_icon_name(entry, c.GTK_ENTRY_ICON_PRIMARY, icon_z.ptr);
-            c.gtk_entry_set_icon_sensitive(entry, c.GTK_ENTRY_ICON_PRIMARY, GFALSE);
+            c.gtk_entry_set_icon_sensitive(entry, c.GTK_ENTRY_ICON_PRIMARY, GTRUE);
             c.gtk_entry_set_icon_activatable(entry, c.GTK_ENTRY_ICON_PRIMARY, GFALSE);
             return;
         }
