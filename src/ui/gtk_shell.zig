@@ -33,6 +33,9 @@ const UiContext = extern struct {
     async_spinner_id: c.guint,
     async_spinner_phase: u8,
     async_inflight: c.gboolean,
+    async_worker_active: c.gboolean,
+    async_pending_query_ptr: ?[*]u8,
+    async_pending_query_len: usize,
 };
 
 const AsyncRenderedRow = struct {
@@ -117,6 +120,9 @@ pub const Shell = struct {
         ctx.async_spinner_id = 0;
         ctx.async_spinner_phase = 0;
         ctx.async_inflight = GFALSE;
+        ctx.async_worker_active = GFALSE;
+        ctx.async_pending_query_ptr = null;
+        ctx.async_pending_query_len = 0;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -184,6 +190,7 @@ pub const Shell = struct {
             _ = c.g_source_remove(ctx.async_spinner_id);
             ctx.async_spinner_id = 0;
         }
+        freePendingAsyncQuery(ctx);
         // Intentionally keep UiContext alive until process exit.
         // Async route worker callbacks may still complete after destroy.
     }
@@ -544,26 +551,41 @@ pub const Shell = struct {
         ctx.async_search_generation += 1;
         const generation = ctx.async_search_generation;
         const query_copy = allocator.dupe(u8, query_trimmed) catch return;
+        beginAsyncSpinner(ctx);
 
-        const payload = allocator.create(AsyncSearchResult) catch {
-            allocator.free(query_copy);
+        if (ctx.async_worker_active == GTRUE) {
+            queuePendingAsyncQuery(ctx, allocator, query_copy);
             return;
+        }
+        if (!spawnAsyncRouteSearchWorker(ctx, allocator, generation, query_copy)) {
+            allocator.free(query_copy);
+            endAsyncSpinner(ctx);
+        }
+    }
+
+    fn spawnAsyncRouteSearchWorker(
+        ctx: *UiContext,
+        allocator: std.mem.Allocator,
+        generation: u64,
+        query_owned: []u8,
+    ) bool {
+        const payload = allocator.create(AsyncSearchResult) catch {
+            return false;
         };
         payload.* = .{
             .ctx = ctx,
             .generation = generation,
             .total_len = 0,
-            .query = query_copy,
+            .query = query_owned,
             .rows = &.{},
         };
-
-        beginAsyncSpinner(ctx);
         const worker = std.Thread.spawn(.{}, asyncRouteSearchWorker, .{payload}) catch {
             freeAsyncSearchResult(allocator, payload);
-            endAsyncSpinner(ctx);
-            return;
+            return false;
         };
+        ctx.async_worker_active = GTRUE;
         worker.detach();
+        return true;
     }
 
     fn asyncRouteSearchWorker(payload: *AsyncSearchResult) void {
@@ -610,7 +632,11 @@ pub const Shell = struct {
         const allocator = allocator_ptr.*;
 
         defer freeAsyncSearchResult(allocator, payload);
-        if (payload.generation != ctx.async_search_generation) return GFALSE;
+        ctx.async_worker_active = GFALSE;
+        if (payload.generation != ctx.async_search_generation) {
+            _ = launchPendingAsyncQuery(ctx, allocator);
+            return GFALSE;
+        }
 
         endAsyncSpinner(ctx);
         var scored = allocator.alloc(@import("../search/mod.zig").ScoredCandidate, payload.rows.len) catch return GFALSE;
@@ -635,7 +661,46 @@ pub const Shell = struct {
 
     fn cancelAsyncRouteSearch(ctx: *UiContext) void {
         ctx.async_search_generation += 1;
+        freePendingAsyncQuery(ctx);
         endAsyncSpinner(ctx);
+    }
+
+    fn queuePendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator, query_owned: []u8) void {
+        if (ctx.async_pending_query_ptr) |ptr| {
+            const prev = ptr[0..ctx.async_pending_query_len];
+            allocator.free(prev);
+        }
+        ctx.async_pending_query_ptr = query_owned.ptr;
+        ctx.async_pending_query_len = query_owned.len;
+    }
+
+    fn launchPendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator) bool {
+        const query_owned = takePendingAsyncQuery(ctx) orelse return false;
+        const generation = ctx.async_search_generation;
+        if (!spawnAsyncRouteSearchWorker(ctx, allocator, generation, query_owned)) {
+            allocator.free(query_owned);
+            endAsyncSpinner(ctx);
+            return false;
+        }
+        return true;
+    }
+
+    fn takePendingAsyncQuery(ctx: *UiContext) ?[]u8 {
+        const ptr = ctx.async_pending_query_ptr orelse return null;
+        const slice = ptr[0..ctx.async_pending_query_len];
+        ctx.async_pending_query_ptr = null;
+        ctx.async_pending_query_len = 0;
+        return slice;
+    }
+
+    fn freePendingAsyncQuery(ctx: *UiContext) void {
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+        if (ctx.async_pending_query_ptr) |ptr| {
+            allocator.free(ptr[0..ctx.async_pending_query_len]);
+            ctx.async_pending_query_ptr = null;
+            ctx.async_pending_query_len = 0;
+        }
     }
 
     fn beginAsyncSpinner(ctx: *UiContext) void {

@@ -221,3 +221,5 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 7 - add explicit async in-flight spinner row for `%`/`&` searches.
 - [x] M8: UX Phase 7 - cancel async search generation when query clears or route switches away.
 - [x] M8: UX Phase 7 - add spinner timer lifecycle cleanup on window destroy.
+- [x] M8: UX Phase 7 - fix async dynamic-route string lifetime race causing `%`/`&` worker segfault.
+- [x] M8: UX Phase 7 - coalesce `%`/`&` async workers to single in-flight + latest pending query.

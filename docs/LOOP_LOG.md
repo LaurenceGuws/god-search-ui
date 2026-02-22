@@ -4106,3 +4106,28 @@
   - M8: UX responsiveness - progressive async result streaming (first-N early paint for `%`/`&`).
 
 ---
+## 2026-02-22 (Cycle 183)
+- Milestone: M8 Patch Release Cadence
+- Task slice: async stability hardening for `%`/`&` worker lifecycle
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - removed per-query dynamic string invalidation in `searchDynamicRoute`
+    - dynamic route strings now remain valid for async worker copy and are released on service deinit
+  - Updated `src/ui/gtk_shell.zig`:
+    - coalesced async route execution to one in-flight worker at a time
+    - added latest-query pending queue for `%`/`&` while a worker is active
+    - stale worker completion now launches the newest pending query instead of spawning thread bursts
+    - pending async query memory is cleaned on cancel and window destroy
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dynamic-route owned strings are retained for process lifetime (freed on deinit) to guarantee async safety.
+  - this favors stability over bounded per-query memory reclamation.
+- Next slice:
+  - M8: UX responsiveness - progressive async result streaming (first-N early paint for `%`/`&`).
+
+---
