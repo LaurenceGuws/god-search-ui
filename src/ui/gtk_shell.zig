@@ -29,6 +29,24 @@ const UiContext = extern struct {
     last_status_hash: u64,
     last_status_tone: u8,
     last_render_hash: u64,
+    async_search_generation: u64,
+};
+
+const AsyncRenderedRow = struct {
+    kind: CandidateKind,
+    score: i32,
+    title: []u8,
+    subtitle: []u8,
+    action: []u8,
+    icon: []u8,
+};
+
+const AsyncSearchResult = struct {
+    ctx: *UiContext,
+    generation: u64,
+    total_len: usize,
+    query: []u8,
+    rows: []AsyncRenderedRow,
 };
 
 pub const Shell = struct {
@@ -92,6 +110,7 @@ pub const Shell = struct {
         ctx.last_status_hash = 0;
         ctx.last_status_tone = 0;
         ctx.last_render_hash = 0;
+        ctx.async_search_generation = 0;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -155,7 +174,8 @@ pub const Shell = struct {
             _ = c.g_source_remove(ctx.status_reset_id);
             ctx.status_reset_id = 0;
         }
-        c.g_free(user_data);
+        // Intentionally keep UiContext alive until process exit.
+        // Async route worker callbacks may still complete after destroy.
     }
 
     fn onKeyPressed(
@@ -415,6 +435,11 @@ pub const Shell = struct {
             return;
         }
 
+        if (shouldAsyncRouteQuery(query_trimmed)) {
+            startAsyncRouteSearch(ctx, allocator, query_trimmed);
+            return;
+        }
+
         const ranked = ctx.service.searchQuery(allocator, query) catch |err| {
             const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
             defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
@@ -424,6 +449,18 @@ pub const Shell = struct {
         };
         defer allocator.free(ranked);
 
+        renderRankedRows(ctx, allocator, query_trimmed, ranked, ranked.len);
+        _ = ctx.service.drainScheduledRefresh(allocator) catch false;
+        selectFirstActionableRow(ctx);
+    }
+
+    fn renderRankedRows(
+        ctx: *UiContext,
+        allocator: std.mem.Allocator,
+        query_trimmed: []const u8,
+        ranked: []const @import("../search/mod.zig").ScoredCandidate,
+        total_len: usize,
+    ) void {
         const limit = @min(ranked.len, 20);
         const rows = ranked[0..limit];
         const empty_query = query_trimmed.len == 0;
@@ -441,7 +478,7 @@ pub const Shell = struct {
                 appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  % files  & grep  > run  = calc  ? web");
             } else {
                 appendGroupedRows(ctx, allocator, rows, highlight_token);
-                if (ranked.len > limit) {
+                if (total_len > limit) {
                     appendInfoRow(ctx.list, "Showing top 20 results");
                 }
             }
@@ -458,9 +495,6 @@ pub const Shell = struct {
         } else if (ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "");
         }
-
-        _ = ctx.service.drainScheduledRefresh(allocator) catch false;
-        selectFirstActionableRow(ctx);
     }
 
     fn computeRenderHash(
@@ -482,6 +516,118 @@ pub const Shell = struct {
             h.update(row.candidate.action);
         }
         return h.final();
+    }
+
+    fn shouldAsyncRouteQuery(query_trimmed: []const u8) bool {
+        if (query_trimmed.len < 2) return false;
+        const route = query_trimmed[0];
+        if (route != '%' and route != '&') return false;
+        return std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len > 0;
+    }
+
+    fn startAsyncRouteSearch(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) void {
+        ctx.async_search_generation += 1;
+        const generation = ctx.async_search_generation;
+        const query_copy = allocator.dupe(u8, query_trimmed) catch return;
+
+        const payload = allocator.create(AsyncSearchResult) catch {
+            allocator.free(query_copy);
+            return;
+        };
+        payload.* = .{
+            .ctx = ctx,
+            .generation = generation,
+            .total_len = 0,
+            .query = query_copy,
+            .rows = &.{},
+        };
+
+        if (ctx.pending_power_confirm == GFALSE) {
+            setStatus(ctx, "Searching...");
+        }
+        const worker = std.Thread.spawn(.{}, asyncRouteSearchWorker, .{payload}) catch {
+            freeAsyncSearchResult(allocator, payload);
+            return;
+        };
+        worker.detach();
+    }
+
+    fn asyncRouteSearchWorker(payload: *AsyncSearchResult) void {
+        const ctx = payload.ctx;
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+
+        const ranked = ctx.service.searchQuery(allocator, payload.query) catch {
+            payload.total_len = 0;
+            payload.rows = &.{};
+            _ = c.g_idle_add(onAsyncSearchReady, payload);
+            return;
+        };
+        defer allocator.free(ranked);
+
+        payload.total_len = ranked.len;
+        const limit = @min(ranked.len, 20);
+        payload.rows = allocator.alloc(AsyncRenderedRow, limit) catch {
+            payload.total_len = 0;
+            payload.rows = &.{};
+            _ = c.g_idle_add(onAsyncSearchReady, payload);
+            return;
+        };
+
+        for (ranked[0..limit], 0..) |row, idx| {
+            payload.rows[idx] = .{
+                .kind = row.candidate.kind,
+                .score = row.score,
+                .title = allocator.dupe(u8, row.candidate.title) catch "",
+                .subtitle = allocator.dupe(u8, row.candidate.subtitle) catch "",
+                .action = allocator.dupe(u8, row.candidate.action) catch "",
+                .icon = allocator.dupe(u8, row.candidate.icon) catch "",
+            };
+        }
+
+        _ = c.g_idle_add(onAsyncSearchReady, payload);
+    }
+
+    fn onAsyncSearchReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const payload: *AsyncSearchResult = @ptrCast(@alignCast(user_data.?));
+        const ctx = payload.ctx;
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+
+        defer freeAsyncSearchResult(allocator, payload);
+        if (payload.generation != ctx.async_search_generation) return GFALSE;
+
+        var scored = allocator.alloc(@import("../search/mod.zig").ScoredCandidate, payload.rows.len) catch return GFALSE;
+        defer allocator.free(scored);
+        for (payload.rows, 0..) |row, idx| {
+            scored[idx] = .{
+                .candidate = .{
+                    .kind = row.kind,
+                    .title = row.title,
+                    .subtitle = row.subtitle,
+                    .action = row.action,
+                    .icon = row.icon,
+                },
+                .score = row.score,
+            };
+        }
+
+        renderRankedRows(ctx, allocator, std.mem.trim(u8, payload.query, " \t\r\n"), scored, payload.total_len);
+        selectFirstActionableRow(ctx);
+        return GFALSE;
+    }
+
+    fn freeAsyncSearchResult(allocator: std.mem.Allocator, payload: *AsyncSearchResult) void {
+        allocator.free(payload.query);
+        for (payload.rows) |row| {
+            if (row.title.len > 0) allocator.free(row.title);
+            if (row.subtitle.len > 0) allocator.free(row.subtitle);
+            if (row.action.len > 0) allocator.free(row.action);
+            if (row.icon.len > 0) allocator.free(row.icon);
+        }
+        if (payload.rows.len > 0) allocator.free(payload.rows);
+        allocator.destroy(payload);
     }
 
     fn appendModuleFilterMenu(ctx: *UiContext, allocator: std.mem.Allocator) void {

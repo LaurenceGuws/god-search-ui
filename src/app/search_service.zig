@@ -4,6 +4,7 @@ const search = @import("../search/mod.zig");
 
 pub const SearchService = struct {
     registry: providers.ProviderRegistry,
+    query_mu: std.Thread.Mutex = .{},
     history_path: ?[]const u8 = null,
     history: std.ArrayListUnmanaged([]u8) = .{},
     cache_mu: std.Thread.Mutex = .{},
@@ -41,6 +42,8 @@ pub const SearchService = struct {
     }
 
     pub fn searchQuery(self: *SearchService, allocator: std.mem.Allocator, raw_query: []const u8) ![]search.ScoredCandidate {
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
         const sw = @import("metrics.zig").Stopwatch.start();
         self.last_query_refreshed_cache = false;
         self.last_query_used_stale_cache = false;
@@ -187,6 +190,8 @@ pub const SearchService = struct {
     }
 
     pub fn prewarmProviders(self: *SearchService, allocator: std.mem.Allocator) !void {
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
         self.cached_candidates.clearRetainingCapacity();
@@ -197,6 +202,8 @@ pub const SearchService = struct {
     }
 
     pub fn invalidateSnapshot(self: *SearchService) void {
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
         self.cache_ready = false;
@@ -205,6 +212,8 @@ pub const SearchService = struct {
     }
 
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
         self.cache_mu.lock();
         const requested = self.refresh_requested;
         self.cache_mu.unlock();
@@ -251,6 +260,8 @@ pub const SearchService = struct {
     }
 
     pub fn recordSelection(self: *SearchService, allocator: std.mem.Allocator, action: []const u8) !void {
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
         if (action.len == 0) return;
         const copy = try allocator.dupe(u8, action);
         try self.history.append(allocator, copy);

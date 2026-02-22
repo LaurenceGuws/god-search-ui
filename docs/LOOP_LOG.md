@@ -4048,3 +4048,31 @@
   - M8: UX responsiveness - async worker path for `%`/`&` query execution with stale-result handoff.
 
 ---
+## 2026-02-22 (Cycle 181)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX responsiveness - async `%`/`&` route worker with stale-result handoff
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added async route worker path for dynamic modules (`%`/`&`)
+    - query generation token added to drop stale completions
+    - background worker computes ranked results, then posts to GTK main loop via `g_idle_add`
+    - main loop renders returned rows without blocking debounce callback path
+  - Updated `src/app/search_service.zig`:
+    - added service-level query mutex around query mutation/read paths:
+      - `searchQuery`
+      - snapshot prewarm/invalidate/drain
+      - selection recording
+    - ensures thread-safe service access when async route workers and UI thread overlap
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - context object is intentionally retained until process exit to avoid async callback use-after-free after window destroy.
+  - headless mode remains synchronous by design.
+- Next slice:
+  - M8: UX responsiveness - add explicit async in-flight spinner row + cancellation on query clear.
+
+---

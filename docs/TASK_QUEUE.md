@@ -215,3 +215,6 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 6 - add route-aware debounce throttling for `%`/`&` heavy queries.
 - [x] M8: UX Phase 6 - add render diff hash to skip redundant GTK list rebuilds.
 - [x] M8: UX Phase 6 - add CSS transitions for actionable row/state color changes.
+- [x] M8: UX Phase 7 - add async worker execution path for `%`/`&` queries with GTK idle-loop handoff.
+- [x] M8: UX Phase 7 - drop stale async route results using generation tokens to avoid UI flicker/races.
+- [x] M8: UX Phase 7 - serialize SearchService query entry points with mutex for thread-safe concurrent access.
