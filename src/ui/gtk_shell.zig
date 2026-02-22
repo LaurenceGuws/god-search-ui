@@ -30,6 +30,9 @@ const UiContext = extern struct {
     last_status_tone: u8,
     last_render_hash: u64,
     async_search_generation: u64,
+    async_spinner_id: c.guint,
+    async_spinner_phase: u8,
+    async_inflight: c.gboolean,
 };
 
 const AsyncRenderedRow = struct {
@@ -111,6 +114,9 @@ pub const Shell = struct {
         ctx.last_status_tone = 0;
         ctx.last_render_hash = 0;
         ctx.async_search_generation = 0;
+        ctx.async_spinner_id = 0;
+        ctx.async_spinner_phase = 0;
+        ctx.async_inflight = GFALSE;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -173,6 +179,10 @@ pub const Shell = struct {
         if (ctx.status_reset_id != 0) {
             _ = c.g_source_remove(ctx.status_reset_id);
             ctx.status_reset_id = 0;
+        }
+        if (ctx.async_spinner_id != 0) {
+            _ = c.g_source_remove(ctx.async_spinner_id);
+            ctx.async_spinner_id = 0;
         }
         // Intentionally keep UiContext alive until process exit.
         // Async route worker callbacks may still complete after destroy.
@@ -264,11 +274,14 @@ pub const Shell = struct {
             _ = c.g_source_remove(ctx.search_debounce_id);
             ctx.search_debounce_id = 0;
         }
+        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        if (std.mem.trim(u8, query, " \t\r\n").len == 0) {
+            cancelAsyncRouteSearch(ctx);
+        }
         if (ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "Searching...");
         }
-        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
         const debounce_ms = searchDebounceMsForQuery(std.mem.trim(u8, query, " \t\r\n"));
         ctx.search_debounce_id = c.g_timeout_add(debounce_ms, onSearchDebounced, ctx);
     }
@@ -422,6 +435,7 @@ pub const Shell = struct {
         const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
 
         if (query_trimmed.len == 0) {
+            cancelAsyncRouteSearch(ctx);
             const empty_hash = std.hash.Wyhash.hash(0, "module-filter-menu");
             if (ctx.last_render_hash != empty_hash) {
                 clearList(ctx.list);
@@ -439,6 +453,7 @@ pub const Shell = struct {
             startAsyncRouteSearch(ctx, allocator, query_trimmed);
             return;
         }
+        cancelAsyncRouteSearch(ctx);
 
         const ranked = ctx.service.searchQuery(allocator, query) catch |err| {
             const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
@@ -542,11 +557,10 @@ pub const Shell = struct {
             .rows = &.{},
         };
 
-        if (ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "Searching...");
-        }
+        beginAsyncSpinner(ctx);
         const worker = std.Thread.spawn(.{}, asyncRouteSearchWorker, .{payload}) catch {
             freeAsyncSearchResult(allocator, payload);
+            endAsyncSpinner(ctx);
             return;
         };
         worker.detach();
@@ -598,6 +612,7 @@ pub const Shell = struct {
         defer freeAsyncSearchResult(allocator, payload);
         if (payload.generation != ctx.async_search_generation) return GFALSE;
 
+        endAsyncSpinner(ctx);
         var scored = allocator.alloc(@import("../search/mod.zig").ScoredCandidate, payload.rows.len) catch return GFALSE;
         defer allocator.free(scored);
         for (payload.rows, 0..) |row, idx| {
@@ -616,6 +631,83 @@ pub const Shell = struct {
         renderRankedRows(ctx, allocator, std.mem.trim(u8, payload.query, " \t\r\n"), scored, payload.total_len);
         selectFirstActionableRow(ctx);
         return GFALSE;
+    }
+
+    fn cancelAsyncRouteSearch(ctx: *UiContext) void {
+        ctx.async_search_generation += 1;
+        endAsyncSpinner(ctx);
+    }
+
+    fn beginAsyncSpinner(ctx: *UiContext) void {
+        ctx.async_inflight = GTRUE;
+        if (ctx.async_spinner_id != 0) {
+            _ = c.g_source_remove(ctx.async_spinner_id);
+            ctx.async_spinner_id = 0;
+        }
+        ctx.async_spinner_phase = 0;
+        updateAsyncSpinnerFrame(ctx);
+        ctx.async_spinner_id = c.g_timeout_add(120, onAsyncSpinnerTick, ctx);
+    }
+
+    fn endAsyncSpinner(ctx: *UiContext) void {
+        ctx.async_inflight = GFALSE;
+        if (ctx.async_spinner_id != 0) {
+            _ = c.g_source_remove(ctx.async_spinner_id);
+            ctx.async_spinner_id = 0;
+        }
+        clearAsyncRows(ctx.list);
+    }
+
+    fn onAsyncSpinnerTick(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        if (ctx.async_inflight == GFALSE) {
+            ctx.async_spinner_id = 0;
+            return GFALSE;
+        }
+        updateAsyncSpinnerFrame(ctx);
+        return GTRUE;
+    }
+
+    fn updateAsyncSpinnerFrame(ctx: *UiContext) void {
+        const frames = [_][]const u8{ "|", "/", "-", "\\" };
+        const frame = frames[ctx.async_spinner_phase % frames.len];
+        ctx.async_spinner_phase +%= 1;
+
+        var msg_buf: [64]u8 = undefined;
+        const msg = std.fmt.bufPrint(&msg_buf, "{s} Searching modules...", .{frame}) catch "Searching modules...";
+        clearAsyncRows(ctx.list);
+        appendAsyncRow(ctx.list, msg);
+        if (ctx.pending_power_confirm == GFALSE) setStatus(ctx, "Searching...");
+    }
+
+    fn appendAsyncRow(list: *c.GtkListBox, message: []const u8) void {
+        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
+        defer std.heap.page_allocator.free(msg_z);
+
+        const label = c.gtk_label_new(null);
+        c.gtk_label_set_text(@ptrCast(label), msg_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+        c.gtk_widget_add_css_class(label, "gs-info");
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-meta-row");
+        c.gtk_list_box_row_set_child(@ptrCast(row), label);
+        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
+        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
+        c.g_object_set_data_full(@ptrCast(row), "gs-async", c.g_strdup("1"), c.g_free);
+        c.gtk_list_box_append(@ptrCast(list), row);
+    }
+
+    fn clearAsyncRows(list: *c.GtkListBox) void {
+        var child = c.gtk_widget_get_first_child(@ptrCast(@alignCast(list)));
+        while (child != null) {
+            const next = c.gtk_widget_get_next_sibling(child);
+            if (c.g_object_get_data(@ptrCast(child), "gs-async") != null) {
+                c.gtk_list_box_remove(list, child);
+            }
+            child = next;
+        }
     }
 
     fn freeAsyncSearchResult(allocator: std.mem.Allocator, payload: *AsyncSearchResult) void {

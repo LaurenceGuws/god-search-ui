@@ -4076,3 +4076,33 @@
   - M8: UX responsiveness - add explicit async in-flight spinner row + cancellation on query clear.
 
 ---
+## 2026-02-22 (Cycle 182)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX responsiveness - async in-flight spinner row + cancellation lifecycle
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added async spinner state in `UiContext`:
+      - timer id
+      - spinner frame phase
+      - in-flight flag
+    - added explicit async in-flight row rendering for `%`/`&` routes:
+      - animated frame (`| / - \`) with "Searching modules..."
+      - row tagged and safely replaced per frame tick
+    - added async cancellation semantics:
+      - increments generation and clears spinner row when query clears
+      - cancels spinner when route switches from async to non-async
+      - cancels spinner on async worker completion before result render
+    - added spinner timer cleanup in `onDestroy`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf '& comb-migration-api\n% bitwarden\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - headless mode remains synchronous and does not render spinner UI rows by design.
+- Next slice:
+  - M8: UX responsiveness - progressive async result streaming (first-N early paint for `%`/`&`).
+
+---

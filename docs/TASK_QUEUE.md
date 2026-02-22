@@ -218,3 +218,6 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 7 - add async worker execution path for `%`/`&` queries with GTK idle-loop handoff.
 - [x] M8: UX Phase 7 - drop stale async route results using generation tokens to avoid UI flicker/races.
 - [x] M8: UX Phase 7 - serialize SearchService query entry points with mutex for thread-safe concurrent access.
+- [x] M8: UX Phase 7 - add explicit async in-flight spinner row for `%`/`&` searches.
+- [x] M8: UX Phase 7 - cancel async search generation when query clears or route switches away.
+- [x] M8: UX Phase 7 - add spinner timer lifecycle cleanup on window destroy.
