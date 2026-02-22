@@ -5161,3 +5161,25 @@
   - M8: extract history list lifecycle cleanup from `deinit` into `history_access` to keep `SearchService` teardown narrowly declarative.
 
 ---
+## 2026-02-22 (Cycle 226)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract history teardown lifecycle from `SearchService.deinit`
+- Changes:
+  - Updated `src/app/search_service/history_access.zig`:
+    - added `deinitHistory(...)` helper for freeing owned history entries + list teardown
+  - Updated `src/app/search_service.zig`:
+    - `deinit(...)` now delegates history teardown to `history_access.deinitHistory(...)`
+    - reduced inline lifecycle cleanup boilerplate in service struct
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_access.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior change intended; this is pure teardown-path extraction.
+- Next slice:
+  - M8: move static-query pipeline chunk from `searchQuery` (recent snapshot + cache-read + rank call) into a dedicated helper for clearer top-level flow.
+
+---

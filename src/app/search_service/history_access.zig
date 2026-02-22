@@ -37,3 +37,11 @@ pub fn snapshotNewestFirstOwnedLocked(
 pub fn freeSnapshot(allocator: std.mem.Allocator, history_snapshot: []const []const u8) void {
     history_store.freeOwnedHistorySnapshot(allocator, history_snapshot);
 }
+
+pub fn deinitHistory(
+    history: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+) void {
+    for (history.items) |item| allocator.free(item);
+    history.deinit(allocator);
+}

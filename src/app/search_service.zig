@@ -55,8 +55,7 @@ pub const SearchService = struct {
         if (self.refresh_thread) |t| t.join();
         cache_snapshots.clearGenerations(&self.cached_rank_generations, allocator);
         dynamic_generations.clear(&self.dynamic_generations, allocator);
-        for (self.history.items) |item| allocator.free(item);
-        self.history.deinit(allocator);
+        history_access.deinitHistory(&self.history, allocator);
         self.cached_candidates.deinit(allocator);
     }
 
