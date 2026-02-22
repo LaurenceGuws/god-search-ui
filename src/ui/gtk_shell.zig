@@ -134,6 +134,11 @@ pub const Shell = struct {
         _ = c.g_signal_connect_data(entry, "activate", c.G_CALLBACK(onEntryActivate), ctx, null, 0);
         _ = c.g_signal_connect_data(list, "row-activated", c.G_CALLBACK(onRowActivated), ctx, null, 0);
         _ = c.g_signal_connect_data(list, "row-selected", c.G_CALLBACK(onRowSelected), ctx, null, 0);
+        const vadj = c.gtk_scrolled_window_get_vadjustment(@ptrCast(scroller));
+        if (vadj != null) {
+            _ = c.g_signal_connect_data(vadj, "changed", c.G_CALLBACK(onResultsAdjustmentChanged), ctx, null, 0);
+            _ = c.g_signal_connect_data(vadj, "value-changed", c.G_CALLBACK(onResultsAdjustmentChanged), ctx, null, 0);
+        }
         _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(onDestroy), ctx, null, 0);
 
         c.gtk_box_append(@ptrCast(root_box), entry);
@@ -143,6 +148,7 @@ pub const Shell = struct {
         c.gtk_window_present(@ptrCast(window));
 
         populateResults(ctx, "");
+        updateScrollbarActiveClass(ctx);
     }
 
     fn configureInitialWindowSize(window: *c.GtkWidget) void {
@@ -310,6 +316,25 @@ pub const Shell = struct {
         const query = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
         populateResults(ctx, query);
         return GFALSE;
+    }
+
+    fn onResultsAdjustmentChanged(_: ?*c.GtkAdjustment, user_data: ?*anyopaque) callconv(.c) void {
+        if (user_data == null) return;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        updateScrollbarActiveClass(ctx);
+    }
+
+    fn updateScrollbarActiveClass(ctx: *UiContext) void {
+        const vadj = c.gtk_scrolled_window_get_vadjustment(ctx.scroller);
+        if (vadj == null) return;
+        const upper = c.gtk_adjustment_get_upper(vadj);
+        const page = c.gtk_adjustment_get_page_size(vadj);
+        const active = (upper - page) > 1.0;
+        if (active) {
+            c.gtk_widget_add_css_class(@ptrCast(@alignCast(ctx.list)), "gs-scroll-active");
+        } else {
+            c.gtk_widget_remove_css_class(@ptrCast(@alignCast(ctx.list)), "gs-scroll-active");
+        }
     }
 
     fn searchDebounceMsForQuery(query_trimmed: []const u8) c.guint {
@@ -1691,6 +1716,8 @@ pub const Shell = struct {
             ".gs-results-scroll scrollbar trough { background: rgba(140, 170, 235, 0.14); border: none; box-shadow: none; border-radius: 999px; }\n" ++
             ".gs-results-scroll scrollbar slider { min-width: 8px; min-height: 24px; background: rgba(140, 170, 235, 0.30); border: none; box-shadow: none; border-radius: 999px; }\n" ++
             ".gs-results > row { border-radius: 8px; padding: 4px 8px; }\n" ++
+            ".gs-results.gs-scroll-active > row > box { margin-right: 12px; }\n" ++
+            ".gs-results.gs-scroll-active .gs-kind-icon { margin-left: -2px; }\n" ++
             ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
             ".gs-results > row.gs-meta-row { padding-top: 2px; padding-bottom: 2px; }\n" ++
             ".gs-results > row.gs-actionable-row:selected { background: rgba(140, 170, 235, 0.28); border: 1px solid rgba(164, 192, 255, 0.65); }\n" ++
