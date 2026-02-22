@@ -5118,3 +5118,23 @@
   - M8: add focused concurrency test covering `drainScheduledRefresh` + repeated query calls to guard lock-order regressions.
 
 ---
+## 2026-02-22 (Cycle 224)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: add lock-order regression coverage for concurrent query + refresh drain paths
+- Changes:
+  - Updated `src/app/search_service_test.zig`:
+    - added `concurrent query and drainScheduledRefresh does not deadlock` test
+    - runs `searchQuery` and `invalidateSnapshot`/`drainScheduledRefresh` in parallel threads with atomic failure signaling
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service_test.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - concurrency tests can be timing-sensitive by nature; loop counts are intentionally moderate to keep CI runtime stable.
+- Next slice:
+  - M8: extract query metrics lock wrappers (`reset/set`) into a tiny scoped helper to further reduce repeated lock boilerplate in `SearchService`.
+
+---

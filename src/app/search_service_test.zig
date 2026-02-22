@@ -248,3 +248,69 @@ test "optional async refresh worker can execute scheduled refresh" {
     std.time.sleep(20 * std.time.ns_per_ms);
     try std.testing.expect(Fake.collect_calls >= 2);
 }
+
+test "concurrent query and drainScheduledRefresh does not deadlock" {
+    const Fake = struct {
+        var collect_calls: usize = 0;
+
+        fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+            _ = context;
+            collect_calls += 1;
+            std.time.sleep(1 * std.time.ns_per_ms);
+            try out.append(allocator, search.Candidate.init(.action, "Settings", "System", "settings"));
+        }
+
+        fn health(context: *anyopaque) search.ProviderHealth {
+            _ = context;
+            return .ready;
+        }
+    };
+
+    const Workers = struct {
+        fn queryLoop(service: *SearchService, failed: *std.atomic.Value(bool)) void {
+            var i: usize = 0;
+            while (i < 80) : (i += 1) {
+                const results = service.searchQuery(std.heap.page_allocator, "set") catch {
+                    failed.store(true, .release);
+                    return;
+                };
+                std.heap.page_allocator.free(results);
+            }
+        }
+
+        fn refreshLoop(service: *SearchService, failed: *std.atomic.Value(bool)) void {
+            var i: usize = 0;
+            while (i < 80) : (i += 1) {
+                service.invalidateSnapshot();
+                _ = service.drainScheduledRefresh(std.heap.page_allocator) catch {
+                    failed.store(true, .release);
+                    return;
+                };
+            }
+        }
+    };
+
+    Fake.collect_calls = 0;
+    var dummy: u8 = 0;
+    const source = [_]search.Provider{
+        .{
+            .name = "fake",
+            .context = &dummy,
+            .vtable = &.{ .collect = Fake.collect, .health = Fake.health },
+        },
+    };
+
+    const registry = providers.ProviderRegistry.init(&source);
+    var service = SearchService.init(registry);
+    defer service.deinit(std.testing.allocator);
+
+    try service.prewarmProviders(std.testing.allocator);
+    var failed = std.atomic.Value(bool).init(false);
+    const t1 = try std.Thread.spawn(.{}, Workers.queryLoop, .{ &service, &failed });
+    const t2 = try std.Thread.spawn(.{}, Workers.refreshLoop, .{ &service, &failed });
+    t1.join();
+    t2.join();
+
+    try std.testing.expect(!failed.load(.acquire));
+    try std.testing.expect(Fake.collect_calls > 0);
+}
