@@ -204,3 +204,6 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 6 - extend query route hints, grouping, and chip theming for file/grep candidate kinds.
 - [x] M8: UX Phase 6 - fix `&` grep route shell quoting/pipeline robustness and dynamic string ownership.
 - [x] M8: UX Phase 6 - raise dynamic shell capture buffer to avoid silent `rg` result drops on large output.
+- [x] M8: UX Phase 6 - improve app icon token extraction for `env`-wrapped exec commands (e.g., Zide).
+- [x] M8: UX Phase 6 - add app icon variant fallback (`-desktop`/`.desktop` stripping) for icon-name lookup.
+- [x] M8: UX Phase 6 - increase GTK row icon size to ~2x heading text scale.

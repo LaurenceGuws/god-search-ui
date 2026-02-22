@@ -149,13 +149,19 @@ fn actionCommandToken(action: []const u8) []const u8 {
     const trimmed = std.mem.trim(u8, action, " \t\r\n");
     if (trimmed.len == 0) return "";
 
-    const split_idx = std.mem.indexOfScalar(u8, trimmed, ' ') orelse trimmed.len;
-    var token = trimmed[0..split_idx];
-    token = std.mem.trim(u8, token, "\"'");
-    if (token.len == 0) return "";
+    var words = std.mem.tokenizeAny(u8, trimmed, " \t\r\n");
+    while (words.next()) |word_raw| {
+        var word = std.mem.trim(u8, word_raw, "\"'");
+        if (word.len == 0) continue;
+        if (std.mem.eql(u8, word, "env")) continue;
+        if (word[0] == '%') continue;
+        if (word[0] == '-') continue;
+        if (std.mem.indexOfScalar(u8, word, '=') != null and word[0] != '/' and !std.mem.startsWith(u8, word, "./")) continue;
 
-    if (std.mem.lastIndexOfScalar(u8, token, '/')) |slash_idx| {
-        if (slash_idx + 1 < token.len) token = token[slash_idx + 1 ..];
+        if (std.mem.lastIndexOfScalar(u8, word, '/')) |slash_idx| {
+            if (slash_idx + 1 < word.len) word = word[slash_idx + 1 ..];
+        }
+        return word;
     }
-    return token;
+    return "";
 }

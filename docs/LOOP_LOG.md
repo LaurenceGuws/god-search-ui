@@ -3928,3 +3928,38 @@
   - M8: UX Phase 6 - add route-root controls and ignore-pattern defaults for faster `%`/`&` query paths.
 
 ---
+## 2026-02-22 (Cycle 177)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - app icon resolution fixes for env-wrapped launchers + 2x icon sizing
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - improved app icon resolution pipeline:
+      - new icon variant resolution helper with fallback variants:
+        - basename extraction from path-like icon names
+        - `.desktop` suffix stripping
+        - `-desktop` suffix stripping
+      - optional theme existence check (`gtk_icon_theme_has_icon`) before selecting a variant
+    - improved action-token extraction for app icon fallback:
+      - ignores `env` prefix
+      - skips env assignments (`KEY=VALUE`) and option-like tokens
+      - handles quoted/path executables and keeps basename token
+    - increased app icon visual size:
+      - image pixel size `16 -> 24`
+      - icon class font scale set to `2em` (about 2x heading text)
+  - Updated `src/ui/stub_shell.zig`:
+    - aligned `:icondiag` command-token parsing with GTK logic for consistent diagnostics.
+  - Verified local icon assets exist for affected apps:
+    - `zide-stable`, `zide-test`, `bitwarden`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf ':icondiag\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - best results still come from explicit icon metadata column in app cache; token/variant fallback is heuristic.
+- Next slice:
+  - M8: UX Phase 6 - add optional desktop-file icon enrichment when cache icon column is missing.
+
+---

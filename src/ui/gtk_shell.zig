@@ -1191,7 +1191,7 @@ pub const Shell = struct {
             ".gs-results > row.gs-actionable-row:hover { background: rgba(140, 170, 235, 0.14); }\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-primary { color: #f5f8ff; }\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-secondary { color: #d6def1; }\n" ++
-            ".gs-kind-icon { color: #a9b1c7; }\n" ++
+            ".gs-kind-icon { color: #a9b1c7; font-size: 2em; }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n" ++
             ".gs-primary-row { min-height: 20px; }\n" ++
@@ -1329,20 +1329,10 @@ pub const Shell = struct {
 
     fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget {
         if (kind == .app) {
-            if (std.mem.trim(u8, icon, " \t\r\n").len > 0) {
-                const icon_name_z = allocator.dupeZ(u8, std.mem.trim(u8, icon, " \t\r\n")) catch null;
-                if (icon_name_z) |name| {
-                    defer allocator.free(name);
-                    const image = c.gtk_image_new_from_icon_name(name.ptr);
-                    c.gtk_image_set_pixel_size(@ptrCast(image), 16);
-                    c.gtk_widget_add_css_class(image, "gs-kind-icon");
-                    return @ptrCast(image);
-                }
-            }
-            if (appIconNameFromAction(allocator, action)) |icon_name_z| {
+            if (resolveAppIconName(allocator, icon, action)) |icon_name_z| {
                 defer allocator.free(icon_name_z);
                 const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
-                c.gtk_image_set_pixel_size(@ptrCast(image), 16);
+                c.gtk_image_set_pixel_size(@ptrCast(image), 24);
                 c.gtk_widget_add_css_class(image, "gs-kind-icon");
                 return @ptrCast(image);
             }
@@ -1361,19 +1351,92 @@ pub const Shell = struct {
         return allocator.dupeZ(u8, token) catch null;
     }
 
+    fn resolveAppIconName(allocator: std.mem.Allocator, icon: []const u8, action: []const u8) ?[:0]u8 {
+        const explicit = std.mem.trim(u8, icon, " \t\r\n");
+        if (explicit.len > 0) {
+            if (resolveIconVariant(allocator, explicit)) |name| return name;
+        }
+        if (appIconNameFromAction(allocator, action)) |token_name| {
+            defer allocator.free(token_name);
+            if (resolveIconVariant(allocator, token_name)) |name| return name;
+        }
+        return null;
+    }
+
+    fn resolveIconVariant(allocator: std.mem.Allocator, raw_name: []const u8) ?[:0]u8 {
+        var name = std.mem.trim(u8, raw_name, " \t\r\n\"'");
+        if (name.len == 0) return null;
+
+        var candidates: [6][]const u8 = undefined;
+        var count: usize = 0;
+        candidates[count] = name;
+        count += 1;
+
+        if (std.mem.lastIndexOfScalar(u8, name, '/')) |slash_idx| {
+            if (slash_idx + 1 < name.len) {
+                const base = name[slash_idx + 1 ..];
+                candidates[count] = base;
+                count += 1;
+                name = base;
+            }
+        }
+
+        if (std.mem.endsWith(u8, name, ".desktop") and name.len > ".desktop".len) {
+            candidates[count] = name[0 .. name.len - ".desktop".len];
+            count += 1;
+        }
+        if (std.mem.endsWith(u8, name, "-desktop") and name.len > "-desktop".len) {
+            candidates[count] = name[0 .. name.len - "-desktop".len];
+            count += 1;
+        }
+
+        if (count > 1 and std.mem.endsWith(u8, candidates[count - 1], ".desktop") and candidates[count - 1].len > ".desktop".len) {
+            candidates[count] = candidates[count - 1][0 .. candidates[count - 1].len - ".desktop".len];
+            count += 1;
+        }
+
+        var idx: usize = 0;
+        while (idx < count) : (idx += 1) {
+            const candidate = candidates[idx];
+            if (candidate.len == 0) continue;
+            if (iconExists(candidate)) {
+                return allocator.dupeZ(u8, candidate) catch null;
+            }
+        }
+
+        // If theme inspection is unavailable, keep best-effort fallback.
+        return allocator.dupeZ(u8, candidates[0]) catch null;
+    }
+
+    fn iconExists(name: []const u8) bool {
+        const display = c.gdk_display_get_default();
+        if (display == null) return false;
+        const theme = c.gtk_icon_theme_get_for_display(display);
+        if (theme == null) return false;
+        const name_z = std.heap.page_allocator.dupeZ(u8, name) catch return false;
+        defer std.heap.page_allocator.free(name_z);
+        return c.gtk_icon_theme_has_icon(theme, name_z.ptr) != 0;
+    }
+
     fn actionCommandToken(action: []const u8) []const u8 {
         const trimmed = std.mem.trim(u8, action, " \t\r\n");
         if (trimmed.len == 0) return "";
 
-        const split_idx = std.mem.indexOfScalar(u8, trimmed, ' ') orelse trimmed.len;
-        var token = trimmed[0..split_idx];
-        token = std.mem.trim(u8, token, "\"'");
-        if (token.len == 0) return "";
+        var words = std.mem.tokenizeAny(u8, trimmed, " \t\r\n");
+        while (words.next()) |word_raw| {
+            var word = std.mem.trim(u8, word_raw, "\"'");
+            if (word.len == 0) continue;
+            if (std.mem.eql(u8, word, "env")) continue;
+            if (word[0] == '%') continue;
+            if (word[0] == '-') continue;
+            if (std.mem.indexOfScalar(u8, word, '=') != null and word[0] != '/' and !std.mem.startsWith(u8, word, "./")) continue;
 
-        if (std.mem.lastIndexOfScalar(u8, token, '/')) |slash_idx| {
-            if (slash_idx + 1 < token.len) token = token[slash_idx + 1 ..];
+            if (std.mem.lastIndexOfScalar(u8, word, '/')) |slash_idx| {
+                if (slash_idx + 1 < word.len) word = word[slash_idx + 1 ..];
+            }
+            return word;
         }
-        return token;
+        return "";
     }
 
     fn hasAppGlyphFallback(rows: []const @import("../search/mod.zig").ScoredCandidate) bool {
