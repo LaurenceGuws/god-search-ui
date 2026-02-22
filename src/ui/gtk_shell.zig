@@ -1728,10 +1728,10 @@ pub const Shell = struct {
             ".gs-results-scroll, .gs-results-scroll > viewport { background: transparent; border: none; box-shadow: none; }\n" ++
             ".gs-results-scroll junction { background: transparent; border: none; box-shadow: none; }\n" ++
             ".gs-results-scroll undershoot.left, .gs-results-scroll undershoot.right { background-image: none; background: transparent; }\n" ++
-            ".gs-results-scroll scrollbar { min-width: 8px; border: none; box-shadow: none; background: transparent; }\n" ++
+            ".gs-results-scroll scrollbar { min-width: 5px; border: none; box-shadow: none; background: transparent; }\n" ++
             ".gs-results-scroll scrollbar separator { min-width: 0; min-height: 0; background: transparent; }\n" ++
-            ".gs-results-scroll scrollbar trough { background: rgba(140, 170, 235, 0.14); border: none; box-shadow: none; border-radius: 999px; }\n" ++
-            ".gs-results-scroll scrollbar slider { min-width: 8px; min-height: 24px; background: rgba(140, 170, 235, 0.30); border: none; box-shadow: none; border-radius: 999px; }\n" ++
+            ".gs-results-scroll scrollbar trough { background: rgba(140, 170, 235, 0.08); border: none; box-shadow: none; border-radius: 4px; }\n" ++
+            ".gs-results-scroll scrollbar slider { min-width: 5px; min-height: 22px; background: rgba(140, 170, 235, 0.24); border: none; box-shadow: none; border-radius: 4px; }\n" ++
             ".gs-results > row { background: transparent; background-color: transparent; background-image: none; border: none; padding: 4px 8px; border-radius: 8px; }\n" ++
             ".gs-results > row:selected,\n" ++
             ".gs-results > row:selected:focus,\n" ++
