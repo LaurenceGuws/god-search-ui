@@ -200,6 +200,11 @@ pub const Shell = struct {
         }
 
         gtk_async_coord.endAsyncSpinner(ctx);
+        if (payload.search_error) |err| {
+            gtk_results_flow.renderSearchError(ctx, allocator, err);
+            gtk_nav.selectFirstActionableRow(ctx);
+            return GFALSE;
+        }
         var scored = allocator.alloc(ScoredCandidate, payload.rows.len) catch return GFALSE;
         defer allocator.free(scored);
         for (payload.rows, 0..) |row, idx| {
@@ -284,6 +289,9 @@ pub const Shell = struct {
 
     fn emitTelemetry(ctx: *UiContext, kind: []const u8, action: []const u8, status: []const u8, detail: []const u8) void {
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        ctx.telemetry.emitActionEvent(allocator_ptr.*, kind, action, status, detail) catch {};
+        ctx.telemetry.emitActionEvent(allocator_ptr.*, kind, action, status, detail) catch |err| {
+            std.log.warn("telemetry write failed: {s}", .{@errorName(err)});
+            setStatus(ctx, "Telemetry write failed");
+        };
     }
 };

@@ -56,6 +56,8 @@ pub fn resolveSelectionKind(
     }
 
     if (dispatch.requiresConfirmationKind(parsed_kind, action) and !pending_power_confirm) {
+        // Do not record a selection until the guarded action is actually confirmed/executed.
+        result.record_selection = false;
         result.clear_power_confirmation = false;
         result.guard_waiting_confirmation = true;
         return result;
@@ -65,4 +67,26 @@ pub fn resolveSelectionKind(
     result.plan = plan;
     result.intent = .run_plan;
     return result;
+}
+
+test "guarded action waits for confirmation and does not record selection" {
+    var decision = try resolveSelectionKind(std.testing.allocator, .action, "power", false);
+    defer decision.deinit(std.testing.allocator);
+
+    try std.testing.expect(!decision.record_selection);
+    try std.testing.expect(!decision.clear_power_confirmation);
+    try std.testing.expect(decision.guard_waiting_confirmation);
+    try std.testing.expectEqual(Intent.none, decision.intent);
+    try std.testing.expect(decision.plan == null);
+}
+
+test "guarded action records selection only after confirmation" {
+    var decision = try resolveSelectionKind(std.testing.allocator, .action, "power", true);
+    defer decision.deinit(std.testing.allocator);
+
+    try std.testing.expect(decision.record_selection);
+    try std.testing.expect(decision.clear_power_confirmation);
+    try std.testing.expect(!decision.guard_waiting_confirmation);
+    try std.testing.expectEqual(Intent.run_plan, decision.intent);
+    try std.testing.expect(decision.plan != null);
 }

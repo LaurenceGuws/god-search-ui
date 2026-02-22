@@ -18,6 +18,7 @@ pub const AsyncSearchResult = struct {
     total_len: usize,
     query: []u8,
     rows: []AsyncRenderedRow,
+    search_error: ?anyerror,
     on_ready: *const fn (?*anyopaque) callconv(.c) gtk_types.c.gboolean,
 };
 

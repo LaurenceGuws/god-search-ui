@@ -13,7 +13,14 @@ pub fn run(allocator: std.mem.Allocator, service: *app.SearchService) !void {
     try stdout.print("[ui] commands: :refresh, :icondiag, :icondiag --json\n", .{});
     while (true) {
         try stdout.print("search> ", .{});
-        const line_opt = try stdin.readUntilDelimiterOrEofAlloc(allocator, '\n', 4096);
+        const line_opt = stdin.readUntilDelimiterOrEofAlloc(allocator, '\n', 4096) catch |err| switch (err) {
+            error.StreamTooLong => {
+                try drainUntilNewline(&stdin);
+                try stdout.print("  input too long (max 4096 bytes); line discarded\n", .{});
+                continue;
+            },
+            else => return err,
+        };
         defer if (line_opt) |line| allocator.free(line);
         const line = line_opt orelse break;
         const query = std.mem.trim(u8, line, " \t\r\n");
@@ -41,5 +48,15 @@ pub fn run(allocator: std.mem.Allocator, service: *app.SearchService) !void {
         if (ranked.len > 0 and common_dispatch.shouldRecordCandidate(ranked[0].candidate.kind)) {
             try service.recordSelection(allocator, ranked[0].candidate.action);
         }
+    }
+}
+
+fn drainUntilNewline(reader: anytype) !void {
+    while (true) {
+        const byte = reader.readByte() catch |err| switch (err) {
+            error.EndOfStream => return,
+            else => return err,
+        };
+        if (byte == '\n') return;
     }
 }

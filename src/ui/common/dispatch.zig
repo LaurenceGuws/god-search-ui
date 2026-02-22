@@ -31,7 +31,7 @@ pub fn shouldRecordSelectionKind(kind: kinds.UiKind) bool {
 
 pub fn shouldRecordCandidate(kind: search.CandidateKind) bool {
     return switch (kind) {
-        .file_option, .dir_option, .module => false,
+        .dir, .file, .grep, .hint => false,
         else => true,
     };
 }

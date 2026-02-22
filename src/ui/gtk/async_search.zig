@@ -80,6 +80,7 @@ fn spawnAsyncRouteSearchWorker(
         .total_len = 0,
         .query = query_owned,
         .rows = &.{},
+        .search_error = null,
         .on_ready = on_ready,
     };
     const worker = std.Thread.spawn(.{}, asyncRouteSearchWorker, .{payload}) catch {
@@ -103,17 +104,18 @@ fn asyncRouteSearchWorker(payload: *AsyncSearchResult) void {
         return;
     }
 
-    const ranked = ctx.service.searchQuery(allocator, payload.query) catch {
+    const ranked = ctx.service.searchQuery(allocator, payload.query) catch |err| {
+        markPayloadSearchFailure(payload, err);
         dispatchOrFreePayload(ctx, allocator, payload);
         return;
     };
     defer allocator.free(ranked);
 
+    payload.search_error = null;
     payload.total_len = ranked.len;
     const limit = @min(ranked.len, 20);
     payload.rows = allocator.alloc(AsyncRenderedRow, limit) catch {
-        payload.total_len = 0;
-        payload.rows = &.{};
+        markPayloadSearchFailure(payload, error.OutOfMemory);
         dispatchOrFreePayload(ctx, allocator, payload);
         return;
     };
@@ -130,6 +132,12 @@ fn asyncRouteSearchWorker(payload: *AsyncSearchResult) void {
     }
 
     dispatchOrFreePayload(ctx, allocator, payload);
+}
+
+fn markPayloadSearchFailure(payload: *AsyncSearchResult, err: anyerror) void {
+    payload.search_error = err;
+    payload.total_len = 0;
+    payload.rows = &.{};
 }
 
 pub fn beginAsyncShutdown(ctx: *UiContext) void {
@@ -208,4 +216,136 @@ test "worker tracking increments and decrements count" {
     c.g_mutex_lock(&ctx.async_worker_lock);
     try std.testing.expectEqual(@as(c.guint, 0), ctx.async_worker_count);
     c.g_mutex_unlock(&ctx.async_worker_lock);
+}
+
+test "mark payload search failure stores error and clears rows" {
+    var ctx = std.mem.zeroes(UiContext);
+    var rows = [_]AsyncRenderedRow{};
+    var payload = AsyncSearchResult{
+        .ctx = &ctx,
+        .generation = 1,
+        .total_len = 7,
+        .query = &.{},
+        .rows = rows[0..],
+        .search_error = null,
+        .on_ready = testNoopIdle,
+    };
+
+    markPayloadSearchFailure(&payload, error.OutOfMemory);
+
+    try std.testing.expectEqual(@as(?anyerror, error.OutOfMemory), payload.search_error);
+    try std.testing.expectEqual(@as(usize, 0), payload.total_len);
+    try std.testing.expectEqual(@as(usize, 0), payload.rows.len);
+}
+
+fn testNoopIdle(_: ?*anyopaque) callconv(.c) c.gboolean {
+    return GFALSE;
+}
+
+test "startAsyncRouteSearch replaces pending query while worker is active" {
+    var allocator = std.testing.allocator;
+    var ctx = std.mem.zeroes(UiContext);
+    initTestAsyncCtx(&ctx, &allocator);
+    defer deinitTestAsyncCtx(&ctx);
+
+    ctx.async_worker_active = GTRUE;
+    const spinner = testSpinnerCounterCallbacks();
+
+    startAsyncRouteSearch(&ctx, allocator, "first", spinner, testNoopIdle);
+    startAsyncRouteSearch(&ctx, allocator, "second", spinner, testNoopIdle);
+
+    try std.testing.expectEqual(@as(u64, 2), ctx.async_search_generation);
+    try std.testing.expectEqual(@as(u8, 2), ctx.async_spinner_phase);
+    try std.testing.expectEqual(@as(c.guint, 0), ctx.async_spinner_id);
+    try expectPendingQuery(&ctx, "second");
+}
+
+test "cancelAsyncRouteSearch clears pending query and ends spinner" {
+    var allocator = std.testing.allocator;
+    var ctx = std.mem.zeroes(UiContext);
+    initTestAsyncCtx(&ctx, &allocator);
+    defer deinitTestAsyncCtx(&ctx);
+    const spinner = testSpinnerCounterCallbacks();
+
+    const pending = try allocator.dupe(u8, "queued");
+    gtk_async.queuePendingAsyncQuery(&ctx, allocator, pending);
+    ctx.async_search_generation = 41;
+
+    cancelAsyncRouteSearch(&ctx, spinner);
+
+    try std.testing.expectEqual(@as(u64, 42), ctx.async_search_generation);
+    try std.testing.expectEqual(@as(u8, 0), ctx.async_spinner_phase);
+    try std.testing.expectEqual(@as(c.guint, 1), ctx.async_spinner_id);
+    try std.testing.expectEqual(@as(?[*]u8, null), ctx.async_pending_query_ptr);
+    try std.testing.expectEqual(@as(usize, 0), ctx.async_pending_query_len);
+}
+
+test "launchPendingAsyncQuery clears pending and ends spinner when spawn fails" {
+    var backing_allocator = std.testing.allocator;
+    var failing_state = std.testing.FailingAllocator.init(backing_allocator, .{
+        .fail_index = 1,
+    });
+    const failing_allocator = failing_state.allocator();
+
+    var ctx = std.mem.zeroes(UiContext);
+    initTestAsyncCtx(&ctx, &backing_allocator);
+    defer deinitTestAsyncCtx(&ctx);
+    const spinner = testSpinnerCounterCallbacks();
+
+    const pending = try failing_allocator.dupe(u8, "queued");
+    gtk_async.queuePendingAsyncQuery(&ctx, failing_allocator, pending);
+    ctx.async_search_generation = 9;
+
+    try std.testing.expect(!launchPendingAsyncQuery(&ctx, failing_allocator, spinner, testNoopIdle));
+
+    try std.testing.expect(failing_state.has_induced_failure);
+    try std.testing.expectEqual(@as(c.gboolean, GFALSE), ctx.async_worker_active);
+    try std.testing.expectEqual(@as(c.guint, 0), getAsyncWorkerCount(&ctx));
+    try std.testing.expectEqual(@as(u8, 0), ctx.async_spinner_phase);
+    try std.testing.expectEqual(@as(c.guint, 1), ctx.async_spinner_id);
+    try std.testing.expectEqual(@as(?[*]u8, null), ctx.async_pending_query_ptr);
+    try std.testing.expectEqual(@as(usize, 0), ctx.async_pending_query_len);
+    try std.testing.expectEqual(@as(u64, 9), ctx.async_search_generation);
+}
+
+fn initTestAsyncCtx(ctx: *UiContext, allocator: *std.mem.Allocator) void {
+    ctx.* = std.mem.zeroes(UiContext);
+    ctx.allocator = @ptrCast(allocator);
+    c.g_mutex_init(&ctx.async_worker_lock);
+    c.g_cond_init(&ctx.async_worker_cond);
+}
+
+fn deinitTestAsyncCtx(ctx: *UiContext) void {
+    gtk_async.freePendingAsyncQuery(ctx);
+    c.g_mutex_clear(&ctx.async_worker_lock);
+    c.g_cond_clear(&ctx.async_worker_cond);
+}
+
+fn testSpinnerCounterCallbacks() SpinnerCallbacks {
+    return .{
+        .begin = testCountSpinnerBegin,
+        .end = testCountSpinnerEnd,
+    };
+}
+
+fn testCountSpinnerBegin(ctx: *UiContext) void {
+    ctx.async_spinner_phase +%= 1;
+}
+
+fn testCountSpinnerEnd(ctx: *UiContext) void {
+    ctx.async_spinner_id += 1;
+}
+
+fn expectPendingQuery(ctx: *UiContext, expected: []const u8) !void {
+    const ptr = ctx.async_pending_query_ptr orelse {
+        return std.testing.expect(false);
+    };
+    try std.testing.expectEqual(expected.len, ctx.async_pending_query_len);
+    try std.testing.expectEqualStrings(expected, ptr[0..ctx.async_pending_query_len]);
+}
+
+fn getAsyncWorkerCount(ctx: *UiContext) c.guint {
+    c.g_mutex_lock(&ctx.async_worker_lock);
+    defer c.g_mutex_unlock(&ctx.async_worker_lock);
+    return ctx.async_worker_count;
 }

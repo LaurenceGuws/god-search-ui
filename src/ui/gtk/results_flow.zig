@@ -43,10 +43,7 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     hooks.cancel_async_route_search(ctx);
 
     const ranked = ctx.service.searchQuery(allocator, query) catch |err| {
-        const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
-        defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
-        gtk_widgets.appendInfoRow(ctx.list, msg);
-        gtk_status.setStatus(ctx, "Search failed");
+        renderSearchError(ctx, allocator, err);
         return;
     };
     defer allocator.free(ranked);
@@ -54,6 +51,16 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     renderRankedRows(ctx, allocator, query_trimmed, ranked, ranked.len);
     _ = ctx.service.drainScheduledRefresh(allocator) catch false;
     gtk_nav.selectFirstActionableRow(ctx);
+}
+
+pub fn renderSearchError(ctx: *UiContext, allocator: std.mem.Allocator, err: anyerror) void {
+    const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
+    defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
+
+    gtk_widgets.clearList(ctx.list);
+    gtk_widgets.appendInfoRow(ctx.list, msg);
+    ctx.last_render_hash = std.hash.Wyhash.hash(0x5ea2c8d7, msg);
+    gtk_status.setStatus(ctx, "Search failed");
 }
 
 pub fn renderRankedRows(
