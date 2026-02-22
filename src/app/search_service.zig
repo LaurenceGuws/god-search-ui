@@ -16,6 +16,8 @@ const query_engine = @import("search_service/query_engine.zig");
 const refresh_worker = @import("search_service/refresh_worker.zig");
 
 pub const SearchService = struct {
+    pub const QueryFlagsSnapshot = query_metrics_access.QueryFlagsSnapshot;
+
     registry: providers.ProviderRegistry,
     query_mu: std.Thread.Mutex = .{},
     history_path: ?[]const u8 = null,
@@ -180,6 +182,7 @@ pub const SearchService = struct {
             self.refresh_thread_running,
         )) return;
         refresh_worker.markRunning(&self.refresh_thread_running);
+        errdefer refresh_worker.markStopped(&self.refresh_thread_running);
         self.refresh_thread = try std.Thread.spawn(.{}, refreshWorkerMain, .{self});
     }
 
@@ -206,6 +209,14 @@ pub const SearchService = struct {
         self.query_mu.lock();
         defer self.query_mu.unlock();
         try history_access.saveLocked(self.history.items, self.history_path, allocator);
+    }
+
+    pub fn queryFlagsSnapshot(self: *SearchService) QueryFlagsSnapshot {
+        return query_metrics_access.readFlags(
+            &self.query_mu,
+            &self.last_query_refreshed_cache,
+            &self.last_query_used_stale_cache,
+        );
     }
 
     fn historySnapshotNewestFirstOwned(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {

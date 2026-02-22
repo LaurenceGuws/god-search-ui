@@ -1,6 +1,11 @@
 const std = @import("std");
 const query_metrics = @import("query_metrics.zig");
 
+pub const QueryFlagsSnapshot = struct {
+    last_query_refreshed_cache: bool,
+    last_query_used_stale_cache: bool,
+};
+
 pub fn markRefreshed(
     query_mu: *std.Thread.Mutex,
     last_query_refreshed_cache: *bool,
@@ -28,4 +33,17 @@ pub fn resetFlags(
     query_mu.lock();
     defer query_mu.unlock();
     query_metrics.resetFlags(last_query_refreshed_cache, last_query_used_stale_cache);
+}
+
+pub fn readFlags(
+    query_mu: *std.Thread.Mutex,
+    last_query_refreshed_cache: *const bool,
+    last_query_used_stale_cache: *const bool,
+) QueryFlagsSnapshot {
+    query_mu.lock();
+    defer query_mu.unlock();
+    return .{
+        .last_query_refreshed_cache = last_query_refreshed_cache.*,
+        .last_query_used_stale_cache = last_query_used_stale_cache.*,
+    };
 }

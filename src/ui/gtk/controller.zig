@@ -94,7 +94,8 @@ pub fn updateEntryRouteIcon(ctx: *UiContext, query: []const u8) void {
 
 pub fn handleRowSelected(ctx: *UiContext, row: *c.GtkListBoxRow, hooks: StatusHooks) void {
     if (ctx.pending_power_confirm == GTRUE) return;
-    if (ctx.service.last_query_used_stale_cache or ctx.service.last_query_refreshed_cache) return;
+    const query_flags = ctx.service.queryFlagsSnapshot();
+    if (query_flags.last_query_used_stale_cache or query_flags.last_query_refreshed_cache) return;
 
     const title = gtk_row_data.title(row) orelse return;
     const kind_label = common_dispatch.kinds.statusLabel(gtk_row_data.kind(row));

@@ -2,14 +2,17 @@ const std = @import("std");
 const search = @import("../search/mod.zig");
 
 pub const WindowsProvider = struct {
-    owned_strings: std.ArrayListUnmanaged([]u8) = .{},
+    owned_strings_current: std.ArrayListUnmanaged([]u8) = .{},
+    owned_strings_previous: std.ArrayListUnmanaged([]u8) = .{},
     had_runtime_failure: bool = false,
     list_windows_fn: *const fn (allocator: std.mem.Allocator) anyerror![]u8 = listWindowsWithSystemTools,
     has_tools_fn: *const fn () bool = hasSystemTools,
 
     pub fn deinit(self: *WindowsProvider, allocator: std.mem.Allocator) void {
-        for (self.owned_strings.items) |item| allocator.free(item);
-        self.owned_strings.deinit(allocator);
+        self.freeOwnedStrings(allocator, &self.owned_strings_current);
+        self.freeOwnedStrings(allocator, &self.owned_strings_previous);
+        self.owned_strings_current.deinit(allocator);
+        self.owned_strings_previous.deinit(allocator);
     }
 
     pub fn provider(self: *WindowsProvider) search.Provider {
@@ -25,6 +28,7 @@ pub const WindowsProvider = struct {
 
     fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
         const self: *WindowsProvider = @ptrCast(@alignCast(context));
+        self.rotateOwnedStringsForCollect(allocator);
         if (!self.has_tools_fn()) {
             return;
         }
@@ -61,8 +65,24 @@ pub const WindowsProvider = struct {
 
     fn keepString(self: *WindowsProvider, allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
         const copy = try allocator.dupe(u8, value);
-        try self.owned_strings.append(allocator, copy);
+        try self.owned_strings_current.append(allocator, copy);
         return copy;
+    }
+
+    fn rotateOwnedStringsForCollect(self: *WindowsProvider, allocator: std.mem.Allocator) void {
+        self.freeOwnedStrings(allocator, &self.owned_strings_previous);
+        std.mem.swap(
+            std.ArrayListUnmanaged([]u8),
+            &self.owned_strings_current,
+            &self.owned_strings_previous,
+        );
+        self.owned_strings_current.clearRetainingCapacity();
+    }
+
+    fn freeOwnedStrings(self: *WindowsProvider, allocator: std.mem.Allocator, strings: *std.ArrayListUnmanaged([]u8)) void {
+        _ = self;
+        for (strings.items) |item| allocator.free(item);
+        strings.clearRetainingCapacity();
     }
 };
 
@@ -188,4 +208,44 @@ test "windows provider runtime query failure degrades health while keeping UX gr
 
     try std.testing.expectEqual(@as(usize, 0), list.items.len);
     try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
+}
+
+test "windows provider rotates owned strings across collects with bounded growth" {
+    const Fake = struct {
+        fn hasTools() bool {
+            return true;
+        }
+
+        fn listWindows(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8,
+                \\Terminal\tkitty\t0xabc
+                \\Browser\tzen\t0xdef
+                \\
+            );
+        }
+    };
+
+    var provider_impl = WindowsProvider{
+        .list_windows_fn = Fake.listWindows,
+        .has_tools_fn = Fake.hasTools,
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+    const first_total = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
+    try std.testing.expectEqual(@as(usize, 6), first_total);
+
+    list.clearRetainingCapacity();
+    try provider.collect(std.testing.allocator, &list);
+    const second_total = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
+    try std.testing.expectEqual(@as(usize, 12), second_total);
+
+    list.clearRetainingCapacity();
+    try provider.collect(std.testing.allocator, &list);
+    const third_total = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
+    try std.testing.expectEqual(@as(usize, 12), third_total);
 }

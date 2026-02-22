@@ -24,13 +24,8 @@ pub fn rankCandidatesWithHistory(
     var scored = std.ArrayList(ScoredCandidate).empty;
     defer scored.deinit(allocator);
 
-    var owned_needle: ?[]u8 = null;
-    var needle: []const u8 = "";
-    if (lowerAsciiLossyAlloc(allocator, query.term)) |buf| {
-        owned_needle = buf;
-        needle = buf;
-    } else |_| {}
-    defer if (owned_needle) |buf| allocator.free(buf);
+    const needle = try lowerAsciiLossyAlloc(allocator, query.term);
+    defer allocator.free(needle);
 
     for (candidates) |candidate| {
         if (!matchesRoute(query.route, candidate.kind)) continue;
@@ -219,4 +214,16 @@ test "short blended query prefers actions over broad app matches" {
     try std.testing.expectEqual(@as(usize, 2), ranked.len);
     try std.testing.expectEqual(types.CandidateKind.action, ranked[0].candidate.kind);
     try std.testing.expectEqualStrings("Restart Waybar", ranked[0].candidate.title);
+}
+
+test "rankCandidates propagates canonicalization alloc failure" {
+    var zero_buf: [0]u8 = .{};
+    var fba = std.heap.FixedBufferAllocator.init(&zero_buf);
+    const candidates = [_]types.Candidate{};
+
+    const query = query_mod.parse("a");
+    try std.testing.expectError(
+        error.OutOfMemory,
+        rankCandidates(fba.allocator(), query, &candidates),
+    );
 }

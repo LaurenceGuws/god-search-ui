@@ -86,9 +86,10 @@ pub fn renderRankedRows(
         }
         ctx.last_render_hash = render_hash;
     }
-    if (ctx.service.last_query_used_stale_cache) {
+    const query_flags = ctx.service.queryFlagsSnapshot();
+    if (query_flags.last_query_used_stale_cache) {
         gtk_status.setStatus(ctx, "Refresh scheduled");
-    } else if (ctx.service.last_query_refreshed_cache) {
+    } else if (query_flags.last_query_refreshed_cache) {
         gtk_status.setStatus(ctx, "Snapshot refreshed");
     } else if (empty_query and has_app_glyph_fallback and ctx.pending_power_confirm == GFALSE) {
         gtk_status.setStatus(ctx, "App icon fallback active (headless :icondiag for breakdown)");

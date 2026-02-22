@@ -2,6 +2,7 @@ const std = @import("std");
 const providers = @import("../providers/mod.zig");
 const search = @import("../search/mod.zig");
 const cache_snapshots = @import("search_service/cache_snapshots.zig");
+const refresh_worker = @import("search_service/refresh_worker.zig");
 const SearchService = @import("search_service.zig").SearchService;
 
 test "search service applies history boost through ranking" {
@@ -156,6 +157,50 @@ test "stale refresh marks last_query_refreshed_cache" {
     try std.testing.expect(refreshed);
     try std.testing.expect(!service.refresh_requested);
     try std.testing.expectEqual(@as(usize, 2), Fake.collect_calls);
+}
+
+test "queryFlagsSnapshot exposes current query flags" {
+    const Fake = struct {
+        fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+            _ = context;
+            try out.append(allocator, search.Candidate.init(.action, "Settings", "System", "settings"));
+        }
+
+        fn health(context: *anyopaque) search.ProviderHealth {
+            _ = context;
+            return .ready;
+        }
+    };
+
+    var dummy: u8 = 0;
+    const source = [_]search.Provider{
+        .{
+            .name = "fake",
+            .context = &dummy,
+            .vtable = &.{ .collect = Fake.collect, .health = Fake.health },
+        },
+    };
+
+    const registry = providers.ProviderRegistry.init(&source);
+    var service = SearchService.init(registry);
+    defer service.deinit(std.testing.allocator);
+
+    const initial_flags = service.queryFlagsSnapshot();
+    try std.testing.expect(!initial_flags.last_query_used_stale_cache);
+    try std.testing.expect(!initial_flags.last_query_refreshed_cache);
+
+    service.cache_ttl_ns = 0;
+    try service.prewarmProviders(std.testing.allocator);
+    const ranked = try service.searchQuery(std.testing.allocator, "");
+    defer std.testing.allocator.free(ranked);
+
+    const stale_flags = service.queryFlagsSnapshot();
+    try std.testing.expect(stale_flags.last_query_used_stale_cache);
+    try std.testing.expect(!stale_flags.last_query_refreshed_cache);
+
+    _ = try service.drainScheduledRefresh(std.testing.allocator);
+    const refreshed_flags = service.queryFlagsSnapshot();
+    try std.testing.expect(refreshed_flags.last_query_refreshed_cache);
 }
 
 test "history load and save roundtrip" {
@@ -336,4 +381,11 @@ test "cache generation clear releases backing storage and is idempotent" {
     try std.testing.expectEqual(@as(usize, 0), generations.capacity);
 
     cache_snapshots.clearGenerations(&generations, std.testing.allocator);
+}
+
+test "refresh worker running flag can be rolled back after spawn failure" {
+    var running = false;
+    refresh_worker.markRunning(&running);
+    refresh_worker.markStopped(&running);
+    try std.testing.expect(!running);
 }
