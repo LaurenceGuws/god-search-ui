@@ -28,7 +28,6 @@ pub const WindowsProvider = struct {
 
     fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
         const self: *WindowsProvider = @ptrCast(@alignCast(context));
-        self.rotateOwnedStringsForCollect(allocator);
         if (!self.has_tools_fn()) {
             return;
         }
@@ -40,6 +39,7 @@ pub const WindowsProvider = struct {
         };
         self.had_runtime_failure = false;
         defer allocator.free(rows);
+        self.rotateOwnedStringsForCollect(allocator);
 
         var lines = std.mem.splitScalar(u8, rows, '\n');
         while (lines.next()) |line| {
@@ -49,9 +49,9 @@ pub const WindowsProvider = struct {
             const class = fields.next() orelse "Window";
             const address = fields.next() orelse continue;
 
-            const kept_title = try self.keepString(allocator, title);
-            const kept_class = try self.keepString(allocator, class);
-            const kept_address = try self.keepString(allocator, address);
+            const kept_title = try self.keepJqTsvField(allocator, title);
+            const kept_class = try self.keepJqTsvField(allocator, class);
+            const kept_address = try self.keepJqTsvField(allocator, address);
             try out.append(allocator, search.Candidate.init(.window, kept_title, kept_class, kept_address));
         }
     }
@@ -65,6 +65,43 @@ pub const WindowsProvider = struct {
 
     fn keepString(self: *WindowsProvider, allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
         const copy = try allocator.dupe(u8, value);
+        try self.owned_strings_current.append(allocator, copy);
+        return copy;
+    }
+
+    fn keepJqTsvField(self: *WindowsProvider, allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
+        if (std.mem.indexOfScalar(u8, value, '\\') == null) {
+            return self.keepString(allocator, value);
+        }
+
+        var decoded = std.ArrayList(u8).empty;
+        defer decoded.deinit(allocator);
+
+        var i: usize = 0;
+        while (i < value.len) : (i += 1) {
+            if (value[i] != '\\') {
+                try decoded.append(allocator, value[i]);
+                continue;
+            }
+            if (i + 1 >= value.len) {
+                try decoded.append(allocator, '\\');
+                continue;
+            }
+
+            i += 1;
+            switch (value[i]) {
+                'n' => try decoded.append(allocator, '\n'),
+                'r' => try decoded.append(allocator, '\r'),
+                't' => try decoded.append(allocator, '\t'),
+                '\\' => try decoded.append(allocator, '\\'),
+                else => {
+                    try decoded.append(allocator, '\\');
+                    try decoded.append(allocator, value[i]);
+                },
+            }
+        }
+
+        const copy = try decoded.toOwnedSlice(allocator);
         try self.owned_strings_current.append(allocator, copy);
         return copy;
     }
@@ -107,7 +144,7 @@ fn commandExists(name: []const u8) bool {
 
 fn listWindowsWithSystemTools(allocator: std.mem.Allocator) ![]u8 {
     const query =
-        "hyprctl clients -j | jq -r '.[] | select(.mapped == true and (.workspace.id // -1) >= 0) | \"\\((.title // \"\") | if length > 0 then . else (.class // \"Window\") end)\\t\\(.class // \"Window\")\\t\\(.address // \"\")\"'";
+        "hyprctl clients -j | jq -r '.[] | select(.mapped == true and (.workspace.id // -1) >= 0) | [((.title // \"\") | if length > 0 then . else (.class // \"Window\") end), (.class // \"Window\"), (.address // \"\")] | @tsv'";
     const result = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &.{ "sh", "-lc", query },
@@ -208,6 +245,91 @@ test "windows provider runtime query failure degrades health while keeping UX gr
 
     try std.testing.expectEqual(@as(usize, 0), list.items.len);
     try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
+}
+
+test "windows provider keeps prior generations alive on transient failure" {
+    const Fake = struct {
+        fn hasTools() bool {
+            return true;
+        }
+
+        fn listWindowsA(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8, "Terminal\tkitty\t0xaaa\n");
+        }
+
+        fn listWindowsB(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8, "Browser\tzen\t0xbbb\n");
+        }
+
+        fn listWindowsFail(_: std.mem.Allocator) ![]u8 {
+            return error.WindowQueryFailed;
+        }
+    };
+
+    var provider_impl = WindowsProvider{
+        .list_windows_fn = Fake.listWindowsA,
+        .has_tools_fn = Fake.hasTools,
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+    const first_title = list.items[0].title;
+    const first_action = list.items[0].action;
+
+    list.clearRetainingCapacity();
+    provider_impl.list_windows_fn = Fake.listWindowsB;
+    try provider.collect(std.testing.allocator, &list);
+    const second_title = list.items[0].title;
+    const second_action = list.items[0].action;
+
+    const total_before_failure = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
+    try std.testing.expectEqual(@as(usize, 6), total_before_failure);
+
+    list.clearRetainingCapacity();
+    provider_impl.list_windows_fn = Fake.listWindowsFail;
+    try provider.collect(std.testing.allocator, &list);
+
+    const total_after_failure = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
+    try std.testing.expectEqual(total_before_failure, total_after_failure);
+    try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
+    try std.testing.expectEqual(@as(usize, 0), list.items.len);
+    try std.testing.expectEqualStrings("Terminal", first_title);
+    try std.testing.expectEqualStrings("0xaaa", first_action);
+    try std.testing.expectEqualStrings("Browser", second_title);
+    try std.testing.expectEqualStrings("0xbbb", second_action);
+}
+
+test "windows provider decodes jq tsv escaped tabs and newlines" {
+    const Fake = struct {
+        fn hasTools() bool {
+            return true;
+        }
+
+        fn listWindows(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8, "Title\\\\Thing\\tTabbed\\nName\tclass\\\\name\t0xabc\n");
+        }
+    };
+
+    var provider_impl = WindowsProvider{
+        .list_windows_fn = Fake.listWindows,
+        .has_tools_fn = Fake.hasTools,
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 1), list.items.len);
+    try std.testing.expectEqualStrings("Title\\Thing\tTabbed\nName", list.items[0].title);
+    try std.testing.expectEqualStrings("class\\name", list.items[0].subtitle);
+    try std.testing.expectEqualStrings("0xabc", list.items[0].action);
 }
 
 test "windows provider rotates owned strings across collects with bounded growth" {

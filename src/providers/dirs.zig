@@ -28,7 +28,6 @@ pub const DirsProvider = struct {
 
     fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
         const self: *DirsProvider = @ptrCast(@alignCast(context));
-        self.rotateOwnedStringsForCollect(allocator);
         if (!self.has_tools_fn()) {
             return;
         }
@@ -40,6 +39,7 @@ pub const DirsProvider = struct {
         };
         self.had_runtime_failure = false;
         defer allocator.free(rows);
+        self.rotateOwnedStringsForCollect(allocator);
 
         var lines = std.mem.splitScalar(u8, rows, '\n');
         while (lines.next()) |line| {
@@ -236,6 +236,68 @@ test "dirs provider runtime query failure degrades health while keeping UX grace
 
     try std.testing.expectEqual(@as(usize, 0), list.items.len);
     try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
+}
+
+test "dirs provider keeps prior generations alive on transient failure" {
+    const Fake = struct {
+        fn hasTools() bool {
+            return true;
+        }
+
+        fn listDirsA(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8,
+                \\1.0 /tmp/alpha dir
+                \\
+            );
+        }
+
+        fn listDirsB(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8,
+                \\2.0 /tmp/beta dir
+                \\
+            );
+        }
+
+        fn listDirsFail(_: std.mem.Allocator) ![]u8 {
+            return error.DirQueryFailed;
+        }
+    };
+
+    var provider_impl = DirsProvider{
+        .list_dirs_fn = Fake.listDirsA,
+        .has_tools_fn = Fake.hasTools,
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+    const first_title = list.items[0].title;
+    const first_action = list.items[0].action;
+
+    list.clearRetainingCapacity();
+    provider_impl.list_dirs_fn = Fake.listDirsB;
+    try provider.collect(std.testing.allocator, &list);
+    const second_title = list.items[0].title;
+    const second_action = list.items[0].action;
+
+    const total_before_failure = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
+    try std.testing.expectEqual(@as(usize, 4), total_before_failure);
+
+    list.clearRetainingCapacity();
+    provider_impl.list_dirs_fn = Fake.listDirsFail;
+    try provider.collect(std.testing.allocator, &list);
+
+    const total_after_failure = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
+    try std.testing.expectEqual(total_before_failure, total_after_failure);
+    try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
+    try std.testing.expectEqual(@as(usize, 0), list.items.len);
+    try std.testing.expectEqualStrings("alpha dir", first_title);
+    try std.testing.expectEqualStrings("/tmp/alpha dir", first_action);
+    try std.testing.expectEqualStrings("beta dir", second_title);
+    try std.testing.expectEqualStrings("/tmp/beta dir", second_action);
 }
 
 test "dirs provider rotates owned strings across collects with bounded growth" {
