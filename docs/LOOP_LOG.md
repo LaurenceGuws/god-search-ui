@@ -5031,3 +5031,25 @@
   - M8: extract dynamic route orchestration (`searchDynamicRoute`) into `search_service/dynamic_query_engine.zig` so `SearchService` remains a thin top-level coordinator.
 
 ---
+## 2026-02-22 (Cycle 220)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract dynamic-route query orchestration into dedicated helper module
+- Changes:
+  - Added `src/app/search_service/dynamic_query_engine.zig`:
+    - `rankDynamicRoute(...)` helper that encapsulates dynamic-generation begin/prune + route collection + ranking
+  - Updated `src/app/search_service.zig`:
+    - `searchDynamicRoute(...)` now delegates orchestration to `dynamic_query_engine.rankDynamicRoute(...)`
+    - removed inline dynamic-route ranking boilerplate from service core
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/dynamic_query_engine.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior change intended; this is a structural extraction to keep `SearchService` focused on state/locking boundaries.
+- Next slice:
+  - M8: extract query-route classification + entry dispatch gate from `searchQuery` into a small helper to keep top-level flow linear.
+
+---

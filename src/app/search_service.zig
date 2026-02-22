@@ -7,6 +7,7 @@ const cache_refresh = @import("search_service/cache_refresh.zig");
 const cache_coordinator = @import("search_service/cache_coordinator.zig");
 const cache_snapshots = @import("search_service/cache_snapshots.zig");
 const dynamic_generations = @import("search_service/dynamic_generations.zig");
+const dynamic_query_engine = @import("search_service/dynamic_query_engine.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
 const query_metrics = @import("search_service/query_metrics.zig");
 const query_engine = @import("search_service/query_engine.zig");
@@ -107,22 +108,17 @@ pub const SearchService = struct {
     fn searchDynamicRoute(self: *SearchService, allocator: std.mem.Allocator, query: search.Query) ![]search.ScoredCandidate {
         // Dynamic route candidates reference owned strings stored in retained generations.
         // We keep a bounded number of generations to cap long-session memory growth.
-        var dynamic_candidates = search.CandidateList.empty;
-        defer dynamic_candidates.deinit(allocator);
-        const term = std.mem.trim(u8, query.term, " \t\r\n");
-        if (term.len == 0) return allocator.alloc(search.ScoredCandidate, 0);
-        {
-            self.dynamic_mu.lock();
-            defer self.dynamic_mu.unlock();
-
-            const generation = try dynamic_generations.begin(&self.dynamic_generations, allocator);
-            dynamic_routes.collectForRoute(&self.dynamic_tool_state, generation, allocator, query, &dynamic_candidates) catch {};
-            dynamic_generations.prune(&self.dynamic_generations, self.dynamic_generation_keep, allocator);
-        }
-
         const recent = try self.historySnapshotNewestFirstOwned(allocator);
         defer history_access.freeSnapshot(allocator, recent);
-        return search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);
+        return dynamic_query_engine.rankDynamicRoute(
+            &self.dynamic_mu,
+            &self.dynamic_tool_state,
+            &self.dynamic_generations,
+            self.dynamic_generation_keep,
+            allocator,
+            query,
+            recent,
+        );
     }
 
     pub fn prewarmProviders(self: *SearchService, allocator: std.mem.Allocator) !void {
