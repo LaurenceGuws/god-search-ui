@@ -212,3 +212,6 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 6 - preserve blended no-prefix behavior for typed queries.
 - [x] M8: UX Phase 6 - stabilize `rg` route for large-result terms using bounded output and parser-side caps.
 - [x] M8: UX Phase 6 - reduce `%`/`&` home-scan noise by excluding codex/cache/trash/opencode paths.
+- [x] M8: UX Phase 6 - add route-aware debounce throttling for `%`/`&` heavy queries.
+- [x] M8: UX Phase 6 - add render diff hash to skip redundant GTK list rebuilds.
+- [x] M8: UX Phase 6 - add CSS transitions for actionable row/state color changes.

@@ -4021,3 +4021,30 @@
   - M8: UX Phase 6 - add configurable search roots for `%`/`&` (cwd-first or env-configured roots).
 
 ---
+## 2026-02-22 (Cycle 180)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX responsiveness pass - reduce GTK thread churn and improve perceived smoothness
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - route-aware debounce for heavy dynamic modules:
+      - `%`/`&` now use longer debounce windows for short terms
+      - preserves faster debounce for normal app/window/dir/action flows
+    - added render diff hashing:
+      - computes hash from query + hints + rendered rows
+      - skips list clear/rebuild when rendered state is unchanged
+    - refined empty-query menu rendering:
+      - module filter menu only rebuilds when empty-view hash changes
+    - added CSS transitions for actionable row/state changes:
+      - smoother hover/selection/color updates
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this pass reduces churn/jitter but does not yet move `%`/`&` process execution fully off the GTK thread.
+- Next slice:
+  - M8: UX responsiveness - async worker path for `%`/`&` query execution with stale-result handoff.
+
+---

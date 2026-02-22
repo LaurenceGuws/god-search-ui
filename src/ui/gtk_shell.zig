@@ -28,6 +28,7 @@ const UiContext = extern struct {
     status_reset_id: c.guint,
     last_status_hash: u64,
     last_status_tone: u8,
+    last_render_hash: u64,
 };
 
 pub const Shell = struct {
@@ -90,6 +91,7 @@ pub const Shell = struct {
         ctx.status_reset_id = 0;
         ctx.last_status_hash = 0;
         ctx.last_status_tone = 0;
+        ctx.last_render_hash = 0;
 
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
@@ -247,7 +249,7 @@ pub const Shell = struct {
         }
         const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
         const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
-        const debounce_ms = searchDebounceMs(std.mem.trim(u8, query, " \t\r\n").len);
+        const debounce_ms = searchDebounceMsForQuery(std.mem.trim(u8, query, " \t\r\n"));
         ctx.search_debounce_id = c.g_timeout_add(debounce_ms, onSearchDebounced, ctx);
     }
 
@@ -266,8 +268,15 @@ pub const Shell = struct {
         return GFALSE;
     }
 
-    fn searchDebounceMs(query_len: usize) c.guint {
+    fn searchDebounceMsForQuery(query_trimmed: []const u8) c.guint {
+        const query_len = query_trimmed.len;
         if (query_len == 0) return 110;
+        if (query_len >= 1 and (query_trimmed[0] == '%' or query_trimmed[0] == '&')) {
+            const term_len = if (query_len > 1) std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len else 0;
+            if (term_len <= 1) return 300;
+            if (term_len <= 3) return 220;
+            return 160;
+        }
         if (query_len <= 2) return 90;
         if (query_len <= 5) return 75;
         return 60;
@@ -392,9 +401,13 @@ pub const Shell = struct {
         const allocator = allocator_ptr.*;
         const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
 
-        clearList(ctx.list);
         if (query_trimmed.len == 0) {
-            appendModuleFilterMenu(ctx, allocator);
+            const empty_hash = std.hash.Wyhash.hash(0, "module-filter-menu");
+            if (ctx.last_render_hash != empty_hash) {
+                clearList(ctx.list);
+                appendModuleFilterMenu(ctx, allocator);
+                ctx.last_render_hash = empty_hash;
+            }
             if (ctx.pending_power_confirm == GFALSE) {
                 setStatus(ctx, "Choose a module filter or type without prefix for blended search");
             }
@@ -417,17 +430,22 @@ pub const Shell = struct {
         const route_hint = routeHintForQuery(query_trimmed);
         const highlight_token = highlightTokenForQuery(query_trimmed);
         const has_app_glyph_fallback = hasAppGlyphFallback(rows);
-        if (route_hint) |hint| {
-            appendInfoRow(ctx.list, hint);
-        }
-        if (rows.len == 0 and !empty_query and route_hint == null) {
-            appendInfoRow(ctx.list, "No results");
-            appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  % files  & grep  > run  = calc  ? web");
-        } else {
-            appendGroupedRows(ctx, allocator, rows, highlight_token);
-            if (ranked.len > limit) {
-                appendInfoRow(ctx.list, "Showing top 20 results");
+        const render_hash = computeRenderHash(query_trimmed, route_hint, rows, ranked.len);
+        if (ctx.last_render_hash != render_hash) {
+            clearList(ctx.list);
+            if (route_hint) |hint| {
+                appendInfoRow(ctx.list, hint);
             }
+            if (rows.len == 0 and !empty_query and route_hint == null) {
+                appendInfoRow(ctx.list, "No results");
+                appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  % files  & grep  > run  = calc  ? web");
+            } else {
+                appendGroupedRows(ctx, allocator, rows, highlight_token);
+                if (ranked.len > limit) {
+                    appendInfoRow(ctx.list, "Showing top 20 results");
+                }
+            }
+            ctx.last_render_hash = render_hash;
         }
         if (ctx.service.last_query_used_stale_cache) {
             setStatus(ctx, "Refresh scheduled");
@@ -443,6 +461,27 @@ pub const Shell = struct {
 
         _ = ctx.service.drainScheduledRefresh(allocator) catch false;
         selectFirstActionableRow(ctx);
+    }
+
+    fn computeRenderHash(
+        query_trimmed: []const u8,
+        route_hint: ?[]const u8,
+        rows: []const @import("../search/mod.zig").ScoredCandidate,
+        total_len: usize,
+    ) u64 {
+        var h = std.hash.Wyhash.init(0);
+        h.update(query_trimmed);
+        if (route_hint) |hint| h.update(hint);
+        var len_buf: [32]u8 = undefined;
+        const len_txt = std.fmt.bufPrint(&len_buf, "{d}", .{total_len}) catch "";
+        h.update(len_txt);
+        for (rows) |row| {
+            h.update(kindTag(row.candidate.kind));
+            h.update(row.candidate.title);
+            h.update(row.candidate.subtitle);
+            h.update(row.candidate.action);
+        }
+        return h.final();
     }
 
     fn appendModuleFilterMenu(ctx: *UiContext, allocator: std.mem.Allocator) void {
@@ -1295,14 +1334,15 @@ pub const Shell = struct {
             ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
             ".gs-results > row { border-radius: 8px; padding: 4px 8px; }\n" ++
+            ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
             ".gs-results > row.gs-meta-row { padding-top: 2px; padding-bottom: 2px; }\n" ++
             ".gs-results > row.gs-actionable-row:selected { background: rgba(140, 170, 235, 0.28); border: 1px solid rgba(164, 192, 255, 0.65); }\n" ++
             ".gs-results > row.gs-actionable-row:hover { background: rgba(140, 170, 235, 0.14); }\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-primary { color: #f5f8ff; }\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-secondary { color: #d6def1; }\n" ++
             ".gs-kind-icon { color: #a9b1c7; font-size: 2em; }\n" ++
-            ".gs-candidate-primary { color: #e8ecf7; }\n" ++
-            ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n" ++
+            ".gs-candidate-primary { color: #e8ecf7; transition: color 120ms ease; }\n" ++
+            ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; transition: color 120ms ease; }\n" ++
             ".gs-primary-row { min-height: 20px; }\n" ++
             ".gs-chip { font-size: 0.72em; font-weight: 700; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; }\n" ++
             ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
