@@ -295,6 +295,54 @@ test "optional async refresh worker can execute scheduled refresh" {
     try std.testing.expect(Fake.collect_calls >= 2);
 }
 
+test "next query reaps finished async refresh thread handle when no new refresh is needed" {
+    const Fake = struct {
+        fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+            _ = context;
+            try out.append(allocator, search.Candidate.init(.action, "Settings", "System", "settings"));
+        }
+
+        fn health(context: *anyopaque) search.ProviderHealth {
+            _ = context;
+            return .ready;
+        }
+    };
+
+    var dummy: u8 = 0;
+    const source = [_]search.Provider{
+        .{
+            .name = "fake",
+            .context = &dummy,
+            .vtable = &.{ .collect = Fake.collect, .health = Fake.health },
+        },
+    };
+
+    const registry = providers.ProviderRegistry.init(&source);
+    var service = SearchService.init(registry);
+    defer service.deinit(std.testing.allocator);
+    service.enable_async_refresh = true;
+    service.cache_ttl_ns = 0;
+    try service.prewarmProviders(std.testing.allocator);
+
+    const first = try service.searchQuery(std.testing.allocator, "");
+    defer std.testing.allocator.free(first);
+    try std.testing.expect(service.refresh_thread != null);
+
+    var attempts: usize = 0;
+    while (service.refresh_thread_running and attempts < 200) : (attempts += 1) {
+        std.time.sleep(1 * std.time.ns_per_ms);
+    }
+    try std.testing.expect(!service.refresh_thread_running);
+    try std.testing.expect(service.refresh_thread != null);
+
+    service.cache_ttl_ns = 60 * std.time.ns_per_s;
+    const second = try service.searchQuery(std.testing.allocator, "");
+    defer std.testing.allocator.free(second);
+
+    try std.testing.expect(!service.refresh_thread_running);
+    try std.testing.expect(service.refresh_thread == null);
+}
+
 test "concurrent query and drainScheduledRefresh does not deadlock" {
     const Fake = struct {
         var collect_calls: usize = 0;

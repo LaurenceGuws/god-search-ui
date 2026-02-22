@@ -172,6 +172,8 @@ pub const SearchService = struct {
     fn prepareRefreshForStaticQuery(self: *SearchService) !void {
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
+        self.reapFinishedRefreshThreadLocked();
+        const refresh_worker_active = self.refresh_thread_running or self.refresh_thread != null;
         if (!query_refresh_gate.scheduleAndShouldStartWorker(
             self.cache_ready,
             self.cache_ttl_ns,
@@ -179,11 +181,21 @@ pub const SearchService = struct {
             &self.refresh_requested,
             &self.last_query_used_stale_cache,
             self.enable_async_refresh,
-            self.refresh_thread_running,
+            refresh_worker_active,
         )) return;
         refresh_worker.markRunning(&self.refresh_thread_running);
         errdefer refresh_worker.markStopped(&self.refresh_thread_running);
         self.refresh_thread = try std.Thread.spawn(.{}, refreshWorkerMain, .{self});
+    }
+
+    fn reapFinishedRefreshThreadLocked(self: *SearchService) void {
+        if (self.refresh_thread_running) return;
+        if (self.refresh_thread) |t| {
+            // The worker clears `refresh_thread_running` while holding `cache_mu`,
+            // so observing `false` under the same mutex means it is safe to join.
+            self.refresh_thread = null;
+            t.join();
+        }
     }
 
     fn refreshWorkerMain(self: *SearchService) void {
