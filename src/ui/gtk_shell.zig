@@ -7,6 +7,7 @@ const gtk_widgets = @import("gtk/widgets.zig");
 const gtk_actions = @import("gtk/actions.zig");
 const gtk_nav = @import("gtk/navigation.zig");
 const gtk_query = @import("gtk/query_helpers.zig");
+const gtk_async = @import("gtk/async_state.zig");
 const c = gtk_types.c;
 const CandidateKind = gtk_types.CandidateKind;
 const GTRUE = gtk_types.GTRUE;
@@ -19,23 +20,8 @@ const LaunchContext = struct {
 };
 
 const UiContext = gtk_types.UiContext;
-
-const AsyncRenderedRow = struct {
-    kind: CandidateKind,
-    score: i32,
-    title: []u8,
-    subtitle: []u8,
-    action: []u8,
-    icon: []u8,
-};
-
-const AsyncSearchResult = struct {
-    ctx: *UiContext,
-    generation: u64,
-    total_len: usize,
-    query: []u8,
-    rows: []AsyncRenderedRow,
-};
+const AsyncRenderedRow = gtk_async.AsyncRenderedRow;
+const AsyncSearchResult = gtk_async.AsyncSearchResult;
 
 pub const Shell = struct {
     pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink) !void {
@@ -181,7 +167,7 @@ pub const Shell = struct {
             _ = c.g_source_remove(ctx.async_spinner_id);
             ctx.async_spinner_id = 0;
         }
-        freePendingAsyncQuery(ctx);
+        gtk_async.freePendingAsyncQuery(ctx);
         // Intentionally keep UiContext alive until process exit.
         // Async route worker callbacks may still complete after destroy.
     }
@@ -461,7 +447,7 @@ pub const Shell = struct {
         beginAsyncSpinner(ctx);
 
         if (ctx.async_worker_active == GTRUE) {
-            queuePendingAsyncQuery(ctx, allocator, query_copy);
+            gtk_async.queuePendingAsyncQuery(ctx, allocator, query_copy);
             return;
         }
         if (!spawnAsyncRouteSearchWorker(ctx, allocator, generation, query_copy)) {
@@ -487,7 +473,7 @@ pub const Shell = struct {
             .rows = &.{},
         };
         const worker = std.Thread.spawn(.{}, asyncRouteSearchWorker, .{payload}) catch {
-            freeAsyncSearchResult(allocator, payload);
+            gtk_async.freeAsyncSearchResult(allocator, payload);
             return false;
         };
         ctx.async_worker_active = GTRUE;
@@ -538,7 +524,7 @@ pub const Shell = struct {
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const allocator = allocator_ptr.*;
 
-        defer freeAsyncSearchResult(allocator, payload);
+        defer gtk_async.freeAsyncSearchResult(allocator, payload);
         ctx.async_worker_active = GFALSE;
         if (payload.generation != ctx.async_search_generation) {
             _ = launchPendingAsyncQuery(ctx, allocator);
@@ -568,21 +554,12 @@ pub const Shell = struct {
 
     fn cancelAsyncRouteSearch(ctx: *UiContext) void {
         ctx.async_search_generation += 1;
-        freePendingAsyncQuery(ctx);
+        gtk_async.freePendingAsyncQuery(ctx);
         endAsyncSpinner(ctx);
     }
 
-    fn queuePendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator, query_owned: []u8) void {
-        if (ctx.async_pending_query_ptr) |ptr| {
-            const prev = ptr[0..ctx.async_pending_query_len];
-            allocator.free(prev);
-        }
-        ctx.async_pending_query_ptr = query_owned.ptr;
-        ctx.async_pending_query_len = query_owned.len;
-    }
-
     fn launchPendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator) bool {
-        const query_owned = takePendingAsyncQuery(ctx) orelse return false;
+        const query_owned = gtk_async.takePendingAsyncQuery(ctx) orelse return false;
         const generation = ctx.async_search_generation;
         if (!spawnAsyncRouteSearchWorker(ctx, allocator, generation, query_owned)) {
             allocator.free(query_owned);
@@ -590,24 +567,6 @@ pub const Shell = struct {
             return false;
         }
         return true;
-    }
-
-    fn takePendingAsyncQuery(ctx: *UiContext) ?[]u8 {
-        const ptr = ctx.async_pending_query_ptr orelse return null;
-        const slice = ptr[0..ctx.async_pending_query_len];
-        ctx.async_pending_query_ptr = null;
-        ctx.async_pending_query_len = 0;
-        return slice;
-    }
-
-    fn freePendingAsyncQuery(ctx: *UiContext) void {
-        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const allocator = allocator_ptr.*;
-        if (ctx.async_pending_query_ptr) |ptr| {
-            allocator.free(ptr[0..ctx.async_pending_query_len]);
-            ctx.async_pending_query_ptr = null;
-            ctx.async_pending_query_len = 0;
-        }
     }
 
     fn beginAsyncSpinner(ctx: *UiContext) void {
@@ -659,18 +618,6 @@ pub const Shell = struct {
 
     fn clearAsyncRows(list: *c.GtkListBox) void {
         gtk_widgets.clearAsyncRows(list);
-    }
-
-    fn freeAsyncSearchResult(allocator: std.mem.Allocator, payload: *AsyncSearchResult) void {
-        allocator.free(payload.query);
-        for (payload.rows) |row| {
-            if (row.title.len > 0) allocator.free(row.title);
-            if (row.subtitle.len > 0) allocator.free(row.subtitle);
-            if (row.action.len > 0) allocator.free(row.action);
-            if (row.icon.len > 0) allocator.free(row.icon);
-        }
-        if (payload.rows.len > 0) allocator.free(payload.rows);
-        allocator.destroy(payload);
     }
 
     fn appendModuleFilterMenu(ctx: *UiContext, allocator: std.mem.Allocator) void {

@@ -4185,3 +4185,28 @@
   - M8: extract async route worker lifecycle into `gtk/async_search.zig`.
 
 ---
+## 2026-02-22 (Cycle 186)
+- Milestone: M8 UX Modularization
+- Task slice: extract async worker state lifecycle from shell
+- Changes:
+  - Added `src/ui/gtk/async_state.zig`:
+    - async payload structs (`AsyncRenderedRow`, `AsyncSearchResult`)
+    - pending async query queue/take/free helpers
+    - async payload memory cleanup helper
+  - Updated `src/ui/gtk_shell.zig`:
+    - switched to `gtk_async` aliases for async payload types
+    - delegated pending-query and async payload cleanup helpers
+    - removed in-file implementations of extracted async state helpers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - async worker lifecycle callbacks still live in shell; follow-up extraction can move worker orchestration behind callback hooks.
+- Next slice:
+  - M8: extract async worker orchestration (`start/spawn/on-ready/spinner`) into `gtk/async_search.zig`.
+
+---
