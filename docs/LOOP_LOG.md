@@ -3831,3 +3831,29 @@
   - M8: UX Phase 5 - add configurable default directory action profile and env/doc wiring.
 
 ---
+## 2026-02-22 (Cycle 174)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 5 bundle - GTK runtime regression fixes from directory-action rollout
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced `gtk_entry_set_placeholder_text` with `gtk_search_entry_set_placeholder_text`
+      to match actual `GtkSearchEntry` API and remove runtime GTK critical
+    - removed invalid GTK CSS `spacing` property from `.gs-candidate-content`
+      to remove theme parser warning
+    - hardened terminal launch command for directory actions:
+      - uses `$TERMINAL` only when executable
+      - falls back through common terminals (`kitty`, `alacritty`, `foot*`, `wezterm`,
+        `gnome-terminal`, `konsole`, `xfce4-terminal`, `tilix`, `xterm`)
+      - exits cleanly with non-zero when no terminal is available
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - if no terminal binary exists, terminal option now fails fast without noisy `exec: xterm: not found`.
+- Next slice:
+  - M8: UX Phase 5 - add in-UI explicit error hint when directory terminal option has no available terminal.
+
+---

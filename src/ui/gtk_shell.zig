@@ -59,7 +59,7 @@ pub const Shell = struct {
         c.gtk_widget_set_margin_end(root_box, 12);
 
         const entry = c.gtk_search_entry_new();
-        c.gtk_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
+        c.gtk_search_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
         const status = c.gtk_label_new("Esc to close, Ctrl+R to refresh");
         c.gtk_label_set_xalign(@ptrCast(status), 0.0);
         c.gtk_label_set_single_line_mode(@ptrCast(status), GTRUE);
@@ -843,7 +843,7 @@ pub const Shell = struct {
         defer allocator.free(quoted);
         return std.fmt.allocPrint(
             allocator,
-            "sh -lc 'cd -- \"$1\" && exec \"${{TERMINAL:-xterm}}\"' _ {s}",
+            "sh -lc 'cd -- \"$1\" || exit 1; term=\"${{TERMINAL:-}}\"; if [ -n \"$term\" ] && command -v \"$term\" >/dev/null 2>&1; then exec \"$term\"; fi; for t in kitty alacritty footclient foot wezterm gnome-terminal konsole xfce4-terminal tilix xterm; do if command -v \"$t\" >/dev/null 2>&1; then exec \"$t\"; fi; done; exit 127' _ {s}",
             .{quoted},
         );
     }
@@ -1012,7 +1012,6 @@ pub const Shell = struct {
             ".gs-candidate-primary { color: #e8ecf7; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; }\n" ++
             ".gs-primary-row { min-height: 20px; }\n" ++
-            ".gs-candidate-content { spacing: 2px; }\n" ++
             ".gs-chip { font-size: 0.72em; font-weight: 700; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; }\n" ++
             ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
             ".gs-chip-window { color: #78d2c7; background: rgba(120, 210, 199, 0.16); }\n" ++

@@ -195,3 +195,6 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 5 - improve selected-row contrast and readability for actionable candidates.
 - [x] M8: UX Phase 5 - add directory action menu (terminal/explorer/editor/copy path) before execution.
 - [x] M8: UX Phase 5 - route directory option execution through close-on-success flow.
+- [x] M8: UX Phase 5 - fix GtkSearchEntry placeholder API usage to remove GTK critical.
+- [x] M8: UX Phase 5 - remove invalid GTK CSS `spacing` property from candidate content class.
+- [x] M8: UX Phase 5 - harden directory terminal action with runtime terminal discovery fallback list.
