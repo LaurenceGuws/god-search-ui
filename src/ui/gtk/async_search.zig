@@ -76,6 +76,7 @@ fn spawnAsyncRouteSearchWorker(
     };
     payload.* = .{
         .ctx = ctx,
+        .allocator = allocator,
         .generation = generation,
         .total_len = 0,
         .query = query_owned,
@@ -85,7 +86,7 @@ fn spawnAsyncRouteSearchWorker(
     };
     const worker = std.Thread.spawn(.{}, asyncRouteSearchWorker, .{payload}) catch {
         finishWorkerTracking(ctx);
-        gtk_async.freeAsyncSearchResult(allocator, payload);
+        gtk_async.freeAsyncSearchResult(payload);
         return false;
     };
     ctx.async_worker_active = GTRUE;
@@ -100,13 +101,13 @@ fn asyncRouteSearchWorker(payload: *AsyncSearchResult) void {
     const allocator = allocator_ptr.*;
 
     if (isAsyncShuttingDown(ctx)) {
-        gtk_async.freeAsyncSearchResult(allocator, payload);
+        gtk_async.freeAsyncSearchResult(payload);
         return;
     }
 
     const ranked = ctx.service.searchQuery(allocator, payload.query) catch |err| {
         markPayloadSearchFailure(payload, err);
-        dispatchOrFreePayload(ctx, allocator, payload);
+        dispatchOrFreePayload(ctx, payload);
         return;
     };
     defer allocator.free(ranked);
@@ -116,7 +117,7 @@ fn asyncRouteSearchWorker(payload: *AsyncSearchResult) void {
     const limit = @min(ranked.len, 20);
     payload.rows = allocator.alloc(AsyncRenderedRow, limit) catch {
         markPayloadSearchFailure(payload, error.OutOfMemory);
-        dispatchOrFreePayload(ctx, allocator, payload);
+        dispatchOrFreePayload(ctx, payload);
         return;
     };
 
@@ -131,7 +132,7 @@ fn asyncRouteSearchWorker(payload: *AsyncSearchResult) void {
         };
     }
 
-    dispatchOrFreePayload(ctx, allocator, payload);
+    dispatchOrFreePayload(ctx, payload);
 }
 
 fn markPayloadSearchFailure(payload: *AsyncSearchResult, err: anyerror) void {
@@ -156,15 +157,28 @@ pub fn isAsyncShuttingDown(ctx: *UiContext) bool {
     return shutting_down;
 }
 
-fn dispatchOrFreePayload(ctx: *UiContext, allocator: std.mem.Allocator, payload: *AsyncSearchResult) void {
+fn dispatchOrFreePayload(ctx: *UiContext, payload: *AsyncSearchResult) void {
     if (isAsyncShuttingDown(ctx)) {
-        gtk_async.freeAsyncSearchResult(allocator, payload);
+        gtk_async.freeAsyncSearchResult(payload);
         return;
     }
-    const source_id = c.g_idle_add(payload.on_ready, payload);
+    const source_id = c.g_idle_add_full(
+        c.G_PRIORITY_DEFAULT_IDLE,
+        payload.on_ready,
+        payload,
+        @ptrCast(&onAsyncPayloadDestroy),
+    );
     if (source_id == 0) {
-        gtk_async.freeAsyncSearchResult(allocator, payload);
+        gtk_async.freeAsyncSearchResult(payload);
+    } else {
+        ctx.async_ready_id = source_id;
     }
+}
+
+fn onAsyncPayloadDestroy(user_data: ?*anyopaque) callconv(.c) void {
+    if (user_data == null) return;
+    const payload: *AsyncSearchResult = @ptrCast(@alignCast(user_data.?));
+    gtk_async.freeAsyncSearchResult(payload);
 }
 
 fn startWorkerTracking(ctx: *UiContext) bool {

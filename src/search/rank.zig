@@ -29,7 +29,7 @@ pub fn rankCandidatesWithHistory(
 
     for (candidates) |candidate| {
         if (!matchesRoute(query.route, candidate.kind)) continue;
-        const score = candidateScore(needle, candidate, recent_actions);
+        const score = try candidateScore(allocator, needle, candidate, recent_actions);
         if (score <= 0 and needle.len > 0) continue;
         try scored.append(allocator, .{ .candidate = candidate, .score = score });
     }
@@ -40,7 +40,22 @@ pub fn rankCandidatesWithHistory(
 
 fn lessThan(_: void, a: ScoredCandidate, b: ScoredCandidate) bool {
     if (a.score != b.score) return a.score > b.score;
-    return std.mem.order(u8, a.candidate.title, b.candidate.title) == .lt;
+
+    const title_order = std.mem.order(u8, a.candidate.title, b.candidate.title);
+    if (title_order != .eq) return title_order == .lt;
+
+    const subtitle_order = std.mem.order(u8, a.candidate.subtitle, b.candidate.subtitle);
+    if (subtitle_order != .eq) return subtitle_order == .lt;
+
+    const action_order = std.mem.order(u8, a.candidate.action, b.candidate.action);
+    if (action_order != .eq) return action_order == .lt;
+
+    if (a.candidate.kind != b.candidate.kind) {
+        return @intFromEnum(a.candidate.kind) < @intFromEnum(b.candidate.kind);
+    }
+
+    const icon_order = std.mem.order(u8, a.candidate.icon, b.candidate.icon);
+    return icon_order == .lt;
 }
 
 fn matchesRoute(route: query_mod.Route, kind: types.CandidateKind) bool {
@@ -55,17 +70,22 @@ fn matchesRoute(route: query_mod.Route, kind: types.CandidateKind) bool {
     };
 }
 
-fn candidateScore(needle: []const u8, candidate: types.Candidate, recent_actions: []const []const u8) i32 {
+fn candidateScore(
+    allocator: std.mem.Allocator,
+    needle: []const u8,
+    candidate: types.Candidate,
+    recent_actions: []const []const u8,
+) !i32 {
     var score: i32 = baseWeight(candidate.kind);
     if (needle.len == 0) {
         score += recencyBoost(candidate.action, recent_actions);
         return score;
     }
 
-    const title = lowerAsciiLossyAlloc(std.heap.page_allocator, candidate.title) catch return 0;
-    defer std.heap.page_allocator.free(title);
-    const subtitle = lowerAsciiLossyAlloc(std.heap.page_allocator, candidate.subtitle) catch "";
-    defer if (subtitle.len > 0) std.heap.page_allocator.free(subtitle);
+    const title = try lowerAsciiLossyAlloc(allocator, candidate.title);
+    defer allocator.free(title);
+    const subtitle = try lowerAsciiLossyAlloc(allocator, candidate.subtitle);
+    defer allocator.free(subtitle);
 
     if (std.mem.eql(u8, needle, title)) score += 100;
     if (std.mem.startsWith(u8, title, needle)) score += 60;
@@ -226,4 +246,36 @@ test "rankCandidates propagates canonicalization alloc failure" {
         error.OutOfMemory,
         rankCandidates(fba.allocator(), query, &candidates),
     );
+}
+
+test "rankCandidates propagates candidate canonicalization alloc failure" {
+    var failing_state = std.testing.FailingAllocator.init(std.testing.allocator, .{
+        .fail_index = 1,
+    });
+    const failing_allocator = failing_state.allocator();
+    const candidates = [_]types.Candidate{
+        .init(.app, "alpha", "subtitle", "alpha"),
+    };
+
+    const query = query_mod.parse("a");
+    try std.testing.expectError(
+        error.OutOfMemory,
+        rankCandidates(failing_allocator, query, &candidates),
+    );
+    try std.testing.expect(failing_state.has_induced_failure);
+}
+
+test "equal score and title uses deterministic tie-breakers" {
+    const candidates = [_]types.Candidate{
+        .init(.app, "Alpha", "Same", "z-action"),
+        .init(.app, "Alpha", "Same", "a-action"),
+    };
+
+    const query = query_mod.parse("");
+    const ranked = try rankCandidates(std.testing.allocator, query, &candidates);
+    defer std.testing.allocator.free(ranked);
+
+    try std.testing.expectEqual(@as(usize, 2), ranked.len);
+    try std.testing.expectEqualStrings("a-action", ranked[0].candidate.action);
+    try std.testing.expectEqualStrings("z-action", ranked[1].candidate.action);
 }

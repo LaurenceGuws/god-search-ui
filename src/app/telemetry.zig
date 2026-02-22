@@ -16,31 +16,53 @@ pub const TelemetrySink = struct {
         detail: []const u8,
     ) !void {
         const ts = std.time.timestamp();
-        const line = try std.fmt.allocPrint(allocator, "ts={d} kind={s} action={s} status={s} detail={s}\n", .{ ts, kind, action, status, detail });
-        defer allocator.free(line);
+        var line = std.ArrayList(u8).empty;
+        defer line.deinit(allocator);
+        const writer = line.writer(allocator);
+
+        try writer.print("ts={d} kind=", .{ts});
+        try writeEscapedTelemetryField(writer, kind);
+        try writer.writeAll(" action=");
+        try writeEscapedTelemetryField(writer, action);
+        try writer.writeAll(" status=");
+        try writeEscapedTelemetryField(writer, status);
+        try writer.writeAll(" detail=");
+        try writeEscapedTelemetryField(writer, detail);
+        try writer.writeByte('\n');
+
+        try ensureParentDir(self.path);
 
         if (std.fs.path.isAbsolute(self.path)) {
-            try ensureParentDirAbsolute(self.path);
             const file = try std.fs.createFileAbsolute(self.path, .{ .truncate = false, .read = true });
             defer file.close();
             try file.seekFromEnd(0);
-            try file.writeAll(line);
+            try file.writeAll(line.items);
+            try file.sync();
             return;
         }
 
         const file = try std.fs.cwd().createFile(self.path, .{ .truncate = false, .read = true });
         defer file.close();
         try file.seekFromEnd(0);
-        try file.writeAll(line);
+        try file.writeAll(line.items);
+        try file.sync();
     }
 };
 
-fn ensureParentDirAbsolute(path: []const u8) !void {
+fn ensureParentDir(path: []const u8) !void {
     const parent = std.fs.path.dirname(path) orelse return;
-    std.fs.makeDirAbsolute(parent) catch |err| switch (err) {
-        error.PathAlreadyExists => return,
-        else => return err,
-    };
+    try std.fs.cwd().makePath(parent);
+}
+
+fn writeEscapedTelemetryField(writer: anytype, value: []const u8) !void {
+    for (value) |c| {
+        switch (c) {
+            '\n' => try writer.writeAll("\\n"),
+            '\r' => try writer.writeAll("\\r"),
+            '\\' => try writer.writeAll("\\\\"),
+            else => try writer.writeByte(c),
+        }
+    }
 }
 
 test "telemetry sink emits event line" {
@@ -61,4 +83,30 @@ test "telemetry sink emits event line" {
     defer std.testing.allocator.free(data);
     try std.testing.expect(std.mem.indexOf(u8, data, "action=power") != null);
     try std.testing.expect(std.mem.indexOf(u8, data, "status=ok") != null);
+}
+
+test "telemetry sink creates relative parent and escapes newlines" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    var original_cwd = try std.fs.cwd().openDir(".", .{});
+    defer original_cwd.close();
+    defer original_cwd.setAsCwd() catch unreachable;
+
+    try tmp.dir.setAsCwd();
+
+    const sink = TelemetrySink.init("nested/events.log");
+    try sink.emitActionEvent(std.testing.allocator, "action\nkind", "power", "ok", "line1\nline2\r\\tail");
+
+    const data = try tmp.dir.readFileAlloc(std.testing.allocator, "nested/events.log", 1024);
+    defer std.testing.allocator.free(data);
+
+    try std.testing.expect(std.mem.indexOf(u8, data, "kind=action\\nkind") != null);
+    try std.testing.expect(std.mem.indexOf(u8, data, "detail=line1\\nline2\\r\\\\tail") != null);
+
+    var newline_count: usize = 0;
+    for (data) |c| {
+        if (c == '\n') newline_count += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 1), newline_count);
 }

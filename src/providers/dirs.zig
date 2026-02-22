@@ -43,10 +43,11 @@ pub const DirsProvider = struct {
 
         var lines = std.mem.splitScalar(u8, rows, '\n');
         while (lines.next()) |line| {
-            const trimmed = std.mem.trim(u8, line, " \t");
+            const trimmed = std.mem.trim(u8, line, " \t\r");
             if (trimmed.len == 0) continue;
             const split_idx = std.mem.indexOfAny(u8, trimmed, " \t") orelse continue;
-            const path = std.mem.trimLeft(u8, trimmed[split_idx + 1 ..], " \t");
+            const path_raw = std.mem.trimLeft(u8, trimmed[split_idx + 1 ..], " \t");
+            const path = std.mem.trimRight(u8, path_raw, " \t\r");
             if (path.len == 0) continue;
 
             const base = std.fs.path.basename(path);
@@ -338,4 +339,38 @@ test "dirs provider rotates owned strings across collects with bounded growth" {
     try provider.collect(std.testing.allocator, &list);
     const third_total = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
     try std.testing.expectEqual(@as(usize, 8), third_total);
+}
+
+test "dirs provider trims crlf and trailing whitespace from parsed paths" {
+    const Fake = struct {
+        fn hasTools() bool {
+            return true;
+        }
+
+        fn listDirs(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8,
+                \\1.0 /tmp/alpha dir  \r
+                \\2.0 /tmp/beta\t\r
+                \\
+            );
+        }
+    };
+
+    var provider_impl = DirsProvider{
+        .list_dirs_fn = Fake.listDirs,
+        .has_tools_fn = Fake.hasTools,
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 2), list.items.len);
+    try std.testing.expectEqualStrings("alpha dir", list.items[0].title);
+    try std.testing.expectEqualStrings("/tmp/alpha dir", list.items[0].action);
+    try std.testing.expectEqualStrings("beta", list.items[1].title);
+    try std.testing.expectEqualStrings("/tmp/beta", list.items[1].action);
 }

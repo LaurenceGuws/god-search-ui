@@ -26,6 +26,7 @@ pub const UiContext = extern struct {
     last_render_hash: u64,
     async_search_generation: u64,
     async_spinner_id: c.guint,
+    async_ready_id: c.guint,
     async_spinner_phase: u8,
     async_inflight: c.gboolean,
     async_worker_active: c.gboolean,

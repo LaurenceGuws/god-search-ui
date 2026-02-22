@@ -11,6 +11,9 @@ pub fn printQueryMeta(writer: anytype, service: *app.SearchService) !void {
     if (service.last_query_refreshed_cache) {
         try writer.print("  (snapshot auto-refreshed)\n", .{});
     }
+    if (service.last_query_had_provider_runtime_failure) {
+        try writer.print("  (provider runtime failure detected; results may be incomplete)\n", .{});
+    }
 }
 
 pub fn printTopResults(writer: anytype, ranked: []const search.ScoredCandidate, max_items: usize) !void {

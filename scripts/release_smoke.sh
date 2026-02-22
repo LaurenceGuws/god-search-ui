@@ -107,6 +107,11 @@ if [[ $STRICT_ICON_THRESHOLD -eq 1 ]]; then
 fi
 
 if [[ $RUN_GTK_RUNTIME -eq 1 ]]; then
+  if ! command -v timeout >/dev/null 2>&1; then
+    echo "error: timeout command not found; required for --with-gtk-runtime" >&2
+    exit 1
+  fi
+
   echo "[optional] gtk runtime launch smoke (with icon-cache fixture)"
   TMP_HOME="$(mktemp -d)"
   trap 'rm -rf "$TMP_HOME"' EXIT

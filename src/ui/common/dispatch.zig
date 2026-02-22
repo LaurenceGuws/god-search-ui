@@ -119,7 +119,11 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
             };
         },
         .window => {
-            const cmd = try std.fmt.allocPrint(allocator, "hyprctl dispatch focuswindow \"address:{s}\"", .{action});
+            const target = try std.fmt.allocPrint(allocator, "address:{s}", .{action});
+            defer allocator.free(target);
+            const target_q = try shellSingleQuote(allocator, target);
+            defer allocator.free(target_q);
+            const cmd = try std.fmt.allocPrint(allocator, "hyprctl dispatch focuswindow {s}", .{target_q});
             return .{
                 .command = cmd,
                 .owned_command = cmd,
@@ -132,4 +136,41 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
         else => {},
     }
     return .{};
+}
+
+fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+    try out.append(allocator, '\'');
+    for (value) |ch| {
+        if (ch == '\'') {
+            try out.appendSlice(allocator, "'\\''");
+        } else {
+            try out.append(allocator, ch);
+        }
+    }
+    try out.append(allocator, '\'');
+    return out.toOwnedSlice(allocator);
+}
+
+test "window focus command shell-quotes metacharacters in address" {
+    var plan = try planCommandKind(std.testing.allocator, .window, "0xabc;touch /tmp/pwn $(id)");
+    defer plan.deinit(std.testing.allocator);
+
+    try std.testing.expect(plan.command != null);
+    try std.testing.expectEqualStrings(
+        "hyprctl dispatch focuswindow 'address:0xabc;touch /tmp/pwn $(id)'",
+        plan.command.?,
+    );
+}
+
+test "window focus command escapes apostrophes in address" {
+    var plan = try planCommandKind(std.testing.allocator, .window, "win'42");
+    defer plan.deinit(std.testing.allocator);
+
+    try std.testing.expect(plan.command != null);
+    try std.testing.expectEqualStrings(
+        "hyprctl dispatch focuswindow 'address:win'\\''42'",
+        plan.command.?,
+    );
 }

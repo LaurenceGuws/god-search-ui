@@ -125,3 +125,63 @@ fn actionCommandToken(action: []const u8) []const u8 {
     }
     return "";
 }
+
+test "actionCommandToken extracts executable token from shell-like actions" {
+    try std.testing.expectEqualStrings("kitty", actionCommandToken("env TERM=xterm /usr/bin/kitty --single-instance"));
+    try std.testing.expectEqualStrings("run.sh", actionCommandToken("./scripts/run.sh --dry-run"));
+    try std.testing.expectEqualStrings("firefox", actionCommandToken("  'firefox'  "));
+}
+
+test "actionCommandToken ignores placeholders flags and assignments" {
+    try std.testing.expectEqualStrings("", actionCommandToken("%f --arg"));
+    try std.testing.expectEqualStrings("", actionCommandToken("FOO=bar --flag"));
+}
+
+test "appIconNameFromAction follows token parsing heuristics" {
+    var allocator = std.testing.allocator;
+    const name = appIconNameFromAction(allocator, "env WAYLAND_DISPLAY=wayland-1 /usr/bin/wezterm start") orelse {
+        return std.testing.expect(false);
+    };
+    defer allocator.free(name);
+    try std.testing.expectEqualStrings("wezterm", name);
+}
+
+test "hasAppGlyphFallback only triggers for app rows without icon and token" {
+    const rows_with_fallback = [_]ScoredCandidate{
+        .{
+            .candidate = .{
+                .kind = .app,
+                .title = "Broken desktop entry",
+                .subtitle = "",
+                .action = "--flag-only",
+                .icon = "",
+            },
+            .score = 1,
+        },
+    };
+    try std.testing.expect(hasAppGlyphFallback(&rows_with_fallback));
+
+    const rows_without_fallback = [_]ScoredCandidate{
+        .{
+            .candidate = .{
+                .kind = .app,
+                .title = "Has icon name",
+                .subtitle = "",
+                .action = "--flag-only",
+                .icon = "org.example.App",
+            },
+            .score = 1,
+        },
+        .{
+            .candidate = .{
+                .kind = .window,
+                .title = "Window row",
+                .subtitle = "",
+                .action = "",
+                .icon = "",
+            },
+            .score = 1,
+        },
+    };
+    try std.testing.expect(!hasAppGlyphFallback(&rows_without_fallback));
+}

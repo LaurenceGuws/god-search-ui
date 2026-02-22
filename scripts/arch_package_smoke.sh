@@ -50,7 +50,7 @@ echo "[1/4] build package"
 cd "$PKG_DIR"
 makepkg -f
 
-PKG_FILE="$(ls -1t god-search-ui-git-*.pkg.tar.* | head -n 1 || true)"
+PKG_FILE="$(ls -1t god-search-ui-git-*.pkg.tar.* 2>/dev/null | grep -v -- '-debug-' | head -n 1 || true)"
 if [[ -z "$PKG_FILE" ]]; then
   echo "error: package archive not produced" >&2
   exit 1
@@ -67,6 +67,7 @@ echo "[2/4] verify package archive contents"
 bsdtar -tf "$PKG_PATH" | grep -q '^usr/bin/god-search-ui$'
 bsdtar -tf "$PKG_PATH" | grep -q '^usr/share/applications/god-search-ui.desktop$'
 bsdtar -tf "$PKG_PATH" | grep -q '^usr/share/icons/hicolor/scalable/apps/god-search-ui.svg$'
+bsdtar -tf "$PKG_PATH" | grep -q '^usr/lib/systemd/user/god-search-ui.service$'
 
 if [[ $DO_INSTALL -eq 1 ]]; then
   if ! command -v sudo >/dev/null 2>&1 || ! command -v pacman >/dev/null 2>&1; then
@@ -79,6 +80,7 @@ if [[ $DO_INSTALL -eq 1 ]]; then
   command -v god-search-ui >/dev/null 2>&1
   test -f /usr/share/applications/god-search-ui.desktop
   test -f /usr/share/icons/hicolor/scalable/apps/god-search-ui.svg
+  test -f /usr/lib/systemd/user/god-search-ui.service
 else
   echo "[3/4] install path skipped (use --install to enable)"
 fi

@@ -9,10 +9,13 @@ pub fn rankFromCacheOrCollect(
     recent: []const []const u8,
     cache_snapshot: []const search.Candidate,
     query_candidates: *search.CandidateList,
+    had_provider_runtime_failure: *bool,
 ) ![]search.ScoredCandidate {
     if (cache_snapshot.len > 0) {
+        had_provider_runtime_failure.* = false;
         return search.rankCandidatesWithHistory(allocator, parsed, cache_snapshot, recent);
     }
-    try registry.collectAll(allocator, query_candidates);
+    const report = try registry.collectAllWithReport(allocator, query_candidates);
+    had_provider_runtime_failure.* = report.had_runtime_failure;
     return search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
 }

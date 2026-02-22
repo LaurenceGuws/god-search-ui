@@ -90,7 +90,7 @@ pub fn postLaunchStatus(message: []const u8) []const u8 {
     return message;
 }
 
-fn escapeMarkupAlloc(allocator: std.mem.Allocator, text: []const u8) ![]u8 {
+pub fn escapeMarkupAlloc(allocator: std.mem.Allocator, text: []const u8) ![]u8 {
     const escaped_ptr = c.g_markup_escape_text(text.ptr, @intCast(text.len));
     if (escaped_ptr == null) return error.OutOfMemory;
     defer c.g_free(escaped_ptr);
@@ -105,4 +105,18 @@ fn firstCaseInsensitiveIndex(haystack: []const u8, needle: []const u8) ?usize {
         if (std.ascii.eqlIgnoreCase(haystack[idx .. idx + needle.len], needle)) return idx;
     }
     return null;
+}
+
+test "highlightedMarkup escapes text and highlights first token match" {
+    const allocator = std.testing.allocator;
+    const markup = try highlightedMarkup(allocator, "Alpha <tag> & omega", "<TAG>");
+    defer allocator.free(markup);
+    try std.testing.expectEqualStrings("Alpha <b>&lt;tag&gt;</b> &amp; omega", markup);
+}
+
+test "highlightedMarkup escapes without highlighting when token missing" {
+    const allocator = std.testing.allocator;
+    const markup = try highlightedMarkup(allocator, "<b>safe</b> & text", "missing");
+    defer allocator.free(markup);
+    try std.testing.expectEqualStrings("&lt;b&gt;safe&lt;/b&gt; &amp; text", markup);
 }

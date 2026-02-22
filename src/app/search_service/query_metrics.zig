@@ -1,6 +1,11 @@
-pub fn resetFlags(last_query_refreshed_cache: *bool, last_query_used_stale_cache: *bool) void {
+pub fn resetFlags(
+    last_query_refreshed_cache: *bool,
+    last_query_used_stale_cache: *bool,
+    last_query_had_provider_runtime_failure: *bool,
+) void {
     last_query_refreshed_cache.* = false;
     last_query_used_stale_cache.* = false;
+    last_query_had_provider_runtime_failure.* = false;
 }
 
 pub fn setElapsed(last_query_elapsed_ns: *u64, elapsed_ns: u64) void {

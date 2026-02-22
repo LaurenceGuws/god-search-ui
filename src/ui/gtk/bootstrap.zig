@@ -73,6 +73,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.last_render_hash = 0;
     ctx.async_search_generation = 0;
     ctx.async_spinner_id = 0;
+    ctx.async_ready_id = 0;
     ctx.async_spinner_phase = 0;
     ctx.async_inflight = gtk_types.GFALSE;
     ctx.async_worker_active = gtk_types.GFALSE;

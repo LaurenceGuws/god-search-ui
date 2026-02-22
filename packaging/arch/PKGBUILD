@@ -11,7 +11,8 @@ makedepends=('zig' 'git')
 optdepends=('gtk4: enable GTK UI shell at build time')
 provides=('god-search-ui')
 conflicts=('god-search-ui')
-source=("$pkgname::git+file:///home/home/personal/god-search-ui")
+_repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+source=("$pkgname::git+file://${_repo_root}")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -35,5 +36,6 @@ package() {
   install -Dm755 "zig-out/bin/god_search_ui" "$pkgdir/usr/bin/god-search-ui"
   install -Dm644 "packaging/desktop/god-search-ui.desktop" "$pkgdir/usr/share/applications/god-search-ui.desktop"
   install -Dm644 "assets/icons/god-search-ui.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/god-search-ui.svg"
+  install -Dm644 "packaging/systemd/god-search-ui.service" "$pkgdir/usr/lib/systemd/user/god-search-ui.service"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }

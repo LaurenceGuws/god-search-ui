@@ -188,6 +188,7 @@ test "queryFlagsSnapshot exposes current query flags" {
     const initial_flags = service.queryFlagsSnapshot();
     try std.testing.expect(!initial_flags.last_query_used_stale_cache);
     try std.testing.expect(!initial_flags.last_query_refreshed_cache);
+    try std.testing.expect(!initial_flags.last_query_had_provider_runtime_failure);
 
     service.cache_ttl_ns = 0;
     try service.prewarmProviders(std.testing.allocator);
@@ -197,10 +198,60 @@ test "queryFlagsSnapshot exposes current query flags" {
     const stale_flags = service.queryFlagsSnapshot();
     try std.testing.expect(stale_flags.last_query_used_stale_cache);
     try std.testing.expect(!stale_flags.last_query_refreshed_cache);
+    try std.testing.expect(!stale_flags.last_query_had_provider_runtime_failure);
 
     _ = try service.drainScheduledRefresh(std.testing.allocator);
     const refreshed_flags = service.queryFlagsSnapshot();
     try std.testing.expect(refreshed_flags.last_query_refreshed_cache);
+    try std.testing.expect(!refreshed_flags.last_query_had_provider_runtime_failure);
+}
+
+test "queryFlagsSnapshot surfaces provider runtime failure from cached snapshot collection" {
+    const Fake = struct {
+        const OkCtx = struct {
+            title: []const u8,
+        };
+
+        fn collectOk(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+            const ctx: *OkCtx = @ptrCast(@alignCast(context));
+            try out.append(allocator, search.Candidate.init(.action, ctx.title, "System", "settings"));
+        }
+
+        fn collectFail(_: *anyopaque, _: std.mem.Allocator, _: *search.CandidateList) !void {
+            return error.RuntimeFailure;
+        }
+
+        fn healthReady(_: *anyopaque) search.ProviderHealth {
+            return .ready;
+        }
+    };
+
+    var ok = Fake.OkCtx{ .title = "Settings" };
+    var dummy_ctx: u8 = 0;
+    const source = [_]search.Provider{
+        .{
+            .name = "broken",
+            .context = &dummy_ctx,
+            .vtable = &.{ .collect = Fake.collectFail, .health = Fake.healthReady },
+        },
+        .{
+            .name = "healthy",
+            .context = &ok,
+            .vtable = &.{ .collect = Fake.collectOk, .health = Fake.healthReady },
+        },
+    };
+
+    const registry = providers.ProviderRegistry.init(&source);
+    var service = SearchService.init(registry);
+    defer service.deinit(std.testing.allocator);
+
+    try service.prewarmProviders(std.testing.allocator);
+    const ranked = try service.searchQuery(std.testing.allocator, "set");
+    defer std.testing.allocator.free(ranked);
+
+    try std.testing.expectEqual(@as(usize, 1), ranked.len);
+    const flags = service.queryFlagsSnapshot();
+    try std.testing.expect(flags.last_query_had_provider_runtime_failure);
 }
 
 test "history load and save roundtrip" {

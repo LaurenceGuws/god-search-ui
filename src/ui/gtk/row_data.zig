@@ -45,3 +45,25 @@ pub fn title(row: *c.GtkListBoxRow) ?[]const u8 {
     const ptr = c.g_object_get_data(@ptrCast(row), "gs-title") orelse return null;
     return std.mem.span(@as([*:0]const u8, @ptrCast(ptr)));
 }
+
+test "row data roundtrip stores and reads kind action and title" {
+    const row_widget = c.gtk_list_box_row_new();
+    defer c.g_object_unref(row_widget);
+    const row: *c.GtkListBoxRow = @ptrCast(@alignCast(row_widget));
+
+    setActionableData(row, std.testing.allocator, .file_option, "nvim /tmp/file", "Open in Editor");
+
+    try std.testing.expectEqual(UiKind.file_option, kind(row));
+    try std.testing.expectEqualStrings("nvim /tmp/file", action(row).?);
+    try std.testing.expectEqualStrings("Open in Editor", title(row).?);
+}
+
+test "row data defaults remain empty before actionable data is set" {
+    const row_widget = c.gtk_list_box_row_new();
+    defer c.g_object_unref(row_widget);
+    const row: *c.GtkListBoxRow = @ptrCast(@alignCast(row_widget));
+
+    try std.testing.expectEqual(UiKind.unknown, kind(row));
+    try std.testing.expect(action(row) == null);
+    try std.testing.expect(title(row) == null);
+}

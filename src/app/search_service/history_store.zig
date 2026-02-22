@@ -95,23 +95,53 @@ fn readFileAnyPath(allocator: std.mem.Allocator, path: []const u8, max_bytes: us
 fn writeFileAnyPathAtomic(allocator: std.mem.Allocator, path: []const u8, data: []const u8) !void {
     const tmp_path = try std.fmt.allocPrint(allocator, "{s}.tmp", .{path});
     defer allocator.free(tmp_path);
+    try ensureParentDir(path);
 
     if (std.fs.path.isAbsolute(path)) {
-        try ensureParentDirAbsolute(tmp_path);
         const file = try std.fs.createFileAbsolute(tmp_path, .{ .truncate = true });
         defer file.close();
         try file.writeAll(data);
+        try file.sync();
         try std.fs.renameAbsolute(tmp_path, path);
+        try syncParentDir(path);
         return;
     }
-    try std.fs.cwd().writeFile(.{
-        .sub_path = tmp_path,
-        .data = data,
-    });
+    const file = try std.fs.cwd().createFile(tmp_path, .{ .truncate = true });
+    defer file.close();
+    try file.writeAll(data);
+    try file.sync();
     try std.fs.cwd().rename(tmp_path, path);
+    try syncParentDir(path);
 }
 
-fn ensureParentDirAbsolute(path: []const u8) !void {
+fn ensureParentDir(path: []const u8) !void {
     const parent = std.fs.path.dirname(path) orelse return;
-    try std.fs.makeDirAbsolute(parent);
+    try std.fs.cwd().makePath(parent);
+}
+
+fn syncParentDir(path: []const u8) !void {
+    const parent = std.fs.path.dirname(path) orelse ".";
+    var parent_dir = if (std.fs.path.isAbsolute(path))
+        try std.fs.openDirAbsolute(parent, .{})
+    else
+        try std.fs.cwd().openDir(parent, .{});
+    defer parent_dir.close();
+    try std.posix.fsync(parent_dir.fd);
+}
+
+test "saveHistory creates relative nested parent directories" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    var original_cwd = try std.fs.cwd().openDir(".", .{});
+    defer original_cwd.close();
+    defer original_cwd.setAsCwd() catch unreachable;
+    try tmp.dir.setAsCwd();
+
+    const entries = [_][]const u8{ "settings", "power" };
+    try saveHistory(entries[0..], "nested/history/history.log", std.testing.allocator);
+
+    const saved = try tmp.dir.readFileAlloc(std.testing.allocator, "nested/history/history.log", 1024);
+    defer std.testing.allocator.free(saved);
+    try std.testing.expectEqualStrings("settings\npower\n", saved);
 }

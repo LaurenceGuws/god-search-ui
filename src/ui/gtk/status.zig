@@ -146,3 +146,25 @@ fn statusPrefix(tone: StatusTone) []const u8 {
         .failure => "[!]",
     };
 }
+
+test "launchStatusTone classifies known status messages" {
+    try std.testing.expectEqual(StatusTone.info, launchStatusTone("Searching..."));
+    try std.testing.expectEqual(StatusTone.info, launchStatusTone("Refresh complete"));
+    try std.testing.expectEqual(StatusTone.info, launchStatusTone("using fallback provider"));
+    try std.testing.expectEqual(StatusTone.failure, launchStatusTone("launch failed"));
+    try std.testing.expectEqual(StatusTone.success, launchStatusTone("launched kitty"));
+    try std.testing.expectEqual(StatusTone.success, launchStatusTone("opened file"));
+    try std.testing.expectEqual(StatusTone.success, launchStatusTone("focused window"));
+    try std.testing.expectEqual(StatusTone.neutral, launchStatusTone("idle"));
+}
+
+test "statusPrefix maps tone markers" {
+    try std.testing.expectEqualStrings("", statusPrefix(.neutral));
+    try std.testing.expectEqualStrings("[i]", statusPrefix(.info));
+    try std.testing.expectEqualStrings("[ok]", statusPrefix(.success));
+    try std.testing.expectEqualStrings("[!]", statusPrefix(.failure));
+}
+
+test "launchStatusTone keeps failure precedence over success tokens" {
+    try std.testing.expectEqual(StatusTone.failure, launchStatusTone("opened but failed"));
+}

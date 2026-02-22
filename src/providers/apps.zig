@@ -52,12 +52,13 @@ pub const AppsProvider = struct {
         var count: usize = 0;
         var lines = std.mem.splitScalar(u8, data, '\n');
         while (lines.next()) |line| {
-            if (line.len == 0) continue;
-            var fields = std.mem.splitScalar(u8, line, '\t');
-            const category = fields.next() orelse continue;
-            const name = fields.next() orelse continue;
-            const exec_cmd = fields.next() orelse continue;
-            const icon_name = fields.next() orelse "";
+            const normalized_line = std.mem.trimRight(u8, line, "\r");
+            if (normalized_line.len == 0) continue;
+            var fields = std.mem.splitScalar(u8, normalized_line, '\t');
+            const category = std.mem.trimRight(u8, fields.next() orelse continue, " \t\r");
+            const name = std.mem.trimRight(u8, fields.next() orelse continue, " \t\r");
+            const exec_cmd = std.mem.trimRight(u8, fields.next() orelse continue, " \t\r");
+            const icon_name = std.mem.trimRight(u8, fields.next() orelse "", " \t\r");
 
             const kept_name = try self.keepString(allocator, name);
             const kept_category = try self.keepString(allocator, category);
@@ -250,4 +251,36 @@ test "apps provider rotates owned strings across collects with bounded growth" {
     try provider.collect(std.testing.allocator, &list);
     const third_total = apps.owned_strings_current.items.len + apps.owned_strings_previous.items.len;
     try std.testing.expectEqual(@as(usize, 16), third_total);
+}
+
+test "apps provider trims crlf and trailing whitespace from stored fields" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.writeFile(.{
+        .sub_path = "apps.tsv",
+        .data =
+        \\Utilities  \tKitty\tkitty  \tkitty  \r
+        \\Internet\tFirefox\tfirefox\r
+        \\
+        ,
+    });
+
+    const cache_path = try tmp.dir.realpathAlloc(std.testing.allocator, "apps.tsv");
+    defer std.testing.allocator.free(cache_path);
+
+    var apps = AppsProvider.init(cache_path);
+    defer apps.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = apps.provider();
+    try provider.collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 2), list.items.len);
+    try std.testing.expectEqualStrings("Utilities", list.items[0].subtitle);
+    try std.testing.expectEqualStrings("kitty", list.items[0].action);
+    try std.testing.expectEqualStrings("kitty", list.items[0].icon);
+    try std.testing.expectEqualStrings("firefox", list.items[1].action);
 }

@@ -94,7 +94,9 @@ pub fn renderRankedRows(
         ctx.last_render_hash = render_hash;
     }
     const query_flags = ctx.service.queryFlagsSnapshot();
-    if (query_flags.last_query_used_stale_cache) {
+    if (query_flags.last_query_had_provider_runtime_failure) {
+        gtk_status.setStatus(ctx, "Some providers failed; results may be incomplete");
+    } else if (query_flags.last_query_used_stale_cache) {
         gtk_status.setStatus(ctx, "Refresh scheduled");
     } else if (query_flags.last_query_refreshed_cache) {
         gtk_status.setStatus(ctx, "Snapshot refreshed");

@@ -9,6 +9,7 @@ const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const CandidateKind = gtk_types.CandidateKind;
 const UiContext = gtk_types.UiContext;
+const UiKind = common_dispatch.kinds.UiKind;
 
 pub const Hooks = struct {
     set_status: *const fn (*UiContext, []const u8) void,
@@ -26,25 +27,25 @@ pub fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path
     const term_cmd = gtk_actions.buildDirTerminalCommand(allocator, dir_path) catch null;
     if (term_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .dir, "DIR", "dir_option", "Open Terminal Here", "Launch terminal in this folder", cmd);
+        appendOptionRow(ctx.list, allocator, .dir, "DIR", .dir_option, "Open Terminal Here", "Launch terminal in this folder", cmd);
     }
 
     const explorer_cmd = gtk_actions.buildDirExplorerCommand(allocator, dir_path) catch null;
     if (explorer_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .dir, "DIR", "dir_option", "Open in File Explorer", "Use default file manager", cmd);
+        appendOptionRow(ctx.list, allocator, .dir, "DIR", .dir_option, "Open in File Explorer", "Use default file manager", cmd);
     }
 
     const editor_cmd = gtk_actions.buildDirEditorCommand(allocator, dir_path) catch null;
     if (editor_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .dir, "DIR", "dir_option", "Open in Editor", "Use $VISUAL/$EDITOR fallback", cmd);
+        appendOptionRow(ctx.list, allocator, .dir, "DIR", .dir_option, "Open in Editor", "Use $VISUAL/$EDITOR fallback", cmd);
     }
 
     const copy_cmd = gtk_actions.buildDirCopyPathCommand(allocator, dir_path) catch null;
     if (copy_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .dir, "DIR", "dir_option", "Copy Path", "Copy directory path to clipboard", cmd);
+        appendOptionRow(ctx.list, allocator, .dir, "DIR", .dir_option, "Copy Path", "Copy directory path to clipboard", cmd);
     }
 
     hooks.set_status(ctx, "Directory action menu");
@@ -63,25 +64,25 @@ pub fn showFileActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, file_ac
     const edit_cmd = gtk_actions.buildFileEditCommand(allocator, parsed.path, parsed.line) catch null;
     if (edit_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .file, "FILE", "file_option", "Open in Editor", "Use $VISUAL/$EDITOR (line-aware when possible)", cmd);
+        appendOptionRow(ctx.list, allocator, .file, "FILE", .file_option, "Open in Editor", "Use $VISUAL/$EDITOR (line-aware when possible)", cmd);
     }
 
     const open_cmd = gtk_actions.buildFileOpenCommand(allocator, parsed.path) catch null;
     if (open_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .file, "FILE", "file_option", "Open with Default App", "Use xdg-open", cmd);
+        appendOptionRow(ctx.list, allocator, .file, "FILE", .file_option, "Open with Default App", "Use xdg-open", cmd);
     }
 
     const reveal_cmd = gtk_actions.buildFileRevealCommand(allocator, parsed.path) catch null;
     if (reveal_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .file, "FILE", "file_option", "Reveal in File Explorer", "Open parent directory", cmd);
+        appendOptionRow(ctx.list, allocator, .file, "FILE", .file_option, "Reveal in File Explorer", "Open parent directory", cmd);
     }
 
     const copy_cmd = gtk_actions.buildFileCopyPathCommand(allocator, parsed.path) catch null;
     if (copy_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .file, "FILE", "file_option", "Copy Path", "Copy file path to clipboard", cmd);
+        appendOptionRow(ctx.list, allocator, .file, "FILE", .file_option, "Copy Path", "Copy file path to clipboard", cmd);
     }
 
     hooks.set_status(ctx, "File action menu");
@@ -93,7 +94,7 @@ fn appendOptionRow(
     allocator: std.mem.Allocator,
     kind: CandidateKind,
     chip_text: []const u8,
-    kind_tag: []const u8,
+    row_kind: UiKind,
     title: []const u8,
     subtitle: []const u8,
     command: []const u8,
@@ -161,7 +162,7 @@ fn appendOptionRow(
     gtk_row_data.setActionableData(
         @ptrCast(@alignCast(row)),
         allocator,
-        common_dispatch.kinds.parse(kind_tag),
+        row_kind,
         command,
         title,
     );

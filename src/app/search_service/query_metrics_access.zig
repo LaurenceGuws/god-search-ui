@@ -4,6 +4,7 @@ const query_metrics = @import("query_metrics.zig");
 pub const QueryFlagsSnapshot = struct {
     last_query_refreshed_cache: bool,
     last_query_used_stale_cache: bool,
+    last_query_had_provider_runtime_failure: bool,
 };
 
 pub fn markRefreshed(
@@ -29,21 +30,28 @@ pub fn resetFlags(
     query_mu: *std.Thread.Mutex,
     last_query_refreshed_cache: *bool,
     last_query_used_stale_cache: *bool,
+    last_query_had_provider_runtime_failure: *bool,
 ) void {
     query_mu.lock();
     defer query_mu.unlock();
-    query_metrics.resetFlags(last_query_refreshed_cache, last_query_used_stale_cache);
+    query_metrics.resetFlags(
+        last_query_refreshed_cache,
+        last_query_used_stale_cache,
+        last_query_had_provider_runtime_failure,
+    );
 }
 
 pub fn readFlags(
     query_mu: *std.Thread.Mutex,
     last_query_refreshed_cache: *const bool,
     last_query_used_stale_cache: *const bool,
+    last_query_had_provider_runtime_failure: *const bool,
 ) QueryFlagsSnapshot {
     query_mu.lock();
     defer query_mu.unlock();
     return .{
         .last_query_refreshed_cache = last_query_refreshed_cache.*,
         .last_query_used_stale_cache = last_query_used_stale_cache.*,
+        .last_query_had_provider_runtime_failure = last_query_had_provider_runtime_failure.*,
     };
 }

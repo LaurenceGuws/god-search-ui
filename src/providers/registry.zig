@@ -6,6 +6,17 @@ pub const ProviderStatus = struct {
     health: search.ProviderHealth,
 };
 
+pub const ProviderCollectFailure = struct {
+    provider_name: []const u8,
+    err: anyerror,
+};
+
+pub const CollectReport = struct {
+    had_runtime_failure: bool = false,
+    runtime_failure_count: usize = 0,
+    first_runtime_failure: ?ProviderCollectFailure = null,
+};
+
 pub const ProviderRegistry = struct {
     providers: []const search.Provider,
 
@@ -14,12 +25,28 @@ pub const ProviderRegistry = struct {
     }
 
     pub fn collectAll(self: ProviderRegistry, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+        _ = try self.collectAllWithReport(allocator, out);
+    }
+
+    pub fn collectAllWithReport(self: ProviderRegistry, allocator: std.mem.Allocator, out: *search.CandidateList) !CollectReport {
+        var report = CollectReport{};
         for (self.providers) |provider| {
             provider.collect(allocator, out) catch |err| switch (err) {
                 error.OutOfMemory => return error.OutOfMemory,
-                else => std.log.warn("provider '{s}' collect failed: {s}", .{ provider.name, @errorName(err) }),
+                else => {
+                    report.had_runtime_failure = true;
+                    report.runtime_failure_count += 1;
+                    if (report.first_runtime_failure == null) {
+                        report.first_runtime_failure = .{
+                            .provider_name = provider.name,
+                            .err = err,
+                        };
+                    }
+                    std.log.warn("provider '{s}' collect failed: {s}", .{ provider.name, @errorName(err) });
+                },
             };
         }
+        return report;
     }
 
     pub fn healthSnapshot(self: ProviderRegistry, allocator: std.mem.Allocator) ![]ProviderStatus {
@@ -154,7 +181,11 @@ test "registry continues after provider runtime failure" {
     var list = search.CandidateList.empty;
     defer list.deinit(std.testing.allocator);
 
-    try registry.collectAll(std.testing.allocator, &list);
+    const report = try registry.collectAllWithReport(std.testing.allocator, &list);
     try std.testing.expectEqual(@as(usize, 1), list.items.len);
     try std.testing.expectEqualStrings("ok", list.items[0].title);
+    try std.testing.expect(report.had_runtime_failure);
+    try std.testing.expectEqual(@as(usize, 1), report.runtime_failure_count);
+    try std.testing.expectEqualStrings("broken", report.first_runtime_failure.?.provider_name);
+    try std.testing.expectEqual(error.RuntimeFailure, report.first_runtime_failure.?.err);
 }

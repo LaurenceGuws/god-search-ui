@@ -9,12 +9,13 @@ pub fn prewarmProviders(
     cache_ready: *bool,
     cache_last_refresh_ns: *i128,
     refresh_requested: *bool,
-) !void {
+) !providers.CollectReport {
     cached_candidates.clearRetainingCapacity();
-    try registry.collectAll(allocator, cached_candidates);
+    const report = try registry.collectAllWithReport(allocator, cached_candidates);
     cache_ready.* = true;
     cache_last_refresh_ns.* = std.time.nanoTimestamp();
     refresh_requested.* = false;
+    return report;
 }
 
 pub fn invalidateSnapshot(cache_ready: *bool, cache_last_refresh_ns: *i128, refresh_requested: *bool) void {

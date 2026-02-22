@@ -13,6 +13,11 @@ fi
 OUTPUT_LOG="$(mktemp)"
 trap 'rm -f "$OUTPUT_LOG"' EXIT
 
+if ! command -v timeout >/dev/null 2>&1; then
+  echo "error: timeout command not found; required for release validate ci guard" >&2
+  exit 1
+fi
+
 if timeout "${TIMEOUT_SECS}"s scripts/release_validate.sh --ci --require-clean ${ALLOW_DIRTY_FLAG} >"$OUTPUT_LOG" 2>&1; then
   echo "release validate ci guard passed"
   exit 0

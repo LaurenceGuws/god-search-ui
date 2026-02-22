@@ -2,6 +2,7 @@ const std = @import("std");
 const common_dispatch = @import("../common/dispatch.zig");
 const gtk_types = @import("types.zig");
 const gtk_row_data = @import("row_data.zig");
+const gtk_query = @import("query_helpers.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -163,11 +164,7 @@ pub fn appendSectionSeparatorRow(list: *c.GtkListBox) void {
 }
 
 pub fn appendAsyncRow(list: *c.GtkListBox, frame: []const u8, message: []const u8) void {
-    const markup = std.fmt.allocPrint(
-        std.heap.page_allocator,
-        "<span foreground=\"#b5d6ff\" size=\"x-large\" weight=\"700\">{s}</span> <span foreground=\"#aeb8cc\">{s}</span>",
-        .{ frame, message },
-    ) catch return;
+    const markup = buildAsyncRowMarkup(std.heap.page_allocator, frame, message) catch return;
     defer std.heap.page_allocator.free(markup);
     const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
     defer std.heap.page_allocator.free(markup_z);
@@ -184,6 +181,18 @@ pub fn appendAsyncRow(list: *c.GtkListBox, frame: []const u8, message: []const u
     c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
     c.g_object_set_data_full(@ptrCast(row), "gs-async", c.g_strdup("1"), c.g_free);
     c.gtk_list_box_append(@ptrCast(list), row);
+}
+
+fn buildAsyncRowMarkup(allocator: std.mem.Allocator, frame: []const u8, message: []const u8) ![]u8 {
+    const frame_escaped = try gtk_query.escapeMarkupAlloc(allocator, frame);
+    defer allocator.free(frame_escaped);
+    const message_escaped = try gtk_query.escapeMarkupAlloc(allocator, message);
+    defer allocator.free(message_escaped);
+    return std.fmt.allocPrint(
+        allocator,
+        "<span foreground=\"#b5d6ff\" size=\"x-large\" weight=\"700\">{s}</span> <span foreground=\"#aeb8cc\">{s}</span>",
+        .{ frame_escaped, message_escaped },
+    );
 }
 
 pub fn clearList(list: *c.GtkListBox) void {
@@ -261,4 +270,14 @@ fn kindChipText(kind: CandidateKind) [:0]const u8 {
         .action => "ACT",
         .hint => "TIP",
     };
+}
+
+test "buildAsyncRowMarkup escapes frame and message markup-sensitive characters" {
+    const allocator = std.testing.allocator;
+    const markup = try buildAsyncRowMarkup(allocator, "<b>*</b>", "x & y <z>");
+    defer allocator.free(markup);
+    try std.testing.expectEqualStrings(
+        "<span foreground=\"#b5d6ff\" size=\"x-large\" weight=\"700\">&lt;b&gt;*&lt;/b&gt;</span> <span foreground=\"#aeb8cc\">x &amp; y &lt;z&gt;</span>",
+        markup,
+    );
 }

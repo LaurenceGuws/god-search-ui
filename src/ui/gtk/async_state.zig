@@ -14,6 +14,7 @@ pub const AsyncRenderedRow = struct {
 
 pub const AsyncSearchResult = struct {
     ctx: *UiContext,
+    allocator: std.mem.Allocator,
     generation: u64,
     total_len: usize,
     query: []u8,
@@ -49,7 +50,8 @@ pub fn freePendingAsyncQuery(ctx: *UiContext) void {
     }
 }
 
-pub fn freeAsyncSearchResult(allocator: std.mem.Allocator, payload: *AsyncSearchResult) void {
+pub fn freeAsyncSearchResult(payload: *AsyncSearchResult) void {
+    const allocator = payload.allocator;
     allocator.free(payload.query);
     for (payload.rows) |row| {
         if (row.title.len > 0) allocator.free(row.title);

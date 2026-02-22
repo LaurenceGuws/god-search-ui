@@ -10,10 +10,13 @@ Quick reference for release automation scripts.
 | `scripts/check_clean_worktree.sh` | Clean-worktree preflight guard | `scripts/check_clean_worktree.sh` | (same command) |
 | `scripts/check_release_validate_ci.sh` | CI guard ensuring `release_validate --ci` completes non-interactively | `scripts/check_release_validate_ci.sh` | (same command) |
 | `scripts/gen_release_notes.sh` | Draft release notes from template + commits | `scripts/gen_release_notes.sh v0.1.1` | edit generated notes and commit |
+| `scripts/lint_release_notes.sh` | Release-notes placeholder/marker lint | `scripts/lint_release_notes.sh docs/release-notes-v0.1.1.md` | (same command) |
 | `scripts/cut_release_tag.sh` | Tag cut flow with preflight | `scripts/cut_release_tag.sh --version v0.1.1` | `scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --push` |
 | `scripts/publish_release_tag.sh` | Publish existing local tag | `scripts/publish_release_tag.sh --version v0.1.1` | `scripts/publish_release_tag.sh --version v0.1.1 --apply` |
 | `scripts/arch_package_smoke.sh` | Arch package build/install smoke | `scripts/arch_package_smoke.sh` | `scripts/arch_package_smoke.sh --install --uninstall` |
 | `scripts/check_release_helpers.sh` | CLI contract checks for helpers | `scripts/check_release_helpers.sh` | (same command) |
+| `scripts/check_release_matrix.sh` | Release matrix script-existence and order guards | `scripts/check_release_matrix.sh` | (same command) |
+| `scripts/check_cut_dryrun_default_safe.sh` | Cut dry-run default-safe notes-path assertions | `scripts/check_cut_dryrun_default_safe.sh` | (same command) |
 | `scripts/check_release_docs_contracts.sh` | Meta contract check for release docs/help/matrix | `scripts/check_release_docs_contracts.sh` | (same command) |
 | `scripts/check_release_contracts.sh` | One-command alias for all release contract checks | `scripts/check_release_contracts.sh --docs-only` | `scripts/check_release_contracts.sh` |
 | `scripts/check_release_contracts_contract.sh` | Contract checks for release-contracts alias CLI/docs sync | `scripts/check_release_contracts_contract.sh` | (same command) |
@@ -30,7 +33,8 @@ Quick reference for release automation scripts.
 2. `scripts/release_smoke.sh --ci` (for CI/minimal-host parity)
 3. `scripts/release_validate.sh --ci` (single-entrypoint operator preflight)
 4. `scripts/gen_release_notes.sh vX.Y.Z`
-5. `scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push`
+5. `scripts/lint_release_notes.sh docs/release-notes-vX.Y.Z.md`
+6. `scripts/cut_release_tag.sh --version vX.Y.Z --apply --commit-notes --push`
 
 Default-safe note mode:
 - if `docs/release-notes-<version>.md` exists, apply mode reuses it.
@@ -40,7 +44,7 @@ Quick dry-run example:
 - Expected output includes either:
   - `[dry-run] would reuse: docs/release-notes-v0.1.2.md`
   - or regeneration command when notes file does not yet exist.
-6. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`
+7. `scripts/publish_release_tag.sh --version vX.Y.Z --apply`
 
 ## Related Docs
 

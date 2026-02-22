@@ -41,6 +41,8 @@ pub const SearchService = struct {
     last_query_elapsed_ns: u64 = 0,
     last_query_refreshed_cache: bool = false,
     last_query_used_stale_cache: bool = false,
+    last_query_had_provider_runtime_failure: bool = false,
+    cache_snapshot_had_provider_runtime_failure: bool = false,
 
     pub fn init(registry: providers.ProviderRegistry) SearchService {
         return .{ .registry = registry };
@@ -78,6 +80,7 @@ pub const SearchService = struct {
             &self.query_mu,
             &self.last_query_refreshed_cache,
             &self.last_query_used_stale_cache,
+            &self.last_query_had_provider_runtime_failure,
         );
 
         const dispatch = query_dispatch.parseAndClassify(raw_query);
@@ -96,8 +99,10 @@ pub const SearchService = struct {
 
         self.cache_mu.lock();
         const cache_view = cache_read.readViewLocked(self.cache_ready, &self.cached_rank_generations);
+        const cache_snapshot_had_provider_runtime_failure = self.cache_snapshot_had_provider_runtime_failure;
         self.cache_mu.unlock();
         if (cache_view.ready) {
+            var had_provider_runtime_failure = false;
             const ranked_cache_or_collect = try query_engine.rankFromCacheOrCollect(
                 allocator,
                 self.registry,
@@ -105,11 +110,17 @@ pub const SearchService = struct {
                 recent,
                 cache_view.snapshot,
                 &query_candidates,
+                &had_provider_runtime_failure,
             );
+            self.query_mu.lock();
+            self.last_query_had_provider_runtime_failure =
+                cache_snapshot_had_provider_runtime_failure or had_provider_runtime_failure;
+            self.query_mu.unlock();
             query_metrics_access.setElapsed(&self.query_mu, &self.last_query_elapsed_ns, sw.elapsedNs());
             return ranked_cache_or_collect;
         }
 
+        var had_provider_runtime_failure = false;
         const ranked = try query_engine.rankFromCacheOrCollect(
             allocator,
             self.registry,
@@ -117,7 +128,11 @@ pub const SearchService = struct {
             recent,
             &.{},
             &query_candidates,
+            &had_provider_runtime_failure,
         );
+        self.query_mu.lock();
+        self.last_query_had_provider_runtime_failure = had_provider_runtime_failure;
+        self.query_mu.unlock();
         query_metrics_access.setElapsed(&self.query_mu, &self.last_query_elapsed_ns, sw.elapsedNs());
         return ranked;
     }
@@ -141,7 +156,7 @@ pub const SearchService = struct {
     pub fn prewarmProviders(self: *SearchService, allocator: std.mem.Allocator) !void {
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
-        try cache_coordinator.prewarmLocked(
+        const report = try cache_coordinator.prewarmLocked(
             self.registry,
             allocator,
             &self.cached_candidates,
@@ -151,6 +166,7 @@ pub const SearchService = struct {
             &self.cached_rank_generations,
             self.cache_generation_keep,
         );
+        self.cache_snapshot_had_provider_runtime_failure = report.had_runtime_failure;
     }
 
     pub fn invalidateSnapshot(self: *SearchService) void {
@@ -228,6 +244,7 @@ pub const SearchService = struct {
             &self.query_mu,
             &self.last_query_refreshed_cache,
             &self.last_query_used_stale_cache,
+            &self.last_query_had_provider_runtime_failure,
         );
     }
 

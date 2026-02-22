@@ -44,6 +44,7 @@ pub fn executeAction(
     action: []const u8,
     runner: *const fn (command: []const u8) anyerror!void,
 ) !void {
+    // `action` is an internal action id; `runner` executes the mapped command string.
     const command = resolveActionCommand(action) orelse return error.UnknownAction;
     try runner(command);
 }
