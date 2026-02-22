@@ -16,7 +16,7 @@ const LaunchContext = struct {
 
 const UiContext = extern struct {
     window: *c.GtkWidget,
-    entry: *c.GtkSearchEntry,
+    entry: *c.GtkEntry,
     status: *c.GtkLabel,
     list: *c.GtkListBox,
     scroller: *c.GtkScrolledWindow,
@@ -83,8 +83,8 @@ pub const Shell = struct {
         c.gtk_widget_set_margin_start(root_box, 12);
         c.gtk_widget_set_margin_end(root_box, 12);
 
-        const entry = c.gtk_search_entry_new();
-        c.gtk_search_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
+        const entry = c.gtk_entry_new();
+        c.gtk_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
         const status = c.gtk_label_new("Esc to close, Ctrl+R to refresh");
         c.gtk_label_set_xalign(@ptrCast(status), 0.0);
         c.gtk_label_set_single_line_mode(@ptrCast(status), GTRUE);
@@ -128,7 +128,7 @@ pub const Shell = struct {
         const key_controller = c.gtk_event_controller_key_new();
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
         c.gtk_widget_add_controller(window, @ptrCast(key_controller));
-        _ = c.g_signal_connect_data(entry, "search-changed", c.G_CALLBACK(onSearchChanged), ctx, null, 0);
+        _ = c.g_signal_connect_data(entry, "changed", c.G_CALLBACK(onSearchChanged), ctx, null, 0);
         _ = c.g_signal_connect_data(entry, "activate", c.G_CALLBACK(onEntryActivate), ctx, null, 0);
         _ = c.g_signal_connect_data(list, "row-activated", c.G_CALLBACK(onRowActivated), ctx, null, 0);
         _ = c.g_signal_connect_data(list, "row-selected", c.G_CALLBACK(onRowSelected), ctx, null, 0);
@@ -257,7 +257,7 @@ pub const Shell = struct {
         }
     }
 
-    fn onEntryActivate(_: ?*c.GtkSearchEntry, user_data: ?*anyopaque) callconv(.c) void {
+    fn onEntryActivate(_: ?*c.GtkEntry, user_data: ?*anyopaque) callconv(.c) void {
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
         activateSelectedRow(ctx);
@@ -272,7 +272,7 @@ pub const Shell = struct {
         if (row != null) c.g_signal_emit_by_name(ctx.list, "row-activated", row);
     }
 
-    fn onSearchChanged(entry: ?*c.GtkSearchEntry, user_data: ?*anyopaque) callconv(.c) void {
+    fn onSearchChanged(entry: ?*c.GtkEditable, user_data: ?*anyopaque) callconv(.c) void {
         _ = entry;
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
