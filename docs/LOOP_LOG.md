@@ -4365,3 +4365,33 @@
   - M8: optional final cleanup pass (`gtk_shell.zig` naming/section ordering and thin wrappers removal).
 
 ---
+## 2026-02-22 (Cycle 193)
+- Milestone: M8 UX Modularization
+- Task slice: extract row-selection dispatch and input controller flow from shell
+- Changes:
+  - Added `src/ui/gtk/selection.zig`:
+    - centralized selected-row execution handling by kind/action
+    - action confirmation and command dispatch behavior via callback hooks
+    - module filter activation helper for default module list rows
+  - Added `src/ui/gtk/controller.zig`:
+    - keyboard/navigation key handling (`Esc`, `Ctrl+L`, `Ctrl+R`, arrows/page/home/end, Enter)
+    - entry activation + scrollbar-adjustment handlers
+    - route-prefix icon updates for the search entry
+    - selected-row status messaging logic
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates row activation to `gtk_selection.executeSelected`
+    - delegates keyboard/input/selection controller behavior to `gtk_controller`
+    - removed dead shell-local action dispatch and route-icon helper code
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - shell callback signatures remain the integration boundary; behavior now depends on hook contracts in `selection.zig` and `controller.zig`.
+- Next slice:
+  - M8: split render orchestration from shell (`populateResults` + async/result routing coordinator).
+
+---
