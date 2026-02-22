@@ -10,8 +10,8 @@ const dynamic_generations = @import("search_service/dynamic_generations.zig");
 const dynamic_query_engine = @import("search_service/dynamic_query_engine.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
 const query_dispatch = @import("search_service/query_dispatch.zig");
+const query_metrics_access = @import("search_service/query_metrics_access.zig");
 const query_refresh_gate = @import("search_service/query_refresh_gate.zig");
-const query_metrics = @import("search_service/query_metrics.zig");
 const query_engine = @import("search_service/query_engine.zig");
 const refresh_worker = @import("search_service/refresh_worker.zig");
 
@@ -62,12 +62,16 @@ pub const SearchService = struct {
 
     pub fn searchQuery(self: *SearchService, allocator: std.mem.Allocator, raw_query: []const u8) ![]search.ScoredCandidate {
         const sw = @import("metrics.zig").Stopwatch.start();
-        self.resetQueryMetrics();
+        query_metrics_access.resetFlags(
+            &self.query_mu,
+            &self.last_query_refreshed_cache,
+            &self.last_query_used_stale_cache,
+        );
 
         const dispatch = query_dispatch.parseAndClassify(raw_query);
         if (dispatch.use_dynamic) {
             const ranked_dynamic = try self.searchDynamicRoute(allocator, dispatch.parsed);
-            self.setQueryElapsed(sw.elapsedNs());
+            query_metrics_access.setElapsed(&self.query_mu, &self.last_query_elapsed_ns, sw.elapsedNs());
             return ranked_dynamic;
         }
 
@@ -90,7 +94,7 @@ pub const SearchService = struct {
                 cache_view.snapshot,
                 &query_candidates,
             );
-            self.setQueryElapsed(sw.elapsedNs());
+            query_metrics_access.setElapsed(&self.query_mu, &self.last_query_elapsed_ns, sw.elapsedNs());
             return ranked_cache_or_collect;
         }
 
@@ -102,7 +106,7 @@ pub const SearchService = struct {
             &.{},
             &query_candidates,
         );
-        self.setQueryElapsed(sw.elapsedNs());
+        query_metrics_access.setElapsed(&self.query_mu, &self.last_query_elapsed_ns, sw.elapsedNs());
         return ranked;
     }
 
@@ -149,9 +153,7 @@ pub const SearchService = struct {
         self.cache_mu.unlock();
         if (!cache_coordinator.shouldDrain(requested)) return false;
         try self.prewarmProviders(allocator);
-        self.query_mu.lock();
-        query_metrics.markRefreshed(&self.last_query_refreshed_cache);
-        self.query_mu.unlock();
+        query_metrics_access.markRefreshed(&self.query_mu, &self.last_query_refreshed_cache);
         return true;
     }
 
@@ -200,18 +202,6 @@ pub const SearchService = struct {
         self.query_mu.lock();
         defer self.query_mu.unlock();
         return history_access.snapshotNewestFirstOwnedLocked(self.history.items, allocator);
-    }
-
-    fn setQueryElapsed(self: *SearchService, elapsed_ns: u64) void {
-        self.query_mu.lock();
-        defer self.query_mu.unlock();
-        query_metrics.setElapsed(&self.last_query_elapsed_ns, elapsed_ns);
-    }
-
-    fn resetQueryMetrics(self: *SearchService) void {
-        self.query_mu.lock();
-        defer self.query_mu.unlock();
-        query_metrics.resetFlags(&self.last_query_refreshed_cache, &self.last_query_used_stale_cache);
     }
 };
 

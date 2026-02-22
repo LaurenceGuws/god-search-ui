@@ -5138,3 +5138,26 @@
   - M8: extract query metrics lock wrappers (`reset/set`) into a tiny scoped helper to further reduce repeated lock boilerplate in `SearchService`.
 
 ---
+## 2026-02-22 (Cycle 225)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract query metrics lock choreography into dedicated helper module
+- Changes:
+  - Added `src/app/search_service/query_metrics_access.zig`:
+    - `resetFlags(...)`, `setElapsed(...)`, `markRefreshed(...)` helpers that own `query_mu` lock/unlock
+  - Updated `src/app/search_service.zig`:
+    - `searchQuery(...)` now uses `query_metrics_access` helpers directly
+    - `drainScheduledRefresh(...)` now marks refreshed flag via helper
+    - removed local `setQueryElapsed(...)` and `resetQueryMetrics(...)` wrappers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_metrics_access.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior unchanged by intent; this is lock-boilerplate consolidation only.
+- Next slice:
+  - M8: extract history list lifecycle cleanup from `deinit` into `history_access` to keep `SearchService` teardown narrowly declarative.
+
+---

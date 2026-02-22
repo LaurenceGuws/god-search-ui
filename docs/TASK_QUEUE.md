@@ -264,3 +264,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Hygiene - unify static-query refresh scheduling + async-worker kickoff via `search_service/query_refresh_gate.zig`.
 - [x] M8: Hygiene - decouple cache refresh entrypoints from `query_mu` to reduce lock-order deadlock risk.
 - [x] M8: Hygiene - add concurrency regression test for `drainScheduledRefresh` and repeated `searchQuery` calls.
+- [x] M8: Hygiene - extract query metrics lock access helpers into `search_service/query_metrics_access.zig`.
