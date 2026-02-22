@@ -4848,3 +4848,25 @@
   - M8: extract `SearchService` tests into dedicated `src/app/search_service_test.zig` to reduce production-file density and improve navigation.
 
 ---
+## 2026-02-22 (Cycle 212)
+- Milestone: M8 Code Hygiene / Test Structure
+- Task slice: move `SearchService` tests out of production file into dedicated test module
+- Changes:
+  - Added `src/app/search_service_test.zig`:
+    - migrated all `SearchService` behavior tests from `search_service.zig`
+  - Updated `src/app/search_service.zig`:
+    - removed inline test bodies
+    - added compact test import shim (`test { _ = @import(\"search_service_test.zig\"); }`)
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service_test.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior changes; this is structure/navigation hygiene only.
+- Next slice:
+  - M8: extract remaining `SearchService` orchestration helpers (query flag/timing + dynamic generation policy) into submodules to push `search_service.zig` further toward thin composition.
+
+---
