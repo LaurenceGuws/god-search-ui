@@ -78,6 +78,7 @@ fn spawnAsyncRouteSearchWorker(
         .ctx = ctx,
         .allocator = allocator,
         .generation = generation,
+        .ready_source_id = 0,
         .total_len = 0,
         .query = query_owned,
         .rows = &.{},
@@ -171,7 +172,8 @@ fn dispatchOrFreePayload(ctx: *UiContext, payload: *AsyncSearchResult) void {
     if (source_id == 0) {
         gtk_async.freeAsyncSearchResult(payload);
     } else {
-        ctx.async_ready_id = source_id;
+        payload.ready_source_id = source_id;
+        setAsyncReadySourceId(ctx, source_id);
     }
 }
 
@@ -199,6 +201,28 @@ fn finishWorkerTracking(ctx: *UiContext) void {
     if (no_workers_left) {
         c.g_cond_signal(&ctx.async_worker_cond);
     }
+}
+
+pub fn setAsyncReadySourceId(ctx: *UiContext, source_id: c.guint) void {
+    c.g_mutex_lock(&ctx.async_worker_lock);
+    ctx.async_ready_id = source_id;
+    c.g_mutex_unlock(&ctx.async_worker_lock);
+}
+
+pub fn takeAsyncReadySourceId(ctx: *UiContext) c.guint {
+    c.g_mutex_lock(&ctx.async_worker_lock);
+    const source_id = ctx.async_ready_id;
+    ctx.async_ready_id = 0;
+    c.g_mutex_unlock(&ctx.async_worker_lock);
+    return source_id;
+}
+
+pub fn clearAsyncReadySourceIdIf(ctx: *UiContext, source_id: c.guint) void {
+    c.g_mutex_lock(&ctx.async_worker_lock);
+    if (ctx.async_ready_id == source_id) {
+        ctx.async_ready_id = 0;
+    }
+    c.g_mutex_unlock(&ctx.async_worker_lock);
 }
 
 test "worker tracking rejects new workers during shutdown" {
@@ -238,6 +262,7 @@ test "mark payload search failure stores error and clears rows" {
     var payload = AsyncSearchResult{
         .ctx = &ctx,
         .generation = 1,
+        .ready_source_id = 0,
         .total_len = 7,
         .query = &.{},
         .rows = rows[0..],
@@ -320,6 +345,22 @@ test "launchPendingAsyncQuery clears pending and ends spinner when spawn fails" 
     try std.testing.expectEqual(@as(?[*]u8, null), ctx.async_pending_query_ptr);
     try std.testing.expectEqual(@as(usize, 0), ctx.async_pending_query_len);
     try std.testing.expectEqual(@as(u64, 9), ctx.async_search_generation);
+}
+
+test "async ready source id helpers synchronize writes and conditional clears" {
+    var ctx = std.mem.zeroes(UiContext);
+    c.g_mutex_init(&ctx.async_worker_lock);
+    defer c.g_mutex_clear(&ctx.async_worker_lock);
+
+    try std.testing.expectEqual(@as(c.guint, 0), takeAsyncReadySourceId(&ctx));
+
+    setAsyncReadySourceId(&ctx, 44);
+    clearAsyncReadySourceIdIf(&ctx, 12);
+    try std.testing.expectEqual(@as(c.guint, 44), takeAsyncReadySourceId(&ctx));
+
+    setAsyncReadySourceId(&ctx, 77);
+    clearAsyncReadySourceIdIf(&ctx, 77);
+    try std.testing.expectEqual(@as(c.guint, 0), takeAsyncReadySourceId(&ctx));
 }
 
 fn initTestAsyncCtx(ctx: *UiContext, allocator: *std.mem.Allocator) void {

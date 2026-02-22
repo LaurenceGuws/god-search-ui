@@ -49,6 +49,14 @@ pub fn launchPendingAsyncQuery(
     );
 }
 
+pub fn takeAsyncReadySourceId(ctx: *UiContext) c.guint {
+    return gtk_async_search.takeAsyncReadySourceId(ctx);
+}
+
+pub fn clearAsyncReadySourceIdIf(ctx: *UiContext, source_id: c.guint) void {
+    gtk_async_search.clearAsyncReadySourceIdIf(ctx, source_id);
+}
+
 pub fn endAsyncSpinner(ctx: *UiContext) void {
     ctx.async_inflight = GFALSE;
     if (ctx.async_spinner_id != 0) {
@@ -56,6 +64,7 @@ pub fn endAsyncSpinner(ctx: *UiContext) void {
         ctx.async_spinner_id = 0;
     }
     gtk_widgets.clearAsyncRows(ctx.list);
+    ctx.last_render_hash = 0;
 }
 
 fn beginAsyncSpinner(ctx: *UiContext) void {
@@ -89,5 +98,6 @@ fn updateAsyncSpinnerFrame(ctx: *UiContext) void {
     const status_msg = std.fmt.bufPrint(&status_buf, "{s} Searching...", .{frame}) catch "Searching...";
     gtk_widgets.clearAsyncRows(ctx.list);
     gtk_widgets.appendAsyncRow(ctx.list, frame, "Searching modules...");
+    ctx.last_render_hash = 0;
     if (ctx.pending_power_confirm == GFALSE) gtk_status.setStatus(ctx, status_msg);
 }

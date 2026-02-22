@@ -4,14 +4,15 @@ const search = @import("../../search/mod.zig");
 
 pub fn printQueryMeta(writer: anytype, service: *app.SearchService) !void {
     const ms = @as(f64, @floatFromInt(service.last_query_elapsed_ns)) / 1_000_000.0;
+    const flags = service.queryFlagsSnapshot();
     try writer.print("  (query time: {d:.2} ms)\n", .{ms});
-    if (service.last_query_used_stale_cache) {
+    if (flags.last_query_used_stale_cache) {
         try writer.print("  (using stale snapshot; refresh scheduled)\n", .{});
     }
-    if (service.last_query_refreshed_cache) {
+    if (flags.last_query_refreshed_cache) {
         try writer.print("  (snapshot auto-refreshed)\n", .{});
     }
-    if (service.last_query_had_provider_runtime_failure) {
+    if (flags.last_query_had_provider_runtime_failure) {
         try writer.print("  (provider runtime failure detected; results may be incomplete)\n", .{});
     }
 }

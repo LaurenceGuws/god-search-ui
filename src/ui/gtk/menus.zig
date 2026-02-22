@@ -18,6 +18,7 @@ pub const Hooks = struct {
 
 pub fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path: []const u8, hooks: Hooks) void {
     gtk_widgets.clearList(ctx.list);
+    ctx.last_render_hash = 0;
     gtk_widgets.appendHeaderRow(ctx.list, "Directory Actions");
     const path_msg = std.fmt.allocPrint(allocator, "Target: {s}", .{dir_path}) catch return;
     defer allocator.free(path_msg);
@@ -55,6 +56,7 @@ pub fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path
 pub fn showFileActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, file_action: []const u8, hooks: Hooks) void {
     const parsed = gtk_actions.parseFileAction(file_action);
     gtk_widgets.clearList(ctx.list);
+    ctx.last_render_hash = 0;
     gtk_widgets.appendHeaderRow(ctx.list, "File Actions");
     const target_msg = std.fmt.allocPrint(allocator, "Target: {s}", .{parsed.path}) catch return;
     defer allocator.free(target_msg);

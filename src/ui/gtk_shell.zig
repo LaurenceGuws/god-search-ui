@@ -75,11 +75,11 @@ pub const Shell = struct {
             _ = c.g_source_remove(ctx.async_spinner_id);
             ctx.async_spinner_id = 0;
         }
-        if (ctx.async_ready_id != 0) {
-            _ = c.g_source_remove(ctx.async_ready_id);
-            ctx.async_ready_id = 0;
-        }
         gtk_async_coord.beginAsyncShutdown(ctx);
+        const ready_id = gtk_async_coord.takeAsyncReadySourceId(ctx);
+        if (ready_id != 0) {
+            _ = c.g_source_remove(ready_id);
+        }
         ctx.async_worker_active = GFALSE;
         gtk_async.freePendingAsyncQuery(ctx);
         c.g_mutex_clear(&ctx.async_worker_lock);
@@ -195,7 +195,7 @@ pub const Shell = struct {
         if (user_data == null) return GFALSE;
         const payload: *AsyncSearchResult = @ptrCast(@alignCast(user_data.?));
         const ctx = payload.ctx;
-        ctx.async_ready_id = 0;
+        gtk_async_coord.clearAsyncReadySourceIdIf(ctx, payload.ready_source_id);
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const allocator = allocator_ptr.*;
         if (gtk_async_coord.isAsyncShuttingDown(ctx)) return GFALSE;

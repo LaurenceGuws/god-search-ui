@@ -16,6 +16,7 @@ pub const AsyncSearchResult = struct {
     ctx: *UiContext,
     allocator: std.mem.Allocator,
     generation: u64,
+    ready_source_id: gtk_types.c.guint,
     total_len: usize,
     query: []u8,
     rows: []AsyncRenderedRow,

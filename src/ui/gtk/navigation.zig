@@ -49,16 +49,18 @@ fn actionableDeltaIndex(
     if (target_moves <= 0) return null;
     var idx = start_idx;
     if (idx < 0) return null;
+    var last_actionable: ?i32 = null;
 
     var moved: i32 = 0;
     while (idx >= 0) : (idx += step) {
-        if (!exists_fn(ctx, idx)) return null;
+        if (!exists_fn(ctx, idx)) return last_actionable;
         if (actionable_fn(ctx, idx)) {
+            last_actionable = idx;
             moved += 1;
             if (moved >= target_moves) return idx;
         }
     }
-    return null;
+    return last_actionable;
 }
 
 fn clampF64(value: f64, min: f64, max: f64) f64 {
@@ -226,6 +228,14 @@ test "actionableDeltaIndex moves by actionable rows for both directions" {
     try std.testing.expectEqual(
         @as(i32, 1),
         actionableDeltaIndex(@constCast(&fixture), fixtureIndexExists, fixtureIndexActionable, 4, -1, 1).?,
+    );
+    try std.testing.expectEqual(
+        @as(i32, 5),
+        actionableDeltaIndex(@constCast(&fixture), fixtureIndexExists, fixtureIndexActionable, 2, 1, 5).?,
+    );
+    try std.testing.expectEqual(
+        @as(i32, 1),
+        actionableDeltaIndex(@constCast(&fixture), fixtureIndexExists, fixtureIndexActionable, 4, -1, 8).?,
     );
     try std.testing.expect(
         actionableDeltaIndex(@constCast(&fixture), fixtureIndexExists, fixtureIndexActionable, 6, 1, 1) == null,
