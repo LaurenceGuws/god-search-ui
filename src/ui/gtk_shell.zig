@@ -393,6 +393,15 @@ pub const Shell = struct {
         const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
 
         clearList(ctx.list);
+        if (query_trimmed.len == 0) {
+            appendModuleFilterMenu(ctx, allocator);
+            if (ctx.pending_power_confirm == GFALSE) {
+                setStatus(ctx, "Choose a module filter or type without prefix for blended search");
+            }
+            selectFirstActionableRow(ctx);
+            return;
+        }
+
         const ranked = ctx.service.searchQuery(allocator, query) catch |err| {
             const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
             defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
@@ -408,10 +417,6 @@ pub const Shell = struct {
         const route_hint = routeHintForQuery(query_trimmed);
         const highlight_token = highlightTokenForQuery(query_trimmed);
         const has_app_glyph_fallback = hasAppGlyphFallback(rows);
-        if (empty_query) {
-            appendInfoRow(ctx.list, "Start typing to search, or use a route prefix.");
-            appendLegendRow(ctx.list, "Hotkeys: Enter launch | Ctrl+L focus | PgUp/PgDn move | Home/End jump | Ctrl+R refresh | Esc close");
-        }
         if (route_hint) |hint| {
             appendInfoRow(ctx.list, hint);
         }
@@ -438,6 +443,89 @@ pub const Shell = struct {
 
         _ = ctx.service.drainScheduledRefresh(allocator) catch false;
         selectFirstActionableRow(ctx);
+    }
+
+    fn appendModuleFilterMenu(ctx: *UiContext, allocator: std.mem.Allocator) void {
+        appendHeaderRow(ctx.list, "Module Filters");
+        appendInfoRow(ctx.list, "Select a module (Enter) or type directly for blended search.");
+        appendLegendRow(ctx.list, "Hotkeys: Enter select | Ctrl+L focus | PgUp/PgDn move | Home/End jump | Ctrl+R refresh | Esc close");
+
+        appendModuleFilterRow(ctx.list, allocator, "Apps", "Filter installed applications", "@", .app);
+        appendModuleFilterRow(ctx.list, allocator, "Windows", "Filter open windows", "#", .window);
+        appendModuleFilterRow(ctx.list, allocator, "Directories", "Filter recent directories", "~", .dir);
+        appendModuleFilterRow(ctx.list, allocator, "Files", "Advanced file finder (fd)", "%", .file);
+        appendModuleFilterRow(ctx.list, allocator, "Code Search", "Text search (rg)", "&", .grep);
+        appendModuleFilterRow(ctx.list, allocator, "Run", "Run command route", ">", .action);
+        appendModuleFilterRow(ctx.list, allocator, "Calc", "Calculator route", "=", .action);
+        appendModuleFilterRow(ctx.list, allocator, "Web", "Web search route", "?", .action);
+    }
+
+    fn appendModuleFilterRow(
+        list: *c.GtkListBox,
+        allocator: std.mem.Allocator,
+        title: []const u8,
+        subtitle: []const u8,
+        route: []const u8,
+        kind: CandidateKind,
+    ) void {
+        const title_markup = std.fmt.allocPrint(allocator, "<span weight=\"600\">{s}</span>", .{title}) catch return;
+        defer allocator.free(title_markup);
+        const title_markup_z = allocator.dupeZ(u8, title_markup) catch return;
+        defer allocator.free(title_markup_z);
+
+        const primary_label = c.gtk_label_new(null);
+        c.gtk_label_set_markup(@ptrCast(primary_label), title_markup_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
+        c.gtk_label_set_ellipsize(@ptrCast(primary_label), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_single_line_mode(@ptrCast(primary_label), GTRUE);
+        c.gtk_widget_set_hexpand(primary_label, GTRUE);
+        c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
+
+        const icon_text_z = allocator.dupeZ(u8, kindIcon(kind)) catch return;
+        defer allocator.free(icon_text_z);
+        const icon = c.gtk_label_new(icon_text_z.ptr);
+        c.gtk_widget_add_css_class(icon, "gs-kind-icon");
+        c.gtk_widget_set_valign(icon, c.GTK_ALIGN_CENTER);
+
+        const chip = kindChipWidget(kind);
+        c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
+
+        const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
+        c.gtk_box_append(@ptrCast(primary_row), icon);
+        c.gtk_box_append(@ptrCast(primary_row), primary_label);
+        c.gtk_box_append(@ptrCast(primary_row), chip);
+
+        const subtitle_z = allocator.dupeZ(u8, subtitle) catch return;
+        defer allocator.free(subtitle_z);
+        const secondary_label = c.gtk_label_new(subtitle_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
+        c.gtk_label_set_ellipsize(@ptrCast(secondary_label), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_single_line_mode(@ptrCast(secondary_label), GTRUE);
+        c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
+        c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_widget_set_margin_top(content, 2);
+        c.gtk_widget_set_margin_bottom(content, 2);
+        c.gtk_widget_add_css_class(content, "gs-candidate-content");
+        c.gtk_box_append(@ptrCast(content), primary_row);
+        c.gtk_box_append(@ptrCast(content), secondary_label);
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-actionable-row");
+        c.gtk_list_box_row_set_child(@ptrCast(row), content);
+
+        const kind_z = allocator.dupeZ(u8, "module") catch return;
+        defer allocator.free(kind_z);
+        const action_z = allocator.dupeZ(u8, route) catch return;
+        defer allocator.free(action_z);
+        const title_z = allocator.dupeZ(u8, title) catch return;
+        defer allocator.free(title_z);
+        c.g_object_set_data_full(@ptrCast(row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
+        c.gtk_list_box_append(@ptrCast(list), row);
     }
 
     fn appendInfoRow(list: *c.GtkListBox, message: []const u8) void {
@@ -671,7 +759,7 @@ pub const Shell = struct {
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const allocator = allocator_ptr.*;
 
-        if (!std.mem.eql(u8, kind, "dir_option") and !std.mem.eql(u8, kind, "file_option")) {
+        if (!std.mem.eql(u8, kind, "dir_option") and !std.mem.eql(u8, kind, "file_option") and !std.mem.eql(u8, kind, "module")) {
             ctx.service.recordSelection(allocator, action) catch {};
         }
 
@@ -720,6 +808,10 @@ pub const Shell = struct {
             c.gtk_window_close(@ptrCast(ctx.window));
             return;
         }
+        if (std.mem.eql(u8, kind, "module")) {
+            applyModuleFilter(ctx, allocator, action);
+            return;
+        }
         clearPowerConfirmation(ctx);
         if (std.mem.eql(u8, kind, "app")) {
             if (!std.mem.eql(u8, action, "__drun__")) {
@@ -753,6 +845,23 @@ pub const Shell = struct {
             c.gtk_window_close(@ptrCast(ctx.window));
             return;
         }
+    }
+
+    fn applyModuleFilter(ctx: *UiContext, allocator: std.mem.Allocator, module_action: []const u8) void {
+        const route = std.mem.trim(u8, module_action, " \t\r\n");
+        if (route.len == 0) return;
+        const text = std.fmt.allocPrint(allocator, "{s} ", .{route}) catch return;
+        defer allocator.free(text);
+        const text_z = allocator.dupeZ(u8, text) catch return;
+        defer allocator.free(text_z);
+
+        clearPowerConfirmation(ctx);
+        c.gtk_editable_set_text(@ptrCast(ctx.entry), text_z.ptr);
+        c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
+        _ = c.gtk_widget_grab_focus(@ptrCast(@alignCast(ctx.entry)));
+        const status = std.fmt.allocPrint(allocator, "Module filter active: {s}", .{route}) catch return;
+        defer allocator.free(status);
+        setStatus(ctx, status);
     }
 
     fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path: []const u8) void {
@@ -1285,6 +1394,7 @@ pub const Shell = struct {
         if (std.mem.eql(u8, kind, "dir")) return "directory";
         if (std.mem.eql(u8, kind, "file")) return "file";
         if (std.mem.eql(u8, kind, "grep")) return "match";
+        if (std.mem.eql(u8, kind, "module")) return "module filter";
         if (std.mem.eql(u8, kind, "action")) return "action";
         if (std.mem.eql(u8, kind, "hint")) return "hint";
         return "item";

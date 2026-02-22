@@ -3963,3 +3963,29 @@
   - M8: UX Phase 6 - add optional desktop-file icon enrichment when cache icon column is missing.
 
 ---
+## 2026-02-22 (Cycle 178)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - default empty-query suggestions switch to module-filter list
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - empty query no longer renders blended result list
+    - added dedicated default module-filter menu on launch/empty input:
+      - Apps (`@`), Windows (`#`), Directories (`~`), Files (`%`), Code Search (`&`), Run (`>`), Calc (`=`), Web (`?`)
+    - module rows are actionable and keyboard-selectable
+    - selecting a module row injects `<prefix><space>` into search entry and focuses input
+      (e.g. `@ `, `% `, `& `)
+    - added module-kind handling in selection execution/status label mapping
+    - preserved no-prefix behavior:
+      - typing without module prefix still uses blended search path unchanged
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - module menu now intentionally replaces previous empty-query blended list to keep launch suggestions focused.
+- Next slice:
+  - M8: UX Phase 6 - add optional desktop-file icon enrichment when cache icon column is missing.
+
+---

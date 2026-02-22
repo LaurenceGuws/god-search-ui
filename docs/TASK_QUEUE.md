@@ -207,3 +207,6 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 6 - improve app icon token extraction for `env`-wrapped exec commands (e.g., Zide).
 - [x] M8: UX Phase 6 - add app icon variant fallback (`-desktop`/`.desktop` stripping) for icon-name lookup.
 - [x] M8: UX Phase 6 - increase GTK row icon size to ~2x heading text scale.
+- [x] M8: UX Phase 6 - show module filter list as default actionable suggestions on empty query.
+- [x] M8: UX Phase 6 - activate module filter rows by injecting route prefixes into search entry.
+- [x] M8: UX Phase 6 - preserve blended no-prefix behavior for typed queries.
