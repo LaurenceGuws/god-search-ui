@@ -4551,3 +4551,29 @@
   - M8: begin extracting a shared execution adapter (`ui/common/execute.zig`) that maps ranked candidates to launch/menu intents for both shells.
 
 ---
+## 2026-02-22 (Cycle 200)
+- Milestone: M8 Code Hygiene / Shared Execution Adapter
+- Task slice: extract shared selection execution adapter and route GTK through it
+- Changes:
+  - Added `src/ui/common/execute.zig`:
+    - centralized selection-decision resolution into explicit intents (`module_filter`, `dir_menu`, `file_menu`, `run_plan`, `none`)
+    - shared guard-confirmation resolution (`guard_waiting_confirmation`) and power-confirm clear policy
+    - integrates with shared command planning contract from `ui/common/dispatch.zig`
+  - Updated `src/ui/gtk/selection.zig`:
+    - now consumes `common_execute.resolveSelection(...)` and executes resulting intent
+    - keeps GTK-specific UI side effects (status hooks, menu presentation, telemetry, close-on-success)
+    - restores explicit unknown-action feedback path when command resolution fails
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/execute.zig src/ui/gtk/selection.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/common/execute.zig ./src/ui/gtk/selection.zig --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - adapter currently wired for GTK selection path; headless execution remains query-display oriented and can adopt this adapter when interactive selection is added.
+- Next slice:
+  - M8: introduce `ui/common/actions.zig` execution runtime (run command + telemetry outcome helper) to remove duplicate run/error handling in GTK selection.
+
+---
