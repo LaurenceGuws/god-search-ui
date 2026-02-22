@@ -693,7 +693,7 @@ pub const Shell = struct {
                 return;
             };
             emitTelemetry(ctx, "action", action, "ok", cmd);
-            showLaunchFeedback(ctx, "Action launched");
+            c.gtk_window_close(@ptrCast(ctx.window));
             return;
         }
         clearPowerConfirmation(ctx);
@@ -705,7 +705,7 @@ pub const Shell = struct {
                     return;
                 };
                 emitTelemetry(ctx, "app", action, "ok", action);
-                showLaunchFeedback(ctx, "App launched");
+                c.gtk_window_close(@ptrCast(ctx.window));
             }
             return;
         }
@@ -718,7 +718,7 @@ pub const Shell = struct {
                 return;
             };
             emitTelemetry(ctx, "dir", action, "ok", cmd);
-            showLaunchFeedback(ctx, "Directory opened");
+            c.gtk_window_close(@ptrCast(ctx.window));
             return;
         }
         if (std.mem.eql(u8, kind, "window")) {
@@ -730,7 +730,7 @@ pub const Shell = struct {
                 return;
             };
             emitTelemetry(ctx, "window", action, "ok", cmd);
-            showLaunchFeedback(ctx, "Window focused");
+            c.gtk_window_close(@ptrCast(ctx.window));
             return;
         }
     }
