@@ -735,7 +735,7 @@ pub const Shell = struct {
     }
 
     fn updateAsyncSpinnerFrame(ctx: *UiContext) void {
-        const frames = [_][]const u8{ "|", "/", "-", "\\" };
+        const frames = [_][]const u8{ "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "⠋", "⠙" };
         const frame = frames[ctx.async_spinner_phase % frames.len];
         ctx.async_spinner_phase +%= 1;
 
