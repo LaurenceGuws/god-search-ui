@@ -4287,3 +4287,28 @@
   - M8: extract status/feedback tone engine into `gtk/status.zig` and shrink shell below 900 LOC.
 
 ---
+## 2026-02-22 (Cycle 190)
+- Milestone: M8 UX Modularization
+- Task slice: extract status/feedback engine from shell
+- Changes:
+  - Added `src/ui/gtk/status.zig`:
+    - status tone model + CSS-class application
+    - launch feedback rows
+    - delayed status reset timer callback behavior
+    - unified `setStatus`/`showLaunchFeedback` entry points
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates status and feedback flows to `gtk_status`
+    - removed in-file status tone + feedback/reset implementations
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status reset timer ownership remains in `UiContext`; shell destroy-path cleanup is unchanged.
+- Next slice:
+  - M8: extract app-icon resolution/fallback helpers into `gtk/icons.zig`.
+
+---

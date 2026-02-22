@@ -11,6 +11,7 @@ const gtk_async = @import("gtk/async_state.zig");
 const gtk_async_search = @import("gtk/async_search.zig");
 const gtk_render = @import("gtk/render.zig");
 const gtk_menus = @import("gtk/menus.zig");
+const gtk_status = @import("gtk/status.zig");
 const c = gtk_types.c;
 const CandidateKind = gtk_types.CandidateKind;
 const GTRUE = gtk_types.GTRUE;
@@ -697,143 +698,17 @@ pub const Shell = struct {
     }
 
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
-        clearLaunchFeedbackRows(ctx.list);
-        appendLaunchFeedbackRow(ctx.list, message);
-        setStatusWithTone(ctx, gtk_query.postLaunchStatus(message), launchStatusTone(message));
-        scheduleStatusReset(ctx);
-        gtk_nav.selectFirstActionableRow(ctx);
-    }
-
-    fn scheduleStatusReset(ctx: *UiContext) void {
-        if (ctx.status_reset_id != 0) {
-            _ = c.g_source_remove(ctx.status_reset_id);
-            ctx.status_reset_id = 0;
-        }
-        ctx.status_reset_id = c.g_timeout_add(1700, onStatusReset, ctx);
-    }
-
-    fn onStatusReset(user_data: ?*anyopaque) callconv(.c) c.gboolean {
-        if (user_data == null) return GFALSE;
-        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        ctx.status_reset_id = 0;
-        if (ctx.pending_power_confirm == GTRUE) return GFALSE;
-
-        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
-        const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
-        if (query_trimmed.len == 0) {
-            setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs % files & grep > run = calc ? web");
-        } else {
-            setStatus(ctx, "");
-        }
-        return GFALSE;
-    }
-
-    fn clearLaunchFeedbackRows(list: *c.GtkListBox) void {
-        var child = c.gtk_widget_get_first_child(@ptrCast(@alignCast(list)));
-        while (child != null) {
-            const next = c.gtk_widget_get_next_sibling(child);
-            if (c.g_object_get_data(@ptrCast(child), "gs-feedback") != null) {
-                c.gtk_list_box_remove(list, child);
-            }
-            child = next;
-        }
-    }
-
-    fn appendLaunchFeedbackRow(list: *c.GtkListBox, message: []const u8) void {
-        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
-        defer std.heap.page_allocator.free(msg_z);
-
-        const label = c.gtk_label_new(msg_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-        c.gtk_widget_add_css_class(label, "gs-info");
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-meta-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), label);
-        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
-        c.g_object_set_data_full(@ptrCast(row), "gs-feedback", c.g_strdup("1"), c.g_free);
-        c.gtk_list_box_append(@ptrCast(list), row);
+        gtk_status.showLaunchFeedback(ctx, message, .{
+            .select_first = gtk_nav.selectFirstActionableRow,
+        });
     }
 
     fn setStatus(ctx: *UiContext, message: []const u8) void {
-        setStatusWithTone(ctx, message, launchStatusTone(message));
-    }
-
-    const StatusTone = enum {
-        neutral,
-        info,
-        success,
-        failure,
-    };
-
-    fn setStatusWithTone(ctx: *UiContext, message: []const u8, tone: StatusTone) void {
-        const status_hash = std.hash.Wyhash.hash(0, message);
-        const tone_code = statusToneCode(tone);
-        if (ctx.last_status_hash == status_hash and ctx.last_status_tone == tone_code) return;
-
-        const status_widget: *c.GtkWidget = @ptrCast(@alignCast(ctx.status));
-        c.gtk_widget_remove_css_class(status_widget, "gs-status-info");
-        c.gtk_widget_remove_css_class(status_widget, "gs-status-success");
-        c.gtk_widget_remove_css_class(status_widget, "gs-status-failure");
-        c.gtk_widget_remove_css_class(status_widget, "gs-status-searching");
-        if (std.mem.indexOf(u8, message, "Searching") != null) {
-            c.gtk_widget_add_css_class(status_widget, "gs-status-searching");
-        }
-        switch (tone) {
-            .info => c.gtk_widget_add_css_class(status_widget, "gs-status-info"),
-            .success => c.gtk_widget_add_css_class(status_widget, "gs-status-success"),
-            .failure => c.gtk_widget_add_css_class(status_widget, "gs-status-failure"),
-            .neutral => {},
-        }
-        const prefix = statusPrefix(tone);
-        if (prefix.len > 0) {
-            const composed = std.fmt.allocPrint(std.heap.page_allocator, "{s} {s}", .{ prefix, message }) catch return;
-            defer std.heap.page_allocator.free(composed);
-            const msg_z = std.heap.page_allocator.dupeZ(u8, composed) catch return;
-            defer std.heap.page_allocator.free(msg_z);
-            c.gtk_label_set_text(ctx.status, msg_z.ptr);
-        } else {
-            const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
-            defer std.heap.page_allocator.free(msg_z);
-            c.gtk_label_set_text(ctx.status, msg_z.ptr);
-        }
-        ctx.last_status_hash = status_hash;
-        ctx.last_status_tone = tone_code;
+        gtk_status.setStatus(ctx, message);
     }
 
     fn installCss(window: *c.GtkWidget) void {
         gtk_styles.installCss(window);
-    }
-
-    fn launchStatusTone(message: []const u8) StatusTone {
-        if (std.mem.indexOf(u8, message, "Searching") != null) return .info;
-        if (std.mem.indexOf(u8, message, "Refresh") != null) return .info;
-        if (std.mem.indexOf(u8, message, "fallback") != null) return .info;
-        if (std.mem.indexOf(u8, message, "failed") != null) return .failure;
-        if (std.mem.indexOf(u8, message, "launched") != null) return .success;
-        if (std.mem.indexOf(u8, message, "opened") != null) return .success;
-        if (std.mem.indexOf(u8, message, "focused") != null) return .success;
-        return .neutral;
-    }
-
-    fn statusToneCode(tone: StatusTone) u8 {
-        return switch (tone) {
-            .neutral => 0,
-            .info => 1,
-            .success => 2,
-            .failure => 3,
-        };
-    }
-
-    fn statusPrefix(tone: StatusTone) []const u8 {
-        return switch (tone) {
-            .neutral => "",
-            .info => "[i]",
-            .success => "[ok]",
-            .failure => "[!]",
-        };
     }
 
     fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget {
