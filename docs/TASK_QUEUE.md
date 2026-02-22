@@ -253,3 +253,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Hygiene - extract cache snapshot generation lifecycle into `search_service/cache_snapshots.zig`.
 - [x] M8: Hygiene - extract `SearchService` tests into `src/app/search_service_test.zig`.
 - [x] M8: Hygiene - extract dynamic generation lifecycle into `search_service/dynamic_generations.zig`.
+- [x] M8: Hygiene - extract query metric/flag mutation helpers into `search_service/query_metrics.zig`.

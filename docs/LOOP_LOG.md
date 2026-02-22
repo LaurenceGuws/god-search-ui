@@ -4892,3 +4892,27 @@
   - M8: extract query timing/flag mutation helpers into a minimal `search_service/query_metrics.zig` helper to keep `SearchService` orchestration thin.
 
 ---
+## 2026-02-22 (Cycle 214)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract query timing and flag mutation helpers into dedicated module
+- Changes:
+  - Added `src/app/search_service/query_metrics.zig`:
+    - query flag reset helper (`last_query_refreshed_cache`, `last_query_used_stale_cache`)
+    - query elapsed setter helper
+    - refreshed-cache marker helper
+  - Updated `src/app/search_service.zig`:
+    - replaced direct query metric flag mutations with `query_metrics` module calls
+    - renamed local helpers to `setQueryElapsed` / `resetQueryMetrics` to reflect new composition role
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_metrics.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior intentionally unchanged; this is a thin extraction to reduce orchestration-file mutation density.
+- Next slice:
+  - M8: extract snapshot refresh worker state transitions (`refresh_requested`/thread-running checks) into a `search_service/refresh_worker.zig` helper.
+
+---
