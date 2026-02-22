@@ -741,9 +741,11 @@ pub const Shell = struct {
 
         var msg_buf: [64]u8 = undefined;
         const msg = std.fmt.bufPrint(&msg_buf, "{s} Searching modules...", .{frame}) catch "Searching modules...";
+        var status_buf: [40]u8 = undefined;
+        const status_msg = std.fmt.bufPrint(&status_buf, "{s} Searching...", .{frame}) catch "Searching...";
         clearAsyncRows(ctx.list);
         appendAsyncRow(ctx.list, msg);
-        if (ctx.pending_power_confirm == GFALSE) setStatus(ctx, "Searching...");
+        if (ctx.pending_power_confirm == GFALSE) setStatus(ctx, status_msg);
     }
 
     fn appendAsyncRow(list: *c.GtkListBox, message: []const u8) void {
