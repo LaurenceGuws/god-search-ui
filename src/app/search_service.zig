@@ -214,14 +214,14 @@ pub const SearchService = struct {
     }
 
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {
-        self.query_mu.lock();
-        defer self.query_mu.unlock();
         self.cache_mu.lock();
         const requested = self.refresh_requested;
         self.cache_mu.unlock();
         if (!requested) return false;
         try self.prewarmProviders(allocator);
+        self.query_mu.lock();
         self.last_query_refreshed_cache = true;
+        self.query_mu.unlock();
         return true;
     }
 

@@ -1732,7 +1732,7 @@ pub const Shell = struct {
             ".gs-results-scroll scrollbar separator { min-width: 0; min-height: 0; background: transparent; }\n" ++
             ".gs-results-scroll scrollbar trough { background: rgba(140, 170, 235, 0.14); border: none; box-shadow: none; border-radius: 999px; }\n" ++
             ".gs-results-scroll scrollbar slider { min-width: 8px; min-height: 24px; background: rgba(140, 170, 235, 0.30); border: none; box-shadow: none; border-radius: 999px; }\n" ++
-            ".gs-results > row { background: transparent !important; background-color: transparent !important; background-image: none !important; border: none !important; padding: 4px 8px; border-radius: 8px; overflow: hidden; }\n" ++
+            ".gs-results > row { background: transparent; background-color: transparent; background-image: none; border: none; padding: 4px 8px; border-radius: 8px; }\n" ++
             ".gs-results > row:selected,\n" ++
             ".gs-results > row:selected:focus,\n" ++
             ".gs-results > row:selected:focus-visible,\n" ++
@@ -1740,7 +1740,7 @@ pub const Shell = struct {
             ".gs-results > row:hover,\n" ++
             ".gs-results > row:focus,\n" ++
             ".gs-results > row:focus-visible,\n" ++
-            ".gs-results > row:focus-within { background: transparent !important; background-color: transparent !important; background-image: none !important; border: none !important; box-shadow: none !important; outline: none !important; }\n" ++
+            ".gs-results > row:focus-within { background: transparent; background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; }\n" ++
             ".gs-results > row > box { border-radius: 8px; }\n" ++
             ".gs-results.gs-scroll-active > row > box { margin-right: 12px; }\n" ++
             ".gs-results.gs-scroll-active .gs-kind-icon { margin-left: -2px; }\n" ++
