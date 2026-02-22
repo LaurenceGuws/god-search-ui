@@ -1720,8 +1720,16 @@ pub const Shell = struct {
             ".gs-results.gs-scroll-active .gs-kind-icon { margin-left: -2px; }\n" ++
             ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
             ".gs-results > row.gs-meta-row { padding-top: 2px; padding-bottom: 2px; }\n" ++
-            ".gs-results > row.gs-actionable-row:selected { background: rgba(140, 170, 235, 0.28); border: 1px solid rgba(164, 192, 255, 0.65); }\n" ++
-            ".gs-results > row.gs-actionable-row:hover { background: rgba(140, 170, 235, 0.14); }\n" ++
+            ".gs-results > row.gs-actionable-row:hover,\n" ++
+            ".gs-results > row.gs-actionable-row:selected,\n" ++
+            ".gs-results > row.gs-actionable-row:selected:focus,\n" ++
+            ".gs-results > row.gs-actionable-row:focus-within {\n" ++
+            "  background: rgba(140, 170, 235, 0.20);\n" ++
+            "  border: 1px solid rgba(164, 192, 255, 0.55);\n" ++
+            "  border-radius: 8px;\n" ++
+            "  outline: none;\n" ++
+            "  box-shadow: none;\n" ++
+            "}\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-primary { color: #f5f8ff; }\n" ++
             ".gs-results > row.gs-actionable-row:selected .gs-candidate-secondary { color: #d6def1; }\n" ++
             ".gs-kind-icon { color: #a9b1c7; font-size: 2em; }\n" ++
