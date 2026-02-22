@@ -1,4 +1,5 @@
 const std = @import("std");
+const common_actions = @import("../common/actions.zig");
 const common_execute = @import("../common/execute.zig");
 const gtk_types = @import("types.zig");
 const gtk_actions = @import("actions.zig");
@@ -52,31 +53,20 @@ pub fn executeSelected(ctx: *UiContext, kind: []const u8, action: []const u8, ho
         },
         .run_plan => {
             if (decision.plan) |*plan| {
-                if (plan.unknown_action and plan.command == null) {
-                    const telemetry_kind = if (plan.telemetry_kind.len > 0) plan.telemetry_kind else kind;
-                    hooks.emit_telemetry(ctx, telemetry_kind, action, "error", "unknown-action");
-                    hooks.show_launch_feedback(ctx, plan.error_message);
-                    return;
-                }
-                const cmd = plan.command orelse return;
-                gtk_actions.runShellCommand(cmd) catch {
-                    const telemetry_kind = if (plan.telemetry_kind.len > 0) plan.telemetry_kind else kind;
-                    const telemetry_detail = if (plan.unknown_action) "unknown-action" else "command-failed";
-                    hooks.emit_telemetry(ctx, telemetry_kind, action, "error", telemetry_detail);
-                    if (plan.error_message.len > 0) {
-                        hooks.show_launch_feedback(ctx, plan.error_message);
-                    } else {
-                        hooks.show_launch_feedback(ctx, "Command failed");
-                    }
-                    return;
-                };
-                if (plan.telemetry_kind.len > 0) {
-                    hooks.emit_telemetry(ctx, plan.telemetry_kind, action, "ok", plan.telemetry_ok_detail);
-                } else {
-                    hooks.emit_telemetry(ctx, kind, action, "ok", cmd);
-                }
-                if (plan.close_on_success) {
-                    c.gtk_window_close(@ptrCast(ctx.window));
+                const outcome = common_actions.executePlan(kind, plan, gtk_actions.runShellCommand);
+                switch (outcome.status) {
+                    .failed => {
+                        hooks.emit_telemetry(ctx, outcome.telemetry_kind, action, "error", outcome.telemetry_detail);
+                        hooks.show_launch_feedback(ctx, outcome.error_message);
+                        return;
+                    },
+                    .ok => {
+                        hooks.emit_telemetry(ctx, outcome.telemetry_kind, action, "ok", outcome.telemetry_detail);
+                        if (outcome.close_on_success) {
+                            c.gtk_window_close(@ptrCast(ctx.window));
+                        }
+                    },
+                    .noop => return,
                 }
             }
         },

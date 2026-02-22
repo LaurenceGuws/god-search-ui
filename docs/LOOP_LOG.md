@@ -4577,3 +4577,27 @@
   - M8: introduce `ui/common/actions.zig` execution runtime (run command + telemetry outcome helper) to remove duplicate run/error handling in GTK selection.
 
 ---
+## 2026-02-22 (Cycle 201)
+- Milestone: M8 Code Hygiene / Shared Action Runtime
+- Task slice: extract shared command execution runtime and route GTK selection through it
+- Changes:
+  - Added `src/ui/common/actions.zig`:
+    - centralized command-plan execution with unified outcomes (`noop`, `ok`, `failed`)
+    - standardized telemetry detail routing (`unknown-action` vs `command-failed`)
+    - standardized fallback error-message handling
+  - Updated `src/ui/gtk/selection.zig`:
+    - switched command run/error/telemetry branching to `common_actions.executePlan(...)`
+    - preserved GTK-specific side effects (feedback UI + close-on-success)
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/actions.zig src/ui/gtk/selection.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior-intent changes expected; execution flow is now centralized for reuse by future shells/command palette.
+- Next slice:
+  - M8: add shared candidate kind codec (`ui/common/kinds.zig`) to remove string-kind branching (`\"app\"`, `\"dir\"`, etc.) from GTK path.
+
+---
