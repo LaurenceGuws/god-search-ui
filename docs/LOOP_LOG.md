@@ -4262,3 +4262,28 @@
   - M8: extract action-menu presentation/dispatch (`dir/file` option menu rows) into `gtk/menus.zig`.
 
 ---
+## 2026-02-22 (Cycle 189)
+- Milestone: M8 UX Modularization
+- Task slice: extract directory/file option menu UI from shell
+- Changes:
+  - Added `src/ui/gtk/menus.zig`:
+    - directory action menu presentation + option-row rendering
+    - file action menu presentation + option-row rendering
+    - delegates command building/parsing to `gtk/actions.zig`
+    - exposes lightweight hooks for status + first-row selection
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates `showDirActionMenu`/`showFileActionMenu` to `gtk_menus`
+    - removed in-file dir/file option row builders and parse/build wrappers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - menu option row schema (`gs-kind` tags) now centralized in `gtk/menus.zig`.
+- Next slice:
+  - M8: extract status/feedback tone engine into `gtk/status.zig` and shrink shell below 900 LOC.
+
+---

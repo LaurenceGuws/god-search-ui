@@ -10,6 +10,7 @@ const gtk_query = @import("gtk/query_helpers.zig");
 const gtk_async = @import("gtk/async_state.zig");
 const gtk_async_search = @import("gtk/async_search.zig");
 const gtk_render = @import("gtk/render.zig");
+const gtk_menus = @import("gtk/menus.zig");
 const c = gtk_types.c;
 const CandidateKind = gtk_types.CandidateKind;
 const GTRUE = gtk_types.GTRUE;
@@ -681,248 +682,18 @@ pub const Shell = struct {
     }
 
     fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path: []const u8) void {
-        clearList(ctx.list);
-        appendHeaderRow(ctx.list, "Directory Actions");
-        const path_msg = std.fmt.allocPrint(allocator, "Target: {s}", .{dir_path}) catch return;
-        defer allocator.free(path_msg);
-        appendInfoRow(ctx.list, path_msg);
-        appendInfoRow(ctx.list, "Enter to run selected action | Esc to close | Type to return to search");
-
-        const term_cmd = buildDirTerminalCommand(allocator, dir_path) catch null;
-        if (term_cmd) |cmd| {
-            defer allocator.free(cmd);
-            appendDirOptionRow(ctx.list, allocator, "Open Terminal Here", "Launch terminal in this folder", cmd);
-        }
-
-        const explorer_cmd = buildDirExplorerCommand(allocator, dir_path) catch null;
-        if (explorer_cmd) |cmd| {
-            defer allocator.free(cmd);
-            appendDirOptionRow(ctx.list, allocator, "Open in File Explorer", "Use default file manager", cmd);
-        }
-
-        const editor_cmd = buildDirEditorCommand(allocator, dir_path) catch null;
-        if (editor_cmd) |cmd| {
-            defer allocator.free(cmd);
-            appendDirOptionRow(ctx.list, allocator, "Open in Editor", "Use $VISUAL/$EDITOR fallback", cmd);
-        }
-
-        const copy_cmd = buildDirCopyPathCommand(allocator, dir_path) catch null;
-        if (copy_cmd) |cmd| {
-            defer allocator.free(cmd);
-            appendDirOptionRow(ctx.list, allocator, "Copy Path", "Copy directory path to clipboard", cmd);
-        }
-
-        setStatus(ctx, "Directory action menu");
-        gtk_nav.selectFirstActionableRow(ctx);
+        gtk_menus.showDirActionMenu(ctx, allocator, dir_path, .{
+            .set_status = setStatus,
+            .select_first = gtk_nav.selectFirstActionableRow,
+        });
     }
 
-    fn appendDirOptionRow(list: *c.GtkListBox, allocator: std.mem.Allocator, title: []const u8, subtitle: []const u8, command: []const u8) void {
-        const title_markup = std.fmt.allocPrint(allocator, "<span weight=\"600\">{s}</span>", .{title}) catch return;
-        defer allocator.free(title_markup);
-        const title_markup_z = allocator.dupeZ(u8, title_markup) catch return;
-        defer allocator.free(title_markup_z);
-
-        const primary_label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(primary_label), title_markup_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
-        c.gtk_label_set_ellipsize(@ptrCast(primary_label), c.PANGO_ELLIPSIZE_END);
-        c.gtk_label_set_single_line_mode(@ptrCast(primary_label), GTRUE);
-        c.gtk_widget_set_hexpand(primary_label, GTRUE);
-        c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
-
-        const icon_text_z = allocator.dupeZ(u8, kindIcon(.dir)) catch return;
-        defer allocator.free(icon_text_z);
-        const icon = c.gtk_label_new(icon_text_z.ptr);
-        c.gtk_widget_add_css_class(icon, "gs-kind-icon");
-        c.gtk_widget_set_valign(icon, c.GTK_ALIGN_CENTER);
-
-        const chip = c.gtk_label_new("DIR".ptr);
-        c.gtk_widget_add_css_class(chip, "gs-chip");
-        c.gtk_widget_add_css_class(chip, "gs-chip-dir");
-        c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
-
-        const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
-        c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
-        c.gtk_box_append(@ptrCast(primary_row), primary_label);
-        c.gtk_box_append(@ptrCast(primary_row), chip);
-
-        const subtitle_z = allocator.dupeZ(u8, subtitle) catch return;
-        defer allocator.free(subtitle_z);
-        const secondary_label = c.gtk_label_new(subtitle_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
-        c.gtk_label_set_ellipsize(@ptrCast(secondary_label), c.PANGO_ELLIPSIZE_END);
-        c.gtk_label_set_single_line_mode(@ptrCast(secondary_label), GTRUE);
-        c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
-        c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
-
-        const text_col = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
-        c.gtk_widget_set_margin_top(text_col, 2);
-        c.gtk_widget_set_margin_bottom(text_col, 2);
-        c.gtk_widget_add_css_class(text_col, "gs-candidate-content");
-        c.gtk_box_append(@ptrCast(text_col), primary_row);
-        c.gtk_box_append(@ptrCast(text_col), secondary_label);
-
-        const content = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
-        c.gtk_widget_add_css_class(content, "gs-entry-layout");
-        c.gtk_box_append(@ptrCast(content), icon);
-        c.gtk_box_append(@ptrCast(content), text_col);
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-actionable-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), content);
-
-        const kind_z = allocator.dupeZ(u8, "dir_option") catch return;
-        defer allocator.free(kind_z);
-        const action_z = allocator.dupeZ(u8, command) catch return;
-        defer allocator.free(action_z);
-        const title_z = allocator.dupeZ(u8, title) catch return;
-        defer allocator.free(title_z);
-        c.g_object_set_data_full(@ptrCast(row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
-        c.g_object_set_data_full(@ptrCast(row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
-        c.g_object_set_data_full(@ptrCast(row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
-        c.gtk_list_box_append(@ptrCast(list), row);
-    }
-
-    fn buildDirTerminalCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
-        return gtk_actions.buildDirTerminalCommand(allocator, dir_path);
-    }
-
-    fn buildDirExplorerCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
-        return gtk_actions.buildDirExplorerCommand(allocator, dir_path);
-    }
-
-    fn buildDirEditorCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
-        return gtk_actions.buildDirEditorCommand(allocator, dir_path);
-    }
-
-    fn buildDirCopyPathCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
-        return gtk_actions.buildDirCopyPathCommand(allocator, dir_path);
-    }
 
     fn showFileActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, file_action: []const u8) void {
-        const parsed = parseFileAction(file_action);
-        clearList(ctx.list);
-        appendHeaderRow(ctx.list, "File Actions");
-        const target_msg = std.fmt.allocPrint(allocator, "Target: {s}", .{parsed.path}) catch return;
-        defer allocator.free(target_msg);
-        appendInfoRow(ctx.list, target_msg);
-        appendInfoRow(ctx.list, "Enter to run selected action | Esc to close | Type to return to search");
-
-        const edit_cmd = buildFileEditCommand(allocator, parsed.path, parsed.line) catch null;
-        if (edit_cmd) |cmd| {
-            defer allocator.free(cmd);
-            appendFileOptionRow(ctx.list, allocator, "Open in Editor", "Use $VISUAL/$EDITOR (line-aware when possible)", cmd);
-        }
-
-        const open_cmd = buildFileOpenCommand(allocator, parsed.path) catch null;
-        if (open_cmd) |cmd| {
-            defer allocator.free(cmd);
-            appendFileOptionRow(ctx.list, allocator, "Open with Default App", "Use xdg-open", cmd);
-        }
-
-        const reveal_cmd = buildFileRevealCommand(allocator, parsed.path) catch null;
-        if (reveal_cmd) |cmd| {
-            defer allocator.free(cmd);
-            appendFileOptionRow(ctx.list, allocator, "Reveal in File Explorer", "Open parent directory", cmd);
-        }
-
-        const copy_cmd = buildFileCopyPathCommand(allocator, parsed.path) catch null;
-        if (copy_cmd) |cmd| {
-            defer allocator.free(cmd);
-            appendFileOptionRow(ctx.list, allocator, "Copy Path", "Copy file path to clipboard", cmd);
-        }
-
-        setStatus(ctx, "File action menu");
-        gtk_nav.selectFirstActionableRow(ctx);
-    }
-
-    fn appendFileOptionRow(list: *c.GtkListBox, allocator: std.mem.Allocator, title: []const u8, subtitle: []const u8, command: []const u8) void {
-        const title_markup = std.fmt.allocPrint(allocator, "<span weight=\"600\">{s}</span>", .{title}) catch return;
-        defer allocator.free(title_markup);
-        const title_markup_z = allocator.dupeZ(u8, title_markup) catch return;
-        defer allocator.free(title_markup_z);
-
-        const primary_label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(primary_label), title_markup_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
-        c.gtk_label_set_ellipsize(@ptrCast(primary_label), c.PANGO_ELLIPSIZE_END);
-        c.gtk_label_set_single_line_mode(@ptrCast(primary_label), GTRUE);
-        c.gtk_widget_set_hexpand(primary_label, GTRUE);
-        c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
-
-        const icon_text_z = allocator.dupeZ(u8, kindIcon(.file)) catch return;
-        defer allocator.free(icon_text_z);
-        const icon = c.gtk_label_new(icon_text_z.ptr);
-        c.gtk_widget_add_css_class(icon, "gs-kind-icon");
-        c.gtk_widget_set_valign(icon, c.GTK_ALIGN_CENTER);
-
-        const chip = c.gtk_label_new("FILE".ptr);
-        c.gtk_widget_add_css_class(chip, "gs-chip");
-        c.gtk_widget_add_css_class(chip, "gs-chip-file");
-        c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
-
-        const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
-        c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
-        c.gtk_box_append(@ptrCast(primary_row), primary_label);
-        c.gtk_box_append(@ptrCast(primary_row), chip);
-
-        const subtitle_z = allocator.dupeZ(u8, subtitle) catch return;
-        defer allocator.free(subtitle_z);
-        const secondary_label = c.gtk_label_new(subtitle_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
-        c.gtk_label_set_ellipsize(@ptrCast(secondary_label), c.PANGO_ELLIPSIZE_END);
-        c.gtk_label_set_single_line_mode(@ptrCast(secondary_label), GTRUE);
-        c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
-        c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
-
-        const text_col = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
-        c.gtk_widget_set_margin_top(text_col, 2);
-        c.gtk_widget_set_margin_bottom(text_col, 2);
-        c.gtk_widget_add_css_class(text_col, "gs-candidate-content");
-        c.gtk_box_append(@ptrCast(text_col), primary_row);
-        c.gtk_box_append(@ptrCast(text_col), secondary_label);
-
-        const content = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
-        c.gtk_widget_add_css_class(content, "gs-entry-layout");
-        c.gtk_box_append(@ptrCast(content), icon);
-        c.gtk_box_append(@ptrCast(content), text_col);
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-actionable-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), content);
-
-        const kind_z = allocator.dupeZ(u8, "file_option") catch return;
-        defer allocator.free(kind_z);
-        const action_z = allocator.dupeZ(u8, command) catch return;
-        defer allocator.free(action_z);
-        const title_z = allocator.dupeZ(u8, title) catch return;
-        defer allocator.free(title_z);
-        c.g_object_set_data_full(@ptrCast(row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
-        c.g_object_set_data_full(@ptrCast(row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
-        c.g_object_set_data_full(@ptrCast(row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
-        c.gtk_list_box_append(@ptrCast(list), row);
-    }
-
-    const ParsedFileAction = gtk_actions.ParsedFileAction;
-
-    fn parseFileAction(file_action: []const u8) ParsedFileAction {
-        return gtk_actions.parseFileAction(file_action);
-    }
-
-    fn buildFileOpenCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
-        return gtk_actions.buildFileOpenCommand(allocator, file_path);
-    }
-
-    fn buildFileRevealCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
-        return gtk_actions.buildFileRevealCommand(allocator, file_path);
-    }
-
-    fn buildFileCopyPathCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
-        return gtk_actions.buildFileCopyPathCommand(allocator, file_path);
-    }
-
-    fn buildFileEditCommand(allocator: std.mem.Allocator, file_path: []const u8, line: ?[]const u8) ![]u8 {
-        return gtk_actions.buildFileEditCommand(allocator, file_path, line);
+        gtk_menus.showFileActionMenu(ctx, allocator, file_action, .{
+            .set_status = setStatus,
+            .select_first = gtk_nav.selectFirstActionableRow,
+        });
     }
 
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
