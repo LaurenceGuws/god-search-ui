@@ -4,6 +4,8 @@ pub const CandidateKind = enum {
     app,
     window,
     dir,
+    file,
+    grep,
     action,
     hint,
 };

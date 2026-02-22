@@ -15,6 +15,7 @@ pub const SearchService = struct {
     refresh_requested: bool = false,
     refresh_thread_running: bool = false,
     refresh_thread: ?std.Thread = null,
+    dynamic_owned: std.ArrayListUnmanaged([]u8) = .{},
     max_history: usize = 32,
     last_query_elapsed_ns: u64 = 0,
     last_query_refreshed_cache: bool = false,
@@ -33,6 +34,7 @@ pub const SearchService = struct {
 
     pub fn deinit(self: *SearchService, allocator: std.mem.Allocator) void {
         if (self.refresh_thread) |t| t.join();
+        self.clearDynamicOwned(allocator);
         for (self.history.items) |item| allocator.free(item);
         self.history.deinit(allocator);
         self.cached_candidates.deinit(allocator);
@@ -42,12 +44,19 @@ pub const SearchService = struct {
         const sw = @import("metrics.zig").Stopwatch.start();
         self.last_query_refreshed_cache = false;
         self.last_query_used_stale_cache = false;
+
+        const parsed = search.parseQuery(raw_query);
+        if (parsed.route == .files or parsed.route == .grep) {
+            const ranked_dynamic = try self.searchDynamicRoute(allocator, parsed);
+            self.last_query_elapsed_ns = sw.elapsedNs();
+            return ranked_dynamic;
+        }
+
         try self.scheduleRefreshIfNeeded();
         if (self.enable_async_refresh) self.startAsyncRefreshWorker() catch {};
         var query_candidates = search.CandidateList.empty;
         defer query_candidates.deinit(allocator);
 
-        const parsed = search.parseQuery(raw_query);
         const recent = try self.historyViewNewestFirst(allocator);
         defer allocator.free(recent);
 
@@ -67,6 +76,111 @@ pub const SearchService = struct {
         const ranked = try search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
         self.last_query_elapsed_ns = sw.elapsedNs();
         return ranked;
+    }
+
+    fn searchDynamicRoute(self: *SearchService, allocator: std.mem.Allocator, query: search.Query) ![]search.ScoredCandidate {
+        self.clearDynamicOwned(allocator);
+        var dynamic_candidates = search.CandidateList.empty;
+        defer dynamic_candidates.deinit(allocator);
+        const term = std.mem.trim(u8, query.term, " \t\r\n");
+        if (term.len == 0) return allocator.alloc(search.ScoredCandidate, 0);
+
+        switch (query.route) {
+            .files => self.collectFdCandidates(allocator, term, &dynamic_candidates) catch {},
+            .grep => self.collectRgCandidates(allocator, term, &dynamic_candidates) catch {},
+            else => {},
+        }
+
+        const recent = try self.historyViewNewestFirst(allocator);
+        defer allocator.free(recent);
+        return search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);
+    }
+
+    fn collectFdCandidates(self: *SearchService, allocator: std.mem.Allocator, term: []const u8, out: *search.CandidateList) !void {
+        if (!commandExists("fd")) return;
+        const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
+        defer allocator.free(home);
+
+        const term_q = try shellSingleQuote(allocator, term);
+        defer allocator.free(term_q);
+        const home_q = try shellSingleQuote(allocator, home);
+        defer allocator.free(home_q);
+
+        const cmd = try std.fmt.allocPrint(
+            allocator,
+            "fd --type f --hidden --follow --color never --ignore-case --max-results 200 --exclude .git --exclude node_modules {s} {s}",
+            .{ term_q, home_q },
+        );
+        defer allocator.free(cmd);
+
+        const rows = try runShellCapture(allocator, cmd);
+        defer allocator.free(rows);
+        var lines = std.mem.splitScalar(u8, rows, '\n');
+        while (lines.next()) |line| {
+            const path = std.mem.trim(u8, line, " \t\r");
+            if (path.len == 0) continue;
+            const title = std.fs.path.basename(path);
+            const kept_title = try self.keepDynamicString(allocator, title);
+            const kept_path = try self.keepDynamicString(allocator, path);
+            try out.append(allocator, search.Candidate.init(.file, kept_title, kept_path, kept_path));
+        }
+    }
+
+    fn collectRgCandidates(self: *SearchService, allocator: std.mem.Allocator, term: []const u8, out: *search.CandidateList) !void {
+        if (!commandExists("rg")) return;
+        const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
+        defer allocator.free(home);
+
+        const term_q = try shellSingleQuote(allocator, term);
+        defer allocator.free(term_q);
+        const home_q = try shellSingleQuote(allocator, home);
+        defer allocator.free(home_q);
+
+        const cmd = try std.fmt.allocPrint(
+            allocator,
+            "sh -lc 'rg --line-number --no-heading --color never --smart-case --hidden --glob \"!.git\" --glob \"!node_modules\" {s} {s} 2>/dev/null | head -n 200'",
+            .{ term_q, home_q },
+        );
+        defer allocator.free(cmd);
+
+        const rows = try runShellCapture(allocator, cmd);
+        defer allocator.free(rows);
+        var lines = std.mem.splitScalar(u8, rows, '\n');
+        while (lines.next()) |line| {
+            const row = std.mem.trim(u8, line, " \t\r");
+            if (row.len == 0) continue;
+            const first_colon = std.mem.indexOfScalar(u8, row, ':') orelse continue;
+            const second_colon_rel = std.mem.indexOfScalar(u8, row[first_colon + 1 ..], ':') orelse continue;
+            const second_colon = first_colon + 1 + second_colon_rel;
+            const path = row[0..first_colon];
+            const line_num = row[first_colon + 1 .. second_colon];
+            const snippet = std.mem.trim(u8, row[second_colon + 1 ..], " \t");
+            const base = std.fs.path.basename(path);
+            const title = try std.fmt.allocPrint(allocator, "{s}:{s}", .{ base, line_num });
+            defer allocator.free(title);
+            const subtitle = if (snippet.len > 0)
+                try std.fmt.allocPrint(allocator, "{s} | {s}", .{ path, snippet })
+            else
+                try allocator.dupe(u8, path);
+            defer allocator.free(subtitle);
+            const action = try std.fmt.allocPrint(allocator, "{s}:{s}", .{ path, line_num });
+            defer allocator.free(action);
+            const kept_title = try self.keepDynamicString(allocator, title);
+            const kept_subtitle = try self.keepDynamicString(allocator, subtitle);
+            const kept_action = try self.keepDynamicString(allocator, action);
+            try out.append(allocator, search.Candidate.init(.grep, kept_title, kept_subtitle, kept_action));
+        }
+    }
+
+    fn keepDynamicString(self: *SearchService, allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
+        const copy = try allocator.dupe(u8, value);
+        try self.dynamic_owned.append(allocator, copy);
+        return copy;
+    }
+
+    fn clearDynamicOwned(self: *SearchService, allocator: std.mem.Allocator) void {
+        for (self.dynamic_owned.items) |item| allocator.free(item);
+        self.dynamic_owned.clearRetainingCapacity();
     }
 
     pub fn prewarmProviders(self: *SearchService, allocator: std.mem.Allocator) !void {
@@ -211,6 +325,49 @@ fn writeFileAnyPath(path: []const u8, data: []const u8) !void {
 fn ensureParentDirAbsolute(path: []const u8) !void {
     const parent = std.fs.path.dirname(path) orelse return;
     try std.fs.makeDirAbsolute(parent);
+}
+
+fn commandExists(name: []const u8) bool {
+    const check_cmd = std.fmt.allocPrint(std.heap.page_allocator, "{s} --help >/dev/null 2>&1", .{name}) catch return false;
+    defer std.heap.page_allocator.free(check_cmd);
+
+    const result = std.process.Child.run(.{
+        .allocator = std.heap.page_allocator,
+        .argv = &.{ "sh", "-lc", check_cmd },
+    }) catch return false;
+    defer {
+        std.heap.page_allocator.free(result.stdout);
+        std.heap.page_allocator.free(result.stderr);
+    }
+    return result.term == .Exited and result.term.Exited == 0;
+}
+
+fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+    try out.append(allocator, '\'');
+    for (value) |ch| {
+        if (ch == '\'') {
+            try out.appendSlice(allocator, "'\\''");
+        } else {
+            try out.append(allocator, ch);
+        }
+    }
+    try out.append(allocator, '\'');
+    return out.toOwnedSlice(allocator);
+}
+
+fn runShellCapture(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
+    const result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "sh", "-lc", command },
+    });
+    defer allocator.free(result.stderr);
+    if (result.term != .Exited or result.term.Exited != 0) {
+        allocator.free(result.stdout);
+        return error.CommandFailed;
+    }
+    return result.stdout;
 }
 
 test "search service applies history boost through ranking" {

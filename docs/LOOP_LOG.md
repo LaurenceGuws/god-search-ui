@@ -3857,3 +3857,45 @@
   - M8: UX Phase 5 - add in-UI explicit error hint when directory terminal option has no available terminal.
 
 ---
+## 2026-02-22 (Cycle 175)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - add `fd`/`rg` route modules and file action UX
+- Changes:
+  - Updated `src/search/types.zig`:
+    - added candidate kinds:
+      - `file`
+      - `grep`
+  - Updated `src/search/query.zig`:
+    - added routes:
+      - `%` => `files`
+      - `&` => `grep`
+    - added route parsing tests for new prefixes
+  - Updated `src/search/rank.zig`:
+    - route matching support for `files`/`grep`
+    - scoring/bias support for `file`/`grep` candidate kinds
+  - Updated `src/app/search_service.zig`:
+    - added dynamic route execution path for query-time tools:
+      - `%` route runs `fd` and maps output to file candidates
+      - `&` route runs `rg` and maps output to grep candidates
+    - implemented shell capture + quoting helpers for safe command composition
+  - Updated `src/ui/gtk_shell.zig`:
+    - added grouped sections for Files and Code Search
+    - added route hints and status text for `%` and `&`
+    - added file/grep execution flow:
+      - opens file action menu instead of immediate launch
+      - action options: open in editor, open default app, reveal in file explorer, copy path
+      - close-on-success behavior preserved
+    - extended kind chip/icon/tag mapping and CSS tokens for file/grep
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `fd`/`rg` routes query under `$HOME` and are capped for responsiveness (`head`/max-results).
+  - `rg` action parser treats trailing `:<digits>` as line metadata for editor line-jump commands.
+- Next slice:
+  - M8: UX Phase 6 - document `%`/`&` routes and add smoke assertions for fd/rg availability/degraded behavior.
+
+---

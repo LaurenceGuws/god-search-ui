@@ -417,7 +417,7 @@ pub const Shell = struct {
         }
         if (rows.len == 0 and !empty_query and route_hint == null) {
             appendInfoRow(ctx.list, "No results");
-            appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  > run  = calc  ? web");
+            appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  % files  & grep  > run  = calc  ? web");
         } else {
             appendGroupedRows(ctx, allocator, rows, highlight_token);
             if (ranked.len > limit) {
@@ -431,7 +431,7 @@ pub const Shell = struct {
         } else if (empty_query and has_app_glyph_fallback and ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "App icon fallback active (headless :icondiag for breakdown)");
         } else if (empty_query and ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs > run = calc ? web");
+            setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs % files & grep > run = calc ? web");
         } else if (ctx.pending_power_confirm == GFALSE) {
             setStatus(ctx, "");
         }
@@ -499,6 +499,8 @@ pub const Shell = struct {
         rendered_any = appendGroup(ctx, allocator, rows, .app, "Apps", rendered_any, highlight_token) or rendered_any;
         rendered_any = appendGroup(ctx, allocator, rows, .window, "Windows", rendered_any, highlight_token) or rendered_any;
         rendered_any = appendGroup(ctx, allocator, rows, .dir, "Directories", rendered_any, highlight_token) or rendered_any;
+        rendered_any = appendGroup(ctx, allocator, rows, .file, "Files", rendered_any, highlight_token) or rendered_any;
+        rendered_any = appendGroup(ctx, allocator, rows, .grep, "Code Search", rendered_any, highlight_token) or rendered_any;
         rendered_any = appendGroup(ctx, allocator, rows, .action, "Actions", rendered_any, highlight_token) or rendered_any;
         _ = appendGroup(ctx, allocator, rows, .hint, "Hints", rendered_any, highlight_token);
     }
@@ -669,7 +671,7 @@ pub const Shell = struct {
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const allocator = allocator_ptr.*;
 
-        if (!std.mem.eql(u8, kind, "dir_option")) {
+        if (!std.mem.eql(u8, kind, "dir_option") and !std.mem.eql(u8, kind, "file_option")) {
             ctx.service.recordSelection(allocator, action) catch {};
         }
 
@@ -708,6 +710,16 @@ pub const Shell = struct {
             c.gtk_window_close(@ptrCast(ctx.window));
             return;
         }
+        if (std.mem.eql(u8, kind, "file_option")) {
+            runShellCommand(action) catch {
+                emitTelemetry(ctx, "file", action, "error", "command-failed");
+                showLaunchFeedback(ctx, "File action failed");
+                return;
+            };
+            emitTelemetry(ctx, "file", action, "ok", "option-command");
+            c.gtk_window_close(@ptrCast(ctx.window));
+            return;
+        }
         clearPowerConfirmation(ctx);
         if (std.mem.eql(u8, kind, "app")) {
             if (!std.mem.eql(u8, action, "__drun__")) {
@@ -723,6 +735,10 @@ pub const Shell = struct {
         }
         if (std.mem.eql(u8, kind, "dir")) {
             showDirActionMenu(ctx, allocator, action);
+            return;
+        }
+        if (std.mem.eql(u8, kind, "file") or std.mem.eql(u8, kind, "grep")) {
+            showFileActionMenu(ctx, allocator, action);
             return;
         }
         if (std.mem.eql(u8, kind, "window")) {
@@ -874,6 +890,173 @@ pub const Shell = struct {
         );
     }
 
+    fn showFileActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, file_action: []const u8) void {
+        const parsed = parseFileAction(file_action);
+        clearList(ctx.list);
+        appendHeaderRow(ctx.list, "File Actions");
+        const target_msg = std.fmt.allocPrint(allocator, "Target: {s}", .{parsed.path}) catch return;
+        defer allocator.free(target_msg);
+        appendInfoRow(ctx.list, target_msg);
+        appendInfoRow(ctx.list, "Enter to run selected action | Esc to close | Type to return to search");
+
+        const edit_cmd = buildFileEditCommand(allocator, parsed.path, parsed.line) catch null;
+        if (edit_cmd) |cmd| {
+            defer allocator.free(cmd);
+            appendFileOptionRow(ctx.list, allocator, "Open in Editor", "Use $VISUAL/$EDITOR (line-aware when possible)", cmd);
+        }
+
+        const open_cmd = buildFileOpenCommand(allocator, parsed.path) catch null;
+        if (open_cmd) |cmd| {
+            defer allocator.free(cmd);
+            appendFileOptionRow(ctx.list, allocator, "Open with Default App", "Use xdg-open", cmd);
+        }
+
+        const reveal_cmd = buildFileRevealCommand(allocator, parsed.path) catch null;
+        if (reveal_cmd) |cmd| {
+            defer allocator.free(cmd);
+            appendFileOptionRow(ctx.list, allocator, "Reveal in File Explorer", "Open parent directory", cmd);
+        }
+
+        const copy_cmd = buildFileCopyPathCommand(allocator, parsed.path) catch null;
+        if (copy_cmd) |cmd| {
+            defer allocator.free(cmd);
+            appendFileOptionRow(ctx.list, allocator, "Copy Path", "Copy file path to clipboard", cmd);
+        }
+
+        setStatus(ctx, "File action menu");
+        selectFirstActionableRow(ctx);
+    }
+
+    fn appendFileOptionRow(list: *c.GtkListBox, allocator: std.mem.Allocator, title: []const u8, subtitle: []const u8, command: []const u8) void {
+        const title_markup = std.fmt.allocPrint(allocator, "<span weight=\"600\">{s}</span>", .{title}) catch return;
+        defer allocator.free(title_markup);
+        const title_markup_z = allocator.dupeZ(u8, title_markup) catch return;
+        defer allocator.free(title_markup_z);
+
+        const primary_label = c.gtk_label_new(null);
+        c.gtk_label_set_markup(@ptrCast(primary_label), title_markup_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
+        c.gtk_label_set_ellipsize(@ptrCast(primary_label), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_single_line_mode(@ptrCast(primary_label), GTRUE);
+        c.gtk_widget_set_hexpand(primary_label, GTRUE);
+        c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
+
+        const icon_text_z = allocator.dupeZ(u8, kindIcon(.file)) catch return;
+        defer allocator.free(icon_text_z);
+        const icon = c.gtk_label_new(icon_text_z.ptr);
+        c.gtk_widget_add_css_class(icon, "gs-kind-icon");
+        c.gtk_widget_set_valign(icon, c.GTK_ALIGN_CENTER);
+
+        const chip = c.gtk_label_new("FILE".ptr);
+        c.gtk_widget_add_css_class(chip, "gs-chip");
+        c.gtk_widget_add_css_class(chip, "gs-chip-file");
+        c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
+
+        const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
+        c.gtk_box_append(@ptrCast(primary_row), icon);
+        c.gtk_box_append(@ptrCast(primary_row), primary_label);
+        c.gtk_box_append(@ptrCast(primary_row), chip);
+
+        const subtitle_z = allocator.dupeZ(u8, subtitle) catch return;
+        defer allocator.free(subtitle_z);
+        const secondary_label = c.gtk_label_new(subtitle_z.ptr);
+        c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
+        c.gtk_label_set_ellipsize(@ptrCast(secondary_label), c.PANGO_ELLIPSIZE_END);
+        c.gtk_label_set_single_line_mode(@ptrCast(secondary_label), GTRUE);
+        c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
+        c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_widget_set_margin_top(content, 2);
+        c.gtk_widget_set_margin_bottom(content, 2);
+        c.gtk_widget_add_css_class(content, "gs-candidate-content");
+        c.gtk_box_append(@ptrCast(content), primary_row);
+        c.gtk_box_append(@ptrCast(content), secondary_label);
+
+        const row = c.gtk_list_box_row_new();
+        c.gtk_widget_add_css_class(row, "gs-actionable-row");
+        c.gtk_list_box_row_set_child(@ptrCast(row), content);
+
+        const kind_z = allocator.dupeZ(u8, "file_option") catch return;
+        defer allocator.free(kind_z);
+        const action_z = allocator.dupeZ(u8, command) catch return;
+        defer allocator.free(action_z);
+        const title_z = allocator.dupeZ(u8, title) catch return;
+        defer allocator.free(title_z);
+        c.g_object_set_data_full(@ptrCast(row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
+        c.g_object_set_data_full(@ptrCast(row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
+        c.gtk_list_box_append(@ptrCast(list), row);
+    }
+
+    const ParsedFileAction = struct {
+        path: []const u8,
+        line: ?[]const u8,
+    };
+
+    fn parseFileAction(file_action: []const u8) ParsedFileAction {
+        if (std.mem.lastIndexOfScalar(u8, file_action, ':')) |idx| {
+            if (idx + 1 < file_action.len) {
+                const suffix = file_action[idx + 1 ..];
+                if (isDigitsOnly(suffix)) {
+                    return .{ .path = file_action[0..idx], .line = suffix };
+                }
+            }
+        }
+        return .{ .path = file_action, .line = null };
+    }
+
+    fn isDigitsOnly(value: []const u8) bool {
+        if (value.len == 0) return false;
+        for (value) |ch| {
+            if (!std.ascii.isDigit(ch)) return false;
+        }
+        return true;
+    }
+
+    fn buildFileOpenCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
+        const quoted = try shellSingleQuote(allocator, file_path);
+        defer allocator.free(quoted);
+        return std.fmt.allocPrint(allocator, "xdg-open {s}", .{quoted});
+    }
+
+    fn buildFileRevealCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
+        const parent = std.fs.path.dirname(file_path) orelse file_path;
+        const quoted = try shellSingleQuote(allocator, parent);
+        defer allocator.free(quoted);
+        return std.fmt.allocPrint(allocator, "xdg-open {s}", .{quoted});
+    }
+
+    fn buildFileCopyPathCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
+        const quoted = try shellSingleQuote(allocator, file_path);
+        defer allocator.free(quoted);
+        return std.fmt.allocPrint(
+            allocator,
+            "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard' _ {s}",
+            .{quoted},
+        );
+    }
+
+    fn buildFileEditCommand(allocator: std.mem.Allocator, file_path: []const u8, line: ?[]const u8) ![]u8 {
+        const quoted = try shellSingleQuote(allocator, file_path);
+        defer allocator.free(quoted);
+        if (line) |line_num| {
+            const line_q = try shellSingleQuote(allocator, line_num);
+            defer allocator.free(line_q);
+            return std.fmt.allocPrint(
+                allocator,
+                "sh -lc 'editor=\"${{VISUAL:-${{EDITOR:-}}}}\"; if [ -z \"$editor\" ]; then exec xdg-open \"$1\"; fi; case \"$editor\" in nvim|vim|vi|helix|hx|kak|nano) exec \"$editor\" +\"$2\" \"$1\" ;; code|codium|code-insiders) exec \"$editor\" --goto \"$1:$2\" ;; subl) exec \"$editor\" \"$1:$2\" ;; *) exec \"$editor\" \"$1\" ;; esac' _ {s} {s}",
+                .{ quoted, line_q },
+            );
+        }
+        return std.fmt.allocPrint(
+            allocator,
+            "sh -lc 'if [ -n \"$VISUAL\" ]; then exec \"$VISUAL\" \"$1\"; elif [ -n \"$EDITOR\" ]; then exec \"$EDITOR\" \"$1\"; else exec xdg-open \"$1\"; fi' _ {s}",
+            .{quoted},
+        );
+    }
+
     fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
         var out = std.ArrayList(u8).empty;
         defer out.deinit(allocator);
@@ -915,7 +1098,7 @@ pub const Shell = struct {
         const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
         const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
         if (query_trimmed.len == 0) {
-            setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs > run = calc ? web");
+            setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs % files & grep > run = calc ? web");
         } else {
             setStatus(ctx, "");
         }
@@ -1016,6 +1199,8 @@ pub const Shell = struct {
             ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
             ".gs-chip-window { color: #78d2c7; background: rgba(120, 210, 199, 0.16); }\n" ++
             ".gs-chip-dir { color: #ddb26f; background: rgba(221, 178, 111, 0.16); }\n" ++
+            ".gs-chip-file { color: #8bc3ff; background: rgba(139, 195, 255, 0.16); }\n" ++
+            ".gs-chip-grep { color: #b8a6ff; background: rgba(184, 166, 255, 0.16); }\n" ++
             ".gs-chip-action { color: #f18cb6; background: rgba(241, 140, 182, 0.16); }\n" ++
             ".gs-chip-hint { color: #9aa1b5; background: rgba(154, 161, 181, 0.16); }\n";
 
@@ -1039,6 +1224,8 @@ pub const Shell = struct {
             '@' => "Apps route active: type app name after @",
             '#' => "Windows route active: type window title/class after #",
             '~' => "Directories route active: type folder name after ~",
+            '%' => "Files route active: type file name after %",
+            '&' => "Grep route active: type text to search after &",
             '>' => "Run route active: type command after >",
             '=' => "Calc route active: type expression after =",
             '?' => "Web route active: type search terms after ?",
@@ -1051,7 +1238,7 @@ pub const Shell = struct {
         if (token.len == 0) return "";
         if (token.len > 1) {
             token = switch (token[0]) {
-                '@', '#', '~', '>', '=', '?' => std.mem.trim(u8, token[1..], " \t\r\n"),
+                '@', '#', '~', '%', '&', '>', '=', '?' => std.mem.trim(u8, token[1..], " \t\r\n"),
                 else => token,
             };
         }
@@ -1096,6 +1283,8 @@ pub const Shell = struct {
         if (std.mem.eql(u8, kind, "app")) return "app";
         if (std.mem.eql(u8, kind, "window")) return "window";
         if (std.mem.eql(u8, kind, "dir")) return "directory";
+        if (std.mem.eql(u8, kind, "file")) return "file";
+        if (std.mem.eql(u8, kind, "grep")) return "match";
         if (std.mem.eql(u8, kind, "action")) return "action";
         if (std.mem.eql(u8, kind, "hint")) return "hint";
         return "item";
@@ -1229,6 +1418,8 @@ pub const Shell = struct {
             .app => "app",
             .window => "window",
             .dir => "dir",
+            .file => "file",
+            .grep => "grep",
             .action => "action",
             .hint => "hint",
         };
@@ -1239,6 +1430,8 @@ pub const Shell = struct {
             .app => "󰀻",
             .window => "",
             .dir => "󰉋",
+            .file => "󰈙",
+            .grep => "󰍉",
             .action => "",
             .hint => "󰘥",
         };
@@ -1251,6 +1444,8 @@ pub const Shell = struct {
             .app => c.gtk_widget_add_css_class(label, "gs-chip-app"),
             .window => c.gtk_widget_add_css_class(label, "gs-chip-window"),
             .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
+            .file => c.gtk_widget_add_css_class(label, "gs-chip-file"),
+            .grep => c.gtk_widget_add_css_class(label, "gs-chip-grep"),
             .action => c.gtk_widget_add_css_class(label, "gs-chip-action"),
             .hint => c.gtk_widget_add_css_class(label, "gs-chip-hint"),
         }
@@ -1262,6 +1457,8 @@ pub const Shell = struct {
             .app => "APP",
             .window => "WIN",
             .dir => "DIR",
+            .file => "FILE",
+            .grep => "GREP",
             .action => "ACT",
             .hint => "TIP",
         };

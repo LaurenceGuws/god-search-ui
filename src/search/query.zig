@@ -5,6 +5,8 @@ pub const Route = enum {
     apps,
     windows,
     dirs,
+    files,
+    grep,
     run,
     calc,
     web,
@@ -32,6 +34,8 @@ pub fn parse(raw_query: []const u8) Query {
         '@' => .{ .raw = raw, .route = .apps, .term = rest },
         '#' => .{ .raw = raw, .route = .windows, .term = rest },
         '~' => .{ .raw = raw, .route = .dirs, .term = rest },
+        '%' => .{ .raw = raw, .route = .files, .term = rest },
+        '&' => .{ .raw = raw, .route = .grep, .term = rest },
         '>' => .{ .raw = raw, .route = .run, .term = rest },
         '=' => .{ .raw = raw, .route = .calc, .term = rest },
         '?' => .{ .raw = raw, .route = .web, .term = rest },
@@ -49,6 +53,16 @@ test "parse prefixed query routes correctly" {
     const q = parse("@ kitty");
     try std.testing.expectEqual(Route.apps, q.route);
     try std.testing.expectEqualStrings("kitty", q.term);
+}
+
+test "parse files and grep routes correctly" {
+    const files = parse("% zig");
+    try std.testing.expectEqual(Route.files, files.route);
+    try std.testing.expectEqualStrings("zig", files.term);
+
+    const grep = parse("& TODO");
+    try std.testing.expectEqual(Route.grep, grep.route);
+    try std.testing.expectEqualStrings("TODO", grep.term);
 }
 
 test "parse non-prefixed query stays blended" {

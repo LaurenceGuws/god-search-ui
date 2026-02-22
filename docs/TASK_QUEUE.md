@@ -198,3 +198,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 5 - fix GtkSearchEntry placeholder API usage to remove GTK critical.
 - [x] M8: UX Phase 5 - remove invalid GTK CSS `spacing` property from candidate content class.
 - [x] M8: UX Phase 5 - harden directory terminal action with runtime terminal discovery fallback list.
+- [x] M8: UX Phase 6 - add dynamic `fd` file-finder route (`%`) with file candidates.
+- [x] M8: UX Phase 6 - add dynamic `rg` text-search route (`&`) with grep candidates.
+- [x] M8: UX Phase 6 - add GTK file action menu for file/grep results (editor/open/reveal/copy path).
+- [x] M8: UX Phase 6 - extend query route hints, grouping, and chip theming for file/grep candidate kinds.
