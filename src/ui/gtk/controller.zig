@@ -1,4 +1,5 @@
 const std = @import("std");
+const common_dispatch = @import("../common/dispatch.zig");
 const gtk_types = @import("types.zig");
 const gtk_nav = @import("navigation.zig");
 const gtk_query = @import("query_helpers.zig");
@@ -7,6 +8,7 @@ const c = gtk_types.c;
 const UiContext = gtk_types.UiContext;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
+const UiKind = common_dispatch.kinds.UiKind;
 
 pub const InputHooks = struct {
     refresh_snapshot: *const fn (*UiContext) void,
@@ -97,11 +99,25 @@ pub fn handleRowSelected(ctx: *UiContext, row: *c.GtkListBoxRow, hooks: StatusHo
     const title_ptr = c.g_object_get_data(@ptrCast(row), "gs-title");
     if (title_ptr == null) return;
     const title = std.mem.span(@as([*:0]const u8, @ptrCast(title_ptr)));
-    const kind_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind");
-    const kind = if (kind_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(kind_ptr))) else "";
-    const kind_label = gtk_query.kindStatusLabel(kind);
+    const kind_label = common_dispatch.kinds.statusLabel(kindFromRow(row));
     const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
     const msg = std.fmt.allocPrint(allocator_ptr.*, "Enter launch {s}: {s}", .{ kind_label, title }) catch return;
     defer allocator_ptr.*.free(msg);
     hooks.set_status(ctx, msg);
+}
+
+fn kindFromRow(row: *c.GtkListBoxRow) UiKind {
+    const kind_id_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind-id");
+    if (kind_id_ptr != null) {
+        const raw = @as(usize, @intFromPtr(kind_id_ptr));
+        if (raw > 0) {
+            const idx = raw - 1;
+            if (idx <= @intFromEnum(UiKind.file_option)) {
+                return @enumFromInt(idx);
+            }
+        }
+    }
+    const kind_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind");
+    if (kind_ptr == null) return .unknown;
+    return common_dispatch.kinds.parse(std.mem.span(@as([*:0]const u8, @ptrCast(kind_ptr))));
 }

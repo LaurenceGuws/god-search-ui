@@ -1,5 +1,6 @@
 const std = @import("std");
 const dispatch = @import("dispatch.zig");
+const UiKind = dispatch.kinds.UiKind;
 
 pub const Intent = enum {
     none,
@@ -28,7 +29,15 @@ pub fn resolveSelection(
     action: []const u8,
     pending_power_confirm: bool,
 ) !SelectionDecision {
-    const parsed_kind = dispatch.kinds.parse(kind);
+    return resolveSelectionKind(allocator, dispatch.kinds.parse(kind), action, pending_power_confirm);
+}
+
+pub fn resolveSelectionKind(
+    allocator: std.mem.Allocator,
+    parsed_kind: UiKind,
+    action: []const u8,
+    pending_power_confirm: bool,
+) !SelectionDecision {
     var result = SelectionDecision{
         .record_selection = dispatch.shouldRecordSelectionKind(parsed_kind),
     };

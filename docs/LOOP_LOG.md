@@ -4645,3 +4645,36 @@
   - M8: expose `UiKind` in GTK row data lifecycle and retire remaining raw kind-string comparisons in selection telemetry paths.
 
 ---
+## 2026-02-22 (Cycle 204)
+- Milestone: M8 Code Hygiene / Typed GTK Row Kind Metadata
+- Task slice: wire typed `UiKind` IDs through GTK row metadata and selection/status paths
+- Changes:
+  - Updated `src/ui/common/kinds.zig`:
+    - added `hint` support in `UiKind`
+    - added canonical `tag`, `statusLabel`, and `fromCandidateKind` helpers
+  - Updated `src/ui/gtk/render.zig`:
+    - candidate rows now set both legacy `gs-kind` and typed `gs-kind-id` metadata
+    - kind-tag generation now flows through shared `UiKind` mapping
+  - Updated `src/ui/gtk/widgets.zig` and `src/ui/gtk/menus.zig`:
+    - module and option rows now also set `gs-kind-id` metadata
+  - Updated `src/ui/gtk_shell.zig`:
+    - row activation now resolves kind via `gs-kind-id` first, with legacy string fallback
+    - selection call now passes `UiKind` instead of raw kind strings
+  - Updated `src/ui/gtk/controller.zig`:
+    - selected-row status label now resolves via typed kind (`UiKind`) with fallback parsing
+  - Updated `src/ui/common/execute.zig` and `src/ui/common/actions.zig`:
+    - selection resolution and plan execution now accept/propagate typed `UiKind`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/kinds.zig src/ui/gtk/render.zig src/ui/gtk/widgets.zig src/ui/gtk/menus.zig src/ui/gtk/controller.zig src/ui/gtk_shell.zig src/ui/gtk/selection.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/common/ ./src/ui/gtk/selection.zig ./src/ui/gtk/render.zig ./src/ui/gtk/controller.zig ./src/ui/gtk/widgets.zig ./src/ui/gtk/menus.zig ./src/ui/gtk_shell.zig --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - legacy `gs-kind` string metadata is intentionally retained as compatibility fallback during migration.
+- Next slice:
+  - M8: remove remaining `gs-kind` fallback usage after confirming all row producers consistently set `gs-kind-id`.
+
+---

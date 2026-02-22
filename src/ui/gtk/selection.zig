@@ -1,11 +1,13 @@
 const std = @import("std");
 const common_actions = @import("../common/actions.zig");
+const common_dispatch = @import("../common/dispatch.zig");
 const common_execute = @import("../common/execute.zig");
 const gtk_types = @import("types.zig");
 const gtk_actions = @import("actions.zig");
 
 const c = gtk_types.c;
 const UiContext = gtk_types.UiContext;
+const UiKind = common_dispatch.kinds.UiKind;
 
 pub const Hooks = struct {
     set_status: *const fn (*UiContext, []const u8) void,
@@ -17,11 +19,11 @@ pub const Hooks = struct {
     show_file_action_menu: *const fn (*UiContext, std.mem.Allocator, []const u8) void,
 };
 
-pub fn executeSelected(ctx: *UiContext, kind: []const u8, action: []const u8, hooks: Hooks) void {
+pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks: Hooks) void {
     const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
     const allocator = allocator_ptr.*;
 
-    var decision = common_execute.resolveSelection(allocator, kind, action, ctx.pending_power_confirm == gtk_types.GTRUE) catch return;
+    var decision = common_execute.resolveSelectionKind(allocator, kind, action, ctx.pending_power_confirm == gtk_types.GTRUE) catch return;
     defer decision.deinit(allocator);
 
     if (decision.record_selection) {

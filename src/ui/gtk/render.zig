@@ -1,4 +1,5 @@
 const std = @import("std");
+const common_dispatch = @import("../common/dispatch.zig");
 const gtk_types = @import("types.zig");
 const gtk_widgets = @import("widgets.zig");
 const gtk_query = @import("query_helpers.zig");
@@ -7,6 +8,7 @@ const GTRUE = gtk_types.GTRUE;
 const CandidateKind = gtk_types.CandidateKind;
 const UiContext = gtk_types.UiContext;
 const ScoredCandidate = @import("../../search/mod.zig").ScoredCandidate;
+const UiKind = common_dispatch.kinds.UiKind;
 
 pub const Hooks = struct {
     candidate_icon_widget: *const fn (allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget,
@@ -91,7 +93,7 @@ fn appendCandidateRow(
     const primary_markup = std.fmt.allocPrint(
         allocator,
         "<span weight=\"600\">{s}</span>",
-        .{ title_markup },
+        .{title_markup},
     ) catch return;
     defer allocator.free(primary_markup);
     const primary_markup_z = allocator.dupeZ(u8, primary_markup) catch return;
@@ -143,7 +145,8 @@ fn appendCandidateRow(
     c.gtk_widget_add_css_class(list_row, "gs-actionable-row");
     c.gtk_list_box_row_set_child(@ptrCast(list_row), content);
 
-    const kind = kindTag(row.candidate.kind);
+    const ui_kind = common_dispatch.kinds.fromCandidateKind(row.candidate.kind);
+    const kind = common_dispatch.kinds.tag(ui_kind);
     const kind_c = std.fmt.allocPrint(allocator, "{s}", .{kind}) catch return;
     defer allocator.free(kind_c);
     const action_c = std.fmt.allocPrint(allocator, "{s}", .{row.candidate.action}) catch return;
@@ -158,6 +161,7 @@ fn appendCandidateRow(
     defer allocator.free(title_z);
 
     c.g_object_set_data_full(@ptrCast(list_row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
+    c.g_object_set_data(@ptrCast(list_row), "gs-kind-id", @ptrFromInt(@intFromEnum(ui_kind) + 1));
     c.g_object_set_data_full(@ptrCast(list_row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
     c.g_object_set_data_full(@ptrCast(list_row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
     const title_tip = allocator.dupeZ(u8, row.candidate.title) catch null;
@@ -174,13 +178,5 @@ fn appendCandidateRow(
 }
 
 fn kindTag(kind: CandidateKind) []const u8 {
-    return switch (kind) {
-        .app => "app",
-        .window => "window",
-        .dir => "dir",
-        .file => "file",
-        .grep => "grep",
-        .action => "action",
-        .hint => "hint",
-    };
+    return common_dispatch.kinds.tag(common_dispatch.kinds.fromCandidateKind(kind));
 }
