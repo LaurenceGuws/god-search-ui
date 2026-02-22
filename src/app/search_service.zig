@@ -138,7 +138,7 @@ pub const SearchService = struct {
 
         const cmd = try std.fmt.allocPrint(
             allocator,
-            "sh -lc 'rg --line-number --no-heading --color never --smart-case --hidden --glob \"!.git\" --glob \"!node_modules\" {s} {s} 2>/dev/null | head -n 200'",
+            "rg --line-number --no-heading --color never --smart-case --hidden --glob '!.git' --glob '!node_modules' {s} {s} 2>/dev/null || true",
             .{ term_q, home_q },
         );
         defer allocator.free(cmd);
@@ -146,6 +146,7 @@ pub const SearchService = struct {
         const rows = try runShellCapture(allocator, cmd);
         defer allocator.free(rows);
         var lines = std.mem.splitScalar(u8, rows, '\n');
+        var count: usize = 0;
         while (lines.next()) |line| {
             const row = std.mem.trim(u8, line, " \t\r");
             if (row.len == 0) continue;
@@ -169,6 +170,8 @@ pub const SearchService = struct {
             const kept_subtitle = try self.keepDynamicString(allocator, subtitle);
             const kept_action = try self.keepDynamicString(allocator, action);
             try out.append(allocator, search.Candidate.init(.grep, kept_title, kept_subtitle, kept_action));
+            count += 1;
+            if (count >= 200) break;
         }
     }
 
@@ -361,6 +364,7 @@ fn runShellCapture(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
     const result = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &.{ "sh", "-lc", command },
+        .max_output_bytes = 8 * 1024 * 1024,
     });
     defer allocator.free(result.stderr);
     if (result.term != .Exited or result.term.Exited != 0) {

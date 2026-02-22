@@ -24,7 +24,7 @@ pub fn rankCandidatesWithHistory(
     var scored = std.ArrayList(ScoredCandidate).empty;
     defer scored.deinit(allocator);
 
-    const needle = std.ascii.allocLowerString(allocator, query.term) catch "";
+    const needle = lowerAsciiLossyAlloc(allocator, query.term) catch "";
     defer if (needle.len > 0) allocator.free(needle);
 
     for (candidates) |candidate| {
@@ -62,9 +62,9 @@ fn candidateScore(needle: []const u8, candidate: types.Candidate, recent_actions
         return score;
     }
 
-    const title = std.ascii.allocLowerString(std.heap.page_allocator, candidate.title) catch return 0;
+    const title = lowerAsciiLossyAlloc(std.heap.page_allocator, candidate.title) catch return 0;
     defer std.heap.page_allocator.free(title);
-    const subtitle = std.ascii.allocLowerString(std.heap.page_allocator, candidate.subtitle) catch "";
+    const subtitle = lowerAsciiLossyAlloc(std.heap.page_allocator, candidate.subtitle) catch "";
     defer if (subtitle.len > 0) std.heap.page_allocator.free(subtitle);
 
     if (std.mem.eql(u8, needle, title)) score += 100;
@@ -80,6 +80,14 @@ fn candidateScore(needle: []const u8, candidate: types.Candidate, recent_actions
     score += shortQueryBias(needle.len, candidate.kind);
     score += recencyBoost(candidate.action, recent_actions);
     return score;
+}
+
+fn lowerAsciiLossyAlloc(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
+    const out = try allocator.alloc(u8, input.len);
+    for (input, 0..) |ch, i| {
+        out[i] = if (std.ascii.isAscii(ch)) std.ascii.toLower(ch) else ch;
+    }
+    return out;
 }
 
 fn shortQueryBias(needle_len: usize, kind: types.CandidateKind) i32 {

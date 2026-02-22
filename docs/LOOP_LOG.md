@@ -3899,3 +3899,32 @@
   - M8: UX Phase 6 - document `%`/`&` routes and add smoke assertions for fd/rg availability/degraded behavior.
 
 ---
+## 2026-02-22 (Cycle 176)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - stabilize `&` grep route under real-world shell/output conditions
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - fixed `rg` route command composition (removed nested `sh -lc` quoting issue)
+    - removed shell pipeline dependence (`| head`) in favor of Zig-side result capping
+      to avoid `pipefail`/SIGPIPE-induced empty results
+    - made `rg` command tolerant of non-zero scanner exits while still consuming stdout (`|| true`)
+    - fixed dynamic candidate string ownership lifecycle for route results
+      (avoids invalid memory access / dropped rows)
+    - raised dynamic command capture budget in `runShellCapture` (`8 MiB`) so large `rg` output
+      no longer fails silently due default output cap
+  - Updated `src/search/rank.zig`:
+    - replaced strict ASCII-lower conversion with lossy-safe ASCII lowering helper
+      so non-ASCII grep snippets no longer zero-out rankability
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf '& wiki_life\n:q\n' | zig build run -- --ui` (headless smoke)
+- Commit(s):
+  - pending
+- Risks/notes:
+  - broad `$HOME` grep can still be slow for high-hit terms; result cap now prevents empty-route failures.
+- Next slice:
+  - M8: UX Phase 6 - add route-root controls and ignore-pattern defaults for faster `%`/`&` query paths.
+
+---

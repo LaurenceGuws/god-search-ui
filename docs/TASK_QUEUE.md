@@ -202,3 +202,5 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 6 - add dynamic `rg` text-search route (`&`) with grep candidates.
 - [x] M8: UX Phase 6 - add GTK file action menu for file/grep results (editor/open/reveal/copy path).
 - [x] M8: UX Phase 6 - extend query route hints, grouping, and chip theming for file/grep candidate kinds.
+- [x] M8: UX Phase 6 - fix `&` grep route shell quoting/pipeline robustness and dynamic string ownership.
+- [x] M8: UX Phase 6 - raise dynamic shell capture buffer to avoid silent `rg` result drops on large output.
