@@ -4623,3 +4623,25 @@
   - M8: route `gtk/selection.zig` kind handling to `UiKind` directly and reduce remaining raw `kind` string handling in the GTK path.
 
 ---
+## 2026-02-22 (Cycle 203)
+- Milestone: M8 Code Hygiene / Enum-Based Dispatch Flow
+- Task slice: parse row kind once and use enum-based dispatch primitives in shared execution path
+- Changes:
+  - Updated `src/ui/common/dispatch.zig`:
+    - added enum-based helper variants (`*Kind`/`*Enum`) for selection recording, confirmation checks, menu kind checks, and command planning
+    - preserved string-based wrappers for compatibility while routing them through enum helpers
+  - Updated `src/ui/common/execute.zig`:
+    - now parses kind string once and uses enum-based dispatch helpers throughout decision resolution
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/dispatch.zig src/ui/common/execute.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - reduces repeated parsing/string branching in hot selection path while keeping external behavior unchanged.
+- Next slice:
+  - M8: expose `UiKind` in GTK row data lifecycle and retire remaining raw kind-string comparisons in selection telemetry paths.
+
+---

@@ -242,3 +242,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 9 - add shared selection execution adapter in `ui/common/execute.zig` and route GTK selection through it.
 - [x] M8: UX Phase 9 - add shared action runtime in `ui/common/actions.zig` and route GTK command execution through it.
 - [x] M8: UX Phase 9 - add shared kind codec in `ui/common/kinds.zig` and remove string-kind branching from dispatch primitives.
+- [x] M8: UX Phase 9 - parse row kind once in `ui/common/execute.zig` and use enum-based dispatch primitives.

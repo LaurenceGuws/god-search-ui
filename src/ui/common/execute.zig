@@ -28,30 +28,31 @@ pub fn resolveSelection(
     action: []const u8,
     pending_power_confirm: bool,
 ) !SelectionDecision {
+    const parsed_kind = dispatch.kinds.parse(kind);
     var result = SelectionDecision{
-        .record_selection = dispatch.shouldRecordSelection(kind),
+        .record_selection = dispatch.shouldRecordSelectionKind(parsed_kind),
     };
 
-    if (dispatch.isModuleKind(kind)) {
+    if (dispatch.isModuleKindEnum(parsed_kind)) {
         result.intent = .module_filter;
         return result;
     }
-    if (dispatch.isDirMenuKind(kind)) {
+    if (dispatch.isDirMenuKindEnum(parsed_kind)) {
         result.intent = .dir_menu;
         return result;
     }
-    if (dispatch.isFileMenuKind(kind)) {
+    if (dispatch.isFileMenuKindEnum(parsed_kind)) {
         result.intent = .file_menu;
         return result;
     }
 
-    if (dispatch.requiresConfirmation(kind, action) and !pending_power_confirm) {
+    if (dispatch.requiresConfirmationKind(parsed_kind, action) and !pending_power_confirm) {
         result.clear_power_confirmation = false;
         result.guard_waiting_confirmation = true;
         return result;
     }
 
-    const plan = try dispatch.planCommand(allocator, kind, action);
+    const plan = try dispatch.planCommandKind(allocator, parsed_kind, action);
     result.plan = plan;
     result.intent = .run_plan;
     return result;

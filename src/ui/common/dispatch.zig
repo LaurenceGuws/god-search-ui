@@ -1,7 +1,7 @@
 const std = @import("std");
 const providers_mod = @import("../../providers/mod.zig");
 const search = @import("../../search/mod.zig");
-const kinds = @import("kinds.zig");
+pub const kinds = @import("kinds.zig");
 
 pub const CommandPlan = struct {
     command: ?[]const u8 = null,
@@ -19,7 +19,11 @@ pub const CommandPlan = struct {
 };
 
 pub fn shouldRecordSelection(kind: []const u8) bool {
-    return switch (kinds.parse(kind)) {
+    return shouldRecordSelectionKind(kinds.parse(kind));
+}
+
+pub fn shouldRecordSelectionKind(kind: kinds.UiKind) bool {
+    return switch (kind) {
         .dir_option, .file_option, .module => false,
         else => true,
     };
@@ -33,24 +37,43 @@ pub fn shouldRecordCandidate(kind: search.CandidateKind) bool {
 }
 
 pub fn requiresConfirmation(kind: []const u8, action: []const u8) bool {
-    return kinds.parse(kind) == .action and providers_mod.requiresConfirmation(action);
+    return requiresConfirmationKind(kinds.parse(kind), action);
+}
+
+pub fn requiresConfirmationKind(kind: kinds.UiKind, action: []const u8) bool {
+    return kind == .action and providers_mod.requiresConfirmation(action);
 }
 
 pub fn isDirMenuKind(kind: []const u8) bool {
-    return kinds.parse(kind) == .dir;
+    return isDirMenuKindEnum(kinds.parse(kind));
+}
+
+pub fn isDirMenuKindEnum(kind: kinds.UiKind) bool {
+    return kind == .dir;
 }
 
 pub fn isFileMenuKind(kind: []const u8) bool {
-    const parsed = kinds.parse(kind);
-    return parsed == .file or parsed == .grep;
+    return isFileMenuKindEnum(kinds.parse(kind));
+}
+
+pub fn isFileMenuKindEnum(kind: kinds.UiKind) bool {
+    return kind == .file or kind == .grep;
 }
 
 pub fn isModuleKind(kind: []const u8) bool {
-    return kinds.parse(kind) == .module;
+    return isModuleKindEnum(kinds.parse(kind));
+}
+
+pub fn isModuleKindEnum(kind: kinds.UiKind) bool {
+    return kind == .module;
 }
 
 pub fn planCommand(allocator: std.mem.Allocator, kind: []const u8, action: []const u8) !CommandPlan {
-    switch (kinds.parse(kind)) {
+    return planCommandKind(allocator, kinds.parse(kind), action);
+}
+
+pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action: []const u8) !CommandPlan {
+    switch (kind) {
         .action => {
             const cmd = providers_mod.resolveActionCommand(action) orelse {
                 return .{
