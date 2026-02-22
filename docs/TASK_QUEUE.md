@@ -261,3 +261,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Hygiene - extract cache snapshot read view helper into `search_service/cache_read.zig`.
 - [x] M8: Hygiene - extract dynamic-route orchestration into `search_service/dynamic_query_engine.zig`.
 - [x] M8: Hygiene - extract query parse/route dispatch classification into `search_service/query_dispatch.zig`.
+- [x] M8: Hygiene - unify static-query refresh scheduling + async-worker kickoff via `search_service/query_refresh_gate.zig`.

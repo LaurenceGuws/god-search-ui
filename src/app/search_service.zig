@@ -10,6 +10,7 @@ const dynamic_generations = @import("search_service/dynamic_generations.zig");
 const dynamic_query_engine = @import("search_service/dynamic_query_engine.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
 const query_dispatch = @import("search_service/query_dispatch.zig");
+const query_refresh_gate = @import("search_service/query_refresh_gate.zig");
 const query_metrics = @import("search_service/query_metrics.zig");
 const query_engine = @import("search_service/query_engine.zig");
 const refresh_worker = @import("search_service/refresh_worker.zig");
@@ -70,8 +71,7 @@ pub const SearchService = struct {
             return ranked_dynamic;
         }
 
-        try self.scheduleRefreshIfNeeded();
-        if (self.enable_async_refresh) self.startAsyncRefreshWorker() catch {};
+        try self.prepareRefreshForStaticQuery();
         var query_candidates = search.CandidateList.empty;
         defer query_candidates.deinit(allocator);
 
@@ -159,22 +159,18 @@ pub const SearchService = struct {
         return true;
     }
 
-    fn scheduleRefreshIfNeeded(self: *SearchService) !void {
+    fn prepareRefreshForStaticQuery(self: *SearchService) !void {
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
-        cache_refresh.scheduleRefreshIfNeeded(
+        if (!query_refresh_gate.scheduleAndShouldStartWorker(
             self.cache_ready,
             self.cache_ttl_ns,
             self.cache_last_refresh_ns,
             &self.refresh_requested,
             &self.last_query_used_stale_cache,
-        );
-    }
-
-    fn startAsyncRefreshWorker(self: *SearchService) !void {
-        self.cache_mu.lock();
-        defer self.cache_mu.unlock();
-        if (!refresh_worker.shouldStart(self.enable_async_refresh, self.refresh_requested, self.refresh_thread_running)) return;
+            self.enable_async_refresh,
+            self.refresh_thread_running,
+        )) return;
         refresh_worker.markRunning(&self.refresh_thread_running);
         self.refresh_thread = try std.Thread.spawn(.{}, refreshWorkerMain, .{self});
     }

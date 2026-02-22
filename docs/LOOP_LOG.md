@@ -5075,3 +5075,25 @@
   - M8: extract refresh scheduling + async-worker kickoff gate in `searchQuery` into a dedicated helper to simplify control flow.
 
 ---
+## 2026-02-22 (Cycle 222)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: unify static-query refresh scheduling and async-worker gate into one helper path
+- Changes:
+  - Added `src/app/search_service/query_refresh_gate.zig`:
+    - `scheduleAndShouldStartWorker(...)` consolidating TTL scheduling + async-worker start eligibility
+  - Updated `src/app/search_service.zig`:
+    - replaced split `scheduleRefreshIfNeeded` + `startAsyncRefreshWorker` calls with `prepareRefreshForStaticQuery(...)`
+    - removed duplicated refresh-start guard branching from `searchQuery` hot path
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_refresh_gate.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior preserved by intent; extraction keeps lock ownership and thread spawn semantics in `SearchService`.
+- Next slice:
+  - M8: remove remaining small lock-wrapper boilerplate by extracting query metrics reset/set helpers at call sites via a compact scoped utility.
+
+---
