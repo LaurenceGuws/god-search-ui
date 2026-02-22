@@ -95,6 +95,7 @@ pub const Shell = struct {
         _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(onKeyPressed), ctx, null, 0);
         c.gtk_widget_add_controller(window, @ptrCast(key_controller));
         _ = c.g_signal_connect_data(entry, "search-changed", c.G_CALLBACK(onSearchChanged), ctx, null, 0);
+        _ = c.g_signal_connect_data(entry, "activate", c.G_CALLBACK(onEntryActivate), ctx, null, 0);
         _ = c.g_signal_connect_data(list, "row-activated", c.G_CALLBACK(onRowActivated), ctx, null, 0);
         _ = c.g_signal_connect_data(list, "row-selected", c.G_CALLBACK(onRowSelected), ctx, null, 0);
         _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(onDestroy), ctx, null, 0);
@@ -209,12 +210,26 @@ pub const Shell = struct {
                 return GTRUE;
             },
             c.GDK_KEY_Return, c.GDK_KEY_KP_Enter => {
-                const row = c.gtk_list_box_get_selected_row(ctx.list);
-                if (row != null) c.g_signal_emit_by_name(ctx.list, "row-activated", row);
+                activateSelectedRow(ctx);
                 return GTRUE;
             },
             else => return GFALSE,
         }
+    }
+
+    fn onEntryActivate(_: ?*c.GtkSearchEntry, user_data: ?*anyopaque) callconv(.c) void {
+        if (user_data == null) return;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        activateSelectedRow(ctx);
+    }
+
+    fn activateSelectedRow(ctx: *UiContext) void {
+        var row = c.gtk_list_box_get_selected_row(ctx.list);
+        if (row == null) {
+            selectFirstActionableRow(ctx);
+            row = c.gtk_list_box_get_selected_row(ctx.list);
+        }
+        if (row != null) c.g_signal_emit_by_name(ctx.list, "row-activated", row);
     }
 
     fn onSearchChanged(entry: ?*c.GtkSearchEntry, user_data: ?*anyopaque) callconv(.c) void {
