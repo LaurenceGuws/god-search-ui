@@ -4916,3 +4916,26 @@
   - M8: extract snapshot refresh worker state transitions (`refresh_requested`/thread-running checks) into a `search_service/refresh_worker.zig` helper.
 
 ---
+## 2026-02-22 (Cycle 215)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract async refresh worker transition helpers into dedicated module
+- Changes:
+  - Added `src/app/search_service/refresh_worker.zig`:
+    - start-eligibility predicate (`shouldStart`)
+    - explicit running/stopped state mutators
+  - Updated `src/app/search_service.zig`:
+    - moved async refresh-worker start guard logic to `refresh_worker.shouldStart(...)`
+    - moved running/stopped state writes to helper functions
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/refresh_worker.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior unchanged by intent; this is another orchestration-thinning extraction.
+- Next slice:
+  - M8: extract cache-refresh orchestration glue (`prewarm/invalidate/drain` lock choreography) into a focused coordinator module.
+
+---

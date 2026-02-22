@@ -7,6 +7,7 @@ const cache_snapshots = @import("search_service/cache_snapshots.zig");
 const dynamic_generations = @import("search_service/dynamic_generations.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
 const query_metrics = @import("search_service/query_metrics.zig");
+const refresh_worker = @import("search_service/refresh_worker.zig");
 
 pub const SearchService = struct {
     registry: providers.ProviderRegistry,
@@ -169,17 +170,15 @@ pub const SearchService = struct {
     fn startAsyncRefreshWorker(self: *SearchService) !void {
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
-        if (!self.enable_async_refresh) return;
-        if (!self.refresh_requested) return;
-        if (self.refresh_thread_running) return;
-        self.refresh_thread_running = true;
+        if (!refresh_worker.shouldStart(self.enable_async_refresh, self.refresh_requested, self.refresh_thread_running)) return;
+        refresh_worker.markRunning(&self.refresh_thread_running);
         self.refresh_thread = try std.Thread.spawn(.{}, refreshWorkerMain, .{self});
     }
 
     fn refreshWorkerMain(self: *SearchService) void {
         _ = self.drainScheduledRefresh(std.heap.page_allocator) catch {};
         self.cache_mu.lock();
-        self.refresh_thread_running = false;
+        refresh_worker.markStopped(&self.refresh_thread_running);
         self.cache_mu.unlock();
     }
 
