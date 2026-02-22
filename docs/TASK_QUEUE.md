@@ -248,3 +248,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 9 - add centralized GTK row metadata helper (`gtk/row_data.zig`) for typed kind/action/title read/write.
 - [x] M8: Hygiene - narrow `SearchService` query lock scope, add cached dynamic-tool availability checks, and make history writes atomic.
 - [x] M8: Hygiene - add bounded dynamic-route string generations to cap `%`/`&` memory growth in long sessions.
+- [x] M8: Hygiene - reduce `cache_mu` hold time by ranking against owned cache snapshots outside the cache lock.

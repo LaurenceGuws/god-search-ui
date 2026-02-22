@@ -4781,3 +4781,24 @@
   - M8: reduce `cache_mu` hold time by ranking on a copied snapshot (or immutable snapshot pointer swap) rather than while holding the cache mutex.
 
 ---
+## 2026-02-22 (Cycle 209)
+- Milestone: M8 Code Hygiene / Cache Lock Contention
+- Task slice: move cached ranking off `cache_mu` critical section using owned candidate snapshots
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - cached-query path now deep-copies cache candidates under `cache_mu`
+    - ranking now runs against copied snapshot outside the cache lock
+    - added owned-candidate snapshot copy/free helpers for safe lock release semantics
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this trades some per-query allocation in cache-hit path for significantly shorter cache lock hold time and lower contention with refresh paths.
+- Next slice:
+  - M8: unify candidate ownership semantics to avoid deep-copy churn on cache hits (immutable snapshot swap + ref-counted slabs).
+
+---

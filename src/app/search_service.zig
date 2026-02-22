@@ -71,11 +71,13 @@ pub const SearchService = struct {
 
         self.cache_mu.lock();
         if (self.cache_ready) {
-            const ranked_cached = search.rankCandidatesWithHistory(allocator, parsed, self.cached_candidates.items, recent) catch |err| {
+            const cache_snapshot = copyCandidatesOwned(allocator, self.cached_candidates.items) catch |err| {
                 self.cache_mu.unlock();
                 return err;
             };
             self.cache_mu.unlock();
+            defer freeCandidatesOwned(allocator, cache_snapshot);
+            const ranked_cached = try search.rankCandidatesWithHistory(allocator, parsed, cache_snapshot, recent);
             self.setLastQueryElapsed(sw.elapsedNs());
             return ranked_cached;
         }
@@ -218,6 +220,60 @@ pub const SearchService = struct {
         while (self.dynamic_generations.items.len > self.dynamic_generation_keep) {
             var oldest = self.dynamic_generations.orderedRemove(0);
             dynamic_routes.clearOwned(&oldest, allocator);
+        }
+    }
+
+    fn copyCandidatesOwned(allocator: std.mem.Allocator, source: []const search.Candidate) ![]search.Candidate {
+        var out = try allocator.alloc(search.Candidate, source.len);
+        errdefer allocator.free(out);
+
+        var idx: usize = 0;
+        while (idx < source.len) : (idx += 1) {
+            const row = source[idx];
+            const title = allocator.dupe(u8, row.title) catch |err| {
+                freeCandidatesOwnedPartial(allocator, out[0..idx]);
+                return err;
+            };
+            const subtitle = allocator.dupe(u8, row.subtitle) catch |err| {
+                allocator.free(title);
+                freeCandidatesOwnedPartial(allocator, out[0..idx]);
+                return err;
+            };
+            const action = allocator.dupe(u8, row.action) catch |err| {
+                allocator.free(title);
+                allocator.free(subtitle);
+                freeCandidatesOwnedPartial(allocator, out[0..idx]);
+                return err;
+            };
+            const icon = allocator.dupe(u8, row.icon) catch |err| {
+                allocator.free(title);
+                allocator.free(subtitle);
+                allocator.free(action);
+                freeCandidatesOwnedPartial(allocator, out[0..idx]);
+                return err;
+            };
+            out[idx] = .{
+                .kind = row.kind,
+                .title = title,
+                .subtitle = subtitle,
+                .action = action,
+                .icon = icon,
+            };
+        }
+        return out;
+    }
+
+    fn freeCandidatesOwned(allocator: std.mem.Allocator, rows: []const search.Candidate) void {
+        freeCandidatesOwnedPartial(allocator, rows);
+        allocator.free(rows);
+    }
+
+    fn freeCandidatesOwnedPartial(allocator: std.mem.Allocator, rows: []const search.Candidate) void {
+        for (rows) |row| {
+            allocator.free(@constCast(row.title));
+            allocator.free(@constCast(row.subtitle));
+            allocator.free(@constCast(row.action));
+            allocator.free(@constCast(row.icon));
         }
     }
 };
