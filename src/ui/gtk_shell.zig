@@ -99,6 +99,7 @@ pub const Shell = struct {
         const scroller = c.gtk_scrolled_window_new();
         c.gtk_widget_set_vexpand(scroller, GTRUE);
         c.gtk_scrolled_window_set_policy(@ptrCast(scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
+        c.gtk_scrolled_window_set_overlay_scrolling(@ptrCast(scroller), GFALSE);
         c.gtk_scrolled_window_set_child(@ptrCast(scroller), list);
 
         const ctx: *UiContext = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(UiContext))));
@@ -1682,6 +1683,7 @@ pub const Shell = struct {
             ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
             ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
             ".gs-results > row { border-radius: 8px; padding: 4px 8px; }\n" ++
+            ".gs-results > row > box { margin-right: 14px; }\n" ++
             ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
             ".gs-results > row.gs-meta-row { padding-top: 2px; padding-bottom: 2px; }\n" ++
             ".gs-results > row.gs-actionable-row:selected { background: rgba(140, 170, 235, 0.28); border: 1px solid rgba(164, 192, 255, 0.65); }\n" ++
