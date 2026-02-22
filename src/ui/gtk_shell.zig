@@ -898,7 +898,6 @@ pub const Shell = struct {
 
         const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
         c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
-        c.gtk_box_append(@ptrCast(primary_row), icon);
         c.gtk_box_append(@ptrCast(primary_row), primary_label);
         c.gtk_box_append(@ptrCast(primary_row), chip);
 
@@ -911,12 +910,17 @@ pub const Shell = struct {
         c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
         c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
 
-        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
-        c.gtk_widget_set_margin_top(content, 2);
-        c.gtk_widget_set_margin_bottom(content, 2);
-        c.gtk_widget_add_css_class(content, "gs-candidate-content");
-        c.gtk_box_append(@ptrCast(content), primary_row);
-        c.gtk_box_append(@ptrCast(content), secondary_label);
+        const text_col = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_widget_set_margin_top(text_col, 2);
+        c.gtk_widget_set_margin_bottom(text_col, 2);
+        c.gtk_widget_add_css_class(text_col, "gs-candidate-content");
+        c.gtk_box_append(@ptrCast(text_col), primary_row);
+        c.gtk_box_append(@ptrCast(text_col), secondary_label);
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(content, "gs-entry-layout");
+        c.gtk_box_append(@ptrCast(content), icon);
+        c.gtk_box_append(@ptrCast(content), text_col);
 
         const row = c.gtk_list_box_row_new();
         c.gtk_widget_add_css_class(row, "gs-actionable-row");
@@ -1095,7 +1099,6 @@ pub const Shell = struct {
         c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
         const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
         c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
-        c.gtk_box_append(@ptrCast(primary_row), icon_widget);
         c.gtk_box_append(@ptrCast(primary_row), primary_label);
         c.gtk_box_append(@ptrCast(primary_row), chip);
 
@@ -1111,12 +1114,18 @@ pub const Shell = struct {
         c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
         c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
 
-        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
-        c.gtk_widget_set_margin_top(content, 2);
-        c.gtk_widget_set_margin_bottom(content, 2);
-        c.gtk_widget_add_css_class(content, "gs-candidate-content");
-        c.gtk_box_append(@ptrCast(content), primary_row);
-        c.gtk_box_append(@ptrCast(content), secondary_label);
+        const text_col = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_widget_set_margin_top(text_col, 2);
+        c.gtk_widget_set_margin_bottom(text_col, 2);
+        c.gtk_widget_add_css_class(text_col, "gs-candidate-content");
+        c.gtk_widget_set_hexpand(text_col, GTRUE);
+        c.gtk_box_append(@ptrCast(text_col), primary_row);
+        c.gtk_box_append(@ptrCast(text_col), secondary_label);
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(content, "gs-entry-layout");
+        c.gtk_box_append(@ptrCast(content), icon_widget);
+        c.gtk_box_append(@ptrCast(content), text_col);
 
         const list_row = c.gtk_list_box_row_new();
         c.gtk_widget_add_css_class(list_row, "gs-actionable-row");
@@ -1335,7 +1344,6 @@ pub const Shell = struct {
 
         const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
         c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
-        c.gtk_box_append(@ptrCast(primary_row), icon);
         c.gtk_box_append(@ptrCast(primary_row), primary_label);
         c.gtk_box_append(@ptrCast(primary_row), chip);
 
@@ -1348,12 +1356,17 @@ pub const Shell = struct {
         c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
         c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
 
-        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
-        c.gtk_widget_set_margin_top(content, 2);
-        c.gtk_widget_set_margin_bottom(content, 2);
-        c.gtk_widget_add_css_class(content, "gs-candidate-content");
-        c.gtk_box_append(@ptrCast(content), primary_row);
-        c.gtk_box_append(@ptrCast(content), secondary_label);
+        const text_col = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_widget_set_margin_top(text_col, 2);
+        c.gtk_widget_set_margin_bottom(text_col, 2);
+        c.gtk_widget_add_css_class(text_col, "gs-candidate-content");
+        c.gtk_box_append(@ptrCast(text_col), primary_row);
+        c.gtk_box_append(@ptrCast(text_col), secondary_label);
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(content, "gs-entry-layout");
+        c.gtk_box_append(@ptrCast(content), icon);
+        c.gtk_box_append(@ptrCast(content), text_col);
 
         const row = c.gtk_list_box_row_new();
         c.gtk_widget_add_css_class(row, "gs-actionable-row");
@@ -1471,7 +1484,6 @@ pub const Shell = struct {
 
         const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
         c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
-        c.gtk_box_append(@ptrCast(primary_row), icon);
         c.gtk_box_append(@ptrCast(primary_row), primary_label);
         c.gtk_box_append(@ptrCast(primary_row), chip);
 
@@ -1484,12 +1496,17 @@ pub const Shell = struct {
         c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
         c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
 
-        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
-        c.gtk_widget_set_margin_top(content, 2);
-        c.gtk_widget_set_margin_bottom(content, 2);
-        c.gtk_widget_add_css_class(content, "gs-candidate-content");
-        c.gtk_box_append(@ptrCast(content), primary_row);
-        c.gtk_box_append(@ptrCast(content), secondary_label);
+        const text_col = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+        c.gtk_widget_set_margin_top(text_col, 2);
+        c.gtk_widget_set_margin_bottom(text_col, 2);
+        c.gtk_widget_add_css_class(text_col, "gs-candidate-content");
+        c.gtk_box_append(@ptrCast(text_col), primary_row);
+        c.gtk_box_append(@ptrCast(text_col), secondary_label);
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(content, "gs-entry-layout");
+        c.gtk_box_append(@ptrCast(content), icon);
+        c.gtk_box_append(@ptrCast(content), text_col);
 
         const row = c.gtk_list_box_row_new();
         c.gtk_widget_add_css_class(row, "gs-actionable-row");
@@ -1747,7 +1764,7 @@ pub const Shell = struct {
             ".gs-kind-icon { color: #a9b1c7; font-size: 2.35em; margin-right: 8px; }\n" ++
             ".gs-candidate-primary { color: #e8ecf7; transition: color 120ms ease; }\n" ++
             ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; transition: color 120ms ease; }\n" ++
-            ".gs-candidate-content > .gs-candidate-secondary { margin-left: 44px; }\n" ++
+            ".gs-entry-layout > .gs-candidate-content { min-width: 0; }\n" ++
             ".gs-primary-row { min-height: 20px; }\n" ++
             ".gs-chip { font-size: 0.72em; font-weight: 700; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; }\n" ++
             ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
