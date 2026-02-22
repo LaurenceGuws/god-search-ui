@@ -126,7 +126,17 @@ fn syncParentDir(path: []const u8) !void {
     else
         try std.fs.cwd().openDir(parent, .{});
     defer parent_dir.close();
-    try std.posix.fsync(parent_dir.fd);
+    const rc = std.posix.system.fsync(parent_dir.fd);
+    switch (std.posix.errno(rc)) {
+        .SUCCESS => return,
+        // Some filesystems/dirfds do not support directory fsync; keep write atomic
+        // semantics via rename, but treat parent dir sync as best-effort.
+        .INVAL, .BADF, .ROFS, .OPNOTSUPP => return,
+        .IO => return error.InputOutput,
+        .NOSPC => return error.NoSpaceLeft,
+        .DQUOT => return error.DiskQuota,
+        else => |err| return std.posix.unexpectedErrno(err),
+    }
 }
 
 test "saveHistory creates relative nested parent directories" {
