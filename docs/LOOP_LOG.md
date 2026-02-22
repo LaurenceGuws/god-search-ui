@@ -4985,3 +4985,26 @@
   - M8: extract history-facing lock helpers (`load/save/record/historySnapshot`) into a `search_service/history_access.zig` helper to reduce direct lock choreography in `SearchService`.
 
 ---
+## 2026-02-22 (Cycle 218)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract history lock choreography into dedicated history access module
+- Changes:
+  - Added `src/app/search_service/history_access.zig`:
+    - `recordLocked`, `loadLocked`, `saveLocked`, and `snapshotNewestFirstOwnedLocked` wrappers
+    - centralized snapshot free helper
+  - Updated `src/app/search_service.zig`:
+    - history read/write/snapshot methods now delegate to `history_access` module
+    - replaced direct history-store free calls with `history_access.freeSnapshot`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_access.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior change intended; lock ownership remains in `SearchService` while operations moved behind a dedicated module boundary.
+- Next slice:
+  - M8: extract cache-hit snapshot selection + cache lock read helper into `search_service/cache_read.zig` to further thin `searchQuery`.
+
+---

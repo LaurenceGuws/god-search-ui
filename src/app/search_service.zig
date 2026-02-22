@@ -1,7 +1,7 @@
 const std = @import("std");
 const providers = @import("../providers/mod.zig");
 const search = @import("../search/mod.zig");
-const history_store = @import("search_service/history_store.zig");
+const history_access = @import("search_service/history_access.zig");
 const cache_refresh = @import("search_service/cache_refresh.zig");
 const cache_coordinator = @import("search_service/cache_coordinator.zig");
 const cache_snapshots = @import("search_service/cache_snapshots.zig");
@@ -73,7 +73,7 @@ pub const SearchService = struct {
         defer query_candidates.deinit(allocator);
 
         const recent = try self.historySnapshotNewestFirstOwned(allocator);
-        defer history_store.freeOwnedHistorySnapshot(allocator, recent);
+        defer history_access.freeSnapshot(allocator, recent);
 
         self.cache_mu.lock();
         if (self.cache_ready) {
@@ -121,7 +121,7 @@ pub const SearchService = struct {
         }
 
         const recent = try self.historySnapshotNewestFirstOwned(allocator);
-        defer history_store.freeOwnedHistorySnapshot(allocator, recent);
+        defer history_access.freeSnapshot(allocator, recent);
         return search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);
     }
 
@@ -192,25 +192,25 @@ pub const SearchService = struct {
     pub fn recordSelection(self: *SearchService, allocator: std.mem.Allocator, action: []const u8) !void {
         self.query_mu.lock();
         defer self.query_mu.unlock();
-        try history_store.recordSelection(&self.history, self.max_history, allocator, action);
+        try history_access.recordLocked(&self.history, self.max_history, allocator, action);
     }
 
     pub fn loadHistory(self: *SearchService, allocator: std.mem.Allocator) !void {
         self.query_mu.lock();
         defer self.query_mu.unlock();
-        try history_store.loadHistory(&self.history, self.max_history, self.history_path, allocator);
+        try history_access.loadLocked(&self.history, self.max_history, self.history_path, allocator);
     }
 
     pub fn saveHistory(self: *SearchService, allocator: std.mem.Allocator) !void {
         self.query_mu.lock();
         defer self.query_mu.unlock();
-        try history_store.saveHistory(self.history.items, self.history_path, allocator);
+        try history_access.saveLocked(self.history.items, self.history_path, allocator);
     }
 
     fn historySnapshotNewestFirstOwned(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {
         self.query_mu.lock();
         defer self.query_mu.unlock();
-        return history_store.historySnapshotNewestFirstOwned(self.history.items, allocator);
+        return history_access.snapshotNewestFirstOwnedLocked(self.history.items, allocator);
     }
 
     fn setQueryElapsed(self: *SearchService, elapsed_ns: u64) void {
