@@ -12,8 +12,8 @@ const gtk_async_search = @import("gtk/async_search.zig");
 const gtk_render = @import("gtk/render.zig");
 const gtk_menus = @import("gtk/menus.zig");
 const gtk_status = @import("gtk/status.zig");
+const gtk_icons = @import("gtk/icons.zig");
 const c = gtk_types.c;
-const CandidateKind = gtk_types.CandidateKind;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
 
@@ -391,7 +391,7 @@ pub const Shell = struct {
         const empty_query = query_trimmed.len == 0;
         const route_hint = gtk_query.routeHintForQuery(query_trimmed);
         const highlight_token = gtk_query.highlightTokenForQuery(query_trimmed);
-        const has_app_glyph_fallback = hasAppGlyphFallback(rows);
+        const has_app_glyph_fallback = gtk_icons.hasAppGlyphFallback(rows);
         const render_hash = gtk_render.computeRenderHash(query_trimmed, route_hint, rows, ranked.len);
         if (ctx.last_render_hash != render_hash) {
             clearList(ctx.list);
@@ -402,7 +402,7 @@ pub const Shell = struct {
                 appendInfoRow(ctx.list, "No results");
                 appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  % files  & grep  > run  = calc  ? web");
             } else {
-                gtk_render.appendGroupedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = candidateIconWidget });
+                gtk_render.appendGroupedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = gtk_icons.candidateIconWidget });
                 if (total_len > limit) {
                     appendInfoRow(ctx.list, "Showing top 20 results");
                 }
@@ -711,127 +711,6 @@ pub const Shell = struct {
         gtk_styles.installCss(window);
     }
 
-    fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget {
-        if (kind == .app) {
-            if (resolveAppIconName(allocator, icon, action)) |icon_name_z| {
-                defer allocator.free(icon_name_z);
-                const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
-                c.gtk_image_set_pixel_size(@ptrCast(image), 30);
-                c.gtk_widget_add_css_class(image, "gs-kind-icon");
-                return @ptrCast(image);
-            }
-        }
-
-        const fallback_icon_z = allocator.dupeZ(u8, kindIcon(kind)) catch return c.gtk_label_new(null);
-        defer allocator.free(fallback_icon_z);
-        const icon_label = c.gtk_label_new(fallback_icon_z.ptr);
-        c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
-        return @ptrCast(icon_label);
-    }
-
-    fn appIconNameFromAction(allocator: std.mem.Allocator, action: []const u8) ?[:0]u8 {
-        const token = actionCommandToken(action);
-        if (token.len == 0) return null;
-        return allocator.dupeZ(u8, token) catch null;
-    }
-
-    fn resolveAppIconName(allocator: std.mem.Allocator, icon: []const u8, action: []const u8) ?[:0]u8 {
-        const explicit = std.mem.trim(u8, icon, " \t\r\n");
-        if (explicit.len > 0) {
-            if (resolveIconVariant(allocator, explicit)) |name| return name;
-        }
-        if (appIconNameFromAction(allocator, action)) |token_name| {
-            defer allocator.free(token_name);
-            if (resolveIconVariant(allocator, token_name)) |name| return name;
-        }
-        return null;
-    }
-
-    fn resolveIconVariant(allocator: std.mem.Allocator, raw_name: []const u8) ?[:0]u8 {
-        var name = std.mem.trim(u8, raw_name, " \t\r\n\"'");
-        if (name.len == 0) return null;
-
-        var candidates: [6][]const u8 = undefined;
-        var count: usize = 0;
-        candidates[count] = name;
-        count += 1;
-
-        if (std.mem.lastIndexOfScalar(u8, name, '/')) |slash_idx| {
-            if (slash_idx + 1 < name.len) {
-                const base = name[slash_idx + 1 ..];
-                candidates[count] = base;
-                count += 1;
-                name = base;
-            }
-        }
-
-        if (std.mem.endsWith(u8, name, ".desktop") and name.len > ".desktop".len) {
-            candidates[count] = name[0 .. name.len - ".desktop".len];
-            count += 1;
-        }
-        if (std.mem.endsWith(u8, name, "-desktop") and name.len > "-desktop".len) {
-            candidates[count] = name[0 .. name.len - "-desktop".len];
-            count += 1;
-        }
-
-        if (count > 1 and std.mem.endsWith(u8, candidates[count - 1], ".desktop") and candidates[count - 1].len > ".desktop".len) {
-            candidates[count] = candidates[count - 1][0 .. candidates[count - 1].len - ".desktop".len];
-            count += 1;
-        }
-
-        var idx: usize = 0;
-        while (idx < count) : (idx += 1) {
-            const candidate = candidates[idx];
-            if (candidate.len == 0) continue;
-            if (iconExists(candidate)) {
-                return allocator.dupeZ(u8, candidate) catch null;
-            }
-        }
-
-        // If theme inspection is unavailable, keep best-effort fallback.
-        return allocator.dupeZ(u8, candidates[0]) catch null;
-    }
-
-    fn iconExists(name: []const u8) bool {
-        const display = c.gdk_display_get_default();
-        if (display == null) return false;
-        const theme = c.gtk_icon_theme_get_for_display(display);
-        if (theme == null) return false;
-        const name_z = std.heap.page_allocator.dupeZ(u8, name) catch return false;
-        defer std.heap.page_allocator.free(name_z);
-        return c.gtk_icon_theme_has_icon(theme, name_z.ptr) != 0;
-    }
-
-    fn actionCommandToken(action: []const u8) []const u8 {
-        const trimmed = std.mem.trim(u8, action, " \t\r\n");
-        if (trimmed.len == 0) return "";
-
-        var words = std.mem.tokenizeAny(u8, trimmed, " \t\r\n");
-        while (words.next()) |word_raw| {
-            var word = std.mem.trim(u8, word_raw, "\"'");
-            if (word.len == 0) continue;
-            if (std.mem.eql(u8, word, "env")) continue;
-            if (word[0] == '%') continue;
-            if (word[0] == '-') continue;
-            if (std.mem.indexOfScalar(u8, word, '=') != null and word[0] != '/' and !std.mem.startsWith(u8, word, "./")) continue;
-
-            if (std.mem.lastIndexOfScalar(u8, word, '/')) |slash_idx| {
-                if (slash_idx + 1 < word.len) word = word[slash_idx + 1 ..];
-            }
-            return word;
-        }
-        return "";
-    }
-
-    fn hasAppGlyphFallback(rows: []const @import("../search/mod.zig").ScoredCandidate) bool {
-        for (rows) |row| {
-            if (row.candidate.kind != .app) continue;
-            if (std.mem.trim(u8, row.candidate.icon, " \t\r\n").len > 0) continue;
-            if (actionCommandToken(row.candidate.action).len == 0) return true;
-        }
-        return false;
-    }
-
     fn runShellCommand(command: []const u8) !void {
         return gtk_actions.runShellCommand(command);
     }
@@ -850,10 +729,6 @@ pub const Shell = struct {
     fn emitTelemetry(ctx: *UiContext, kind: []const u8, action: []const u8, status: []const u8, detail: []const u8) void {
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         ctx.telemetry.emitActionEvent(allocator_ptr.*, kind, action, status, detail) catch {};
-    }
-
-    fn kindIcon(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
-        return gtk_widgets.kindIcon(kind);
     }
 
 };

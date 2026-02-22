@@ -4312,3 +4312,30 @@
   - M8: extract app-icon resolution/fallback helpers into `gtk/icons.zig`.
 
 ---
+## 2026-02-22 (Cycle 191)
+- Milestone: M8 UX Modularization
+- Task slice: extract app icon resolution/fallback helpers from shell
+- Changes:
+  - Added `src/ui/gtk/icons.zig`:
+    - app icon widget resolution entrypoint for row rendering
+    - icon-name variant matching (`.desktop`/`-desktop` stripping)
+    - action-token extraction for `env`/flag-wrapped exec commands
+    - app-glyph fallback detection helper
+  - Updated `src/ui/gtk_shell.zig`:
+    - render hook now uses `gtk_icons.candidateIconWidget`
+    - app-fallback status check now uses `gtk_icons.hasAppGlyphFallback`
+    - removed in-file icon/token/variant helper implementations
+    - removed now-dead local icon wrapper helper
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - icon behavior should remain identical; logic is moved but unchanged semantically.
+- Next slice:
+  - M8: optional final split of shell activation/bootstrap glue into `gtk/bootstrap.zig`.
+
+---
