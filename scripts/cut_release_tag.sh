@@ -10,6 +10,7 @@ COMMIT_NOTES=0
 REUSE_NOTES=0
 REGEN_NOTES=0
 VERSION=""
+SEMVER_TAG_RE='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$'
 
 usage() {
   cat <<'EOF'
@@ -18,7 +19,7 @@ Usage: scripts/cut_release_tag.sh --version vX.Y.Z [--apply] [--push] [--commit-
 Default mode is dry-run and prints planned actions.
 
 Options:
-  --version   tag/version to cut (required)
+  --version   tag/version to cut (required, vMAJOR.MINOR.PATCH[-PRERELEASE][+BUILD])
   --apply     execute tag creation (otherwise dry-run)
   --push      push main + tag after creation (requires --apply)
   --commit-notes  commit generated release notes before tag creation (requires --apply)
@@ -71,6 +72,11 @@ if [[ -z "$VERSION" ]]; then
   exit 1
 fi
 
+if [[ ! "$VERSION" =~ $SEMVER_TAG_RE ]]; then
+  echo "error: --version must match semver-like tag format (vMAJOR.MINOR.PATCH[-PRERELEASE][+BUILD])" >&2
+  exit 1
+fi
+
 if [[ $PUSH -eq 1 && $DRY_RUN -eq 1 ]]; then
   echo "error: --push requires --apply" >&2
   exit 1
@@ -114,6 +120,15 @@ else
 fi
 
 NOTES_PATH="docs/release-notes-${VERSION}.md"
+if [[ "$NOTES_PATH" != docs/release-notes-*.md ]]; then
+  echo "error: computed notes path must remain under docs/: $NOTES_PATH" >&2
+  exit 1
+fi
+NOTES_BASENAME="${NOTES_PATH#docs/}"
+if [[ "$NOTES_BASENAME" == "$NOTES_PATH" || "$NOTES_BASENAME" == */* ]]; then
+  echo "error: computed notes path must be a direct file under docs/: $NOTES_PATH" >&2
+  exit 1
+fi
 NOTES_MODE="regen"
 if [[ -f "$NOTES_PATH" && $REGEN_NOTES -eq 0 ]]; then
   NOTES_MODE="reuse"
@@ -147,6 +162,22 @@ if [[ $DRY_RUN -eq 1 ]]; then
   exit 0
 fi
 
+EXPECTED_BRANCH="${CUT_RELEASE_EXPECTED_BRANCH:-main}"
+if [[ ! "$EXPECTED_BRANCH" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ || "$EXPECTED_BRANCH" == */ || "$EXPECTED_BRANCH" == /* || "$EXPECTED_BRANCH" == *"//"* || "$EXPECTED_BRANCH" == *".."* ]]; then
+  echo "error: invalid CUT_RELEASE_EXPECTED_BRANCH value: $EXPECTED_BRANCH" >&2
+  exit 1
+fi
+
+CURRENT_BRANCH="$(git symbolic-ref --quiet --short HEAD || true)"
+if [[ -z "$CURRENT_BRANCH" ]]; then
+  echo "error: apply mode requires a checked out branch (detached HEAD is not allowed)" >&2
+  exit 1
+fi
+if [[ "$CURRENT_BRANCH" != "$EXPECTED_BRANCH" ]]; then
+  echo "error: apply mode must run on branch '$EXPECTED_BRANCH' (current: '$CURRENT_BRANCH')" >&2
+  exit 1
+fi
+
 if [[ "$NOTES_MODE" == "reuse" ]]; then
   if [[ ! -f "$NOTES_PATH" ]]; then
     echo "error: notes reuse requested but file missing: $NOTES_PATH" >&2
@@ -173,8 +204,8 @@ git tag -a -m "god-search-ui $VERSION" -- "$VERSION"
 git show "$VERSION" --no-patch --
 
 if [[ $PUSH -eq 1 ]]; then
-  echo "[apply] pushing main and tag"
-  git push origin main
+  echo "[apply] pushing $EXPECTED_BRANCH and tag"
+  git push origin "$EXPECTED_BRANCH"
   git push origin -- "$VERSION"
 fi
 

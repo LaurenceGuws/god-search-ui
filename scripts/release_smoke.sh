@@ -120,7 +120,10 @@ if [[ $RUN_GTK_RUNTIME -eq 1 ]]; then
 Utilities	Kitty	kitty	kitty
 Internet	Firefox	firefox	firefox
 EOF
-  HOME="$TMP_HOME" timeout 3s zig build run -Denable_gtk=true -- --ui >/dev/null 2>&1 || true
+  if ! HOME="$TMP_HOME" timeout 3s zig build run -Denable_gtk=true -- --ui >/dev/null 2>&1; then
+    echo "error: gtk runtime launch smoke failed" >&2
+    exit 1
+  fi
   rm -rf "$TMP_HOME"
   trap - EXIT
 fi

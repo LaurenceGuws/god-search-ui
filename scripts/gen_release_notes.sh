@@ -3,6 +3,24 @@ set -euo pipefail
 
 VERSION="${1:-UNRELEASED}"
 OUT="${2:-docs/release-notes-${VERSION}.md}"
+SEMVER_TAG_RE='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$'
+
+if [[ ! "$VERSION" =~ $SEMVER_TAG_RE && "$VERSION" != "SMOKE" && "$VERSION" != "UNRELEASED" ]]; then
+  echo "error: version must be semver-like tag (vMAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]) or SMOKE/UNRELEASED" >&2
+  exit 1
+fi
+
+if [[ "$OUT" == docs/* ]]; then
+  if [[ "$OUT" != docs/release-notes-*.md ]]; then
+    echo "error: docs output path must match docs/release-notes-*.md" >&2
+    exit 1
+  fi
+  OUT_BASENAME="${OUT#docs/}"
+  if [[ "$OUT_BASENAME" == "$OUT" || "$OUT_BASENAME" == */* ]]; then
+    echo "error: docs output path must be a direct file under docs/" >&2
+    exit 1
+  fi
+fi
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "error: run inside git repository" >&2
