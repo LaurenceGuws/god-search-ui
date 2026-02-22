@@ -1,6 +1,9 @@
 const std = @import("std");
 const providers = @import("../providers/mod.zig");
 const search = @import("../search/mod.zig");
+const history_store = @import("search_service/history_store.zig");
+const cache_refresh = @import("search_service/cache_refresh.zig");
+const dynamic_routes = @import("search_service/dynamic_routes.zig");
 
 pub const SearchService = struct {
     registry: providers.ProviderRegistry,
@@ -35,7 +38,7 @@ pub const SearchService = struct {
 
     pub fn deinit(self: *SearchService, allocator: std.mem.Allocator) void {
         if (self.refresh_thread) |t| t.join();
-        self.clearDynamicOwned(allocator);
+        dynamic_routes.clearOwned(&self.dynamic_owned, allocator);
         for (self.history.items) |item| allocator.free(item);
         self.history.deinit(allocator);
         self.cached_candidates.deinit(allocator);
@@ -89,120 +92,11 @@ pub const SearchService = struct {
         defer dynamic_candidates.deinit(allocator);
         const term = std.mem.trim(u8, query.term, " \t\r\n");
         if (term.len == 0) return allocator.alloc(search.ScoredCandidate, 0);
-
-        switch (query.route) {
-            .files => self.collectFdCandidates(allocator, term, &dynamic_candidates) catch {},
-            .grep => self.collectRgCandidates(allocator, term, &dynamic_candidates) catch {},
-            else => {},
-        }
+        dynamic_routes.collectForRoute(&self.dynamic_owned, allocator, query, &dynamic_candidates) catch {};
 
         const recent = try self.historyViewNewestFirst(allocator);
         defer allocator.free(recent);
         return search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);
-    }
-
-    fn collectFdCandidates(self: *SearchService, allocator: std.mem.Allocator, term: []const u8, out: *search.CandidateList) !void {
-        if (!commandExists("fd")) return;
-        const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
-        defer allocator.free(home);
-
-        const term_q = try shellSingleQuote(allocator, term);
-        defer allocator.free(term_q);
-        const home_q = try shellSingleQuote(allocator, home);
-        defer allocator.free(home_q);
-
-        try self.collectFdTypeCandidates(allocator, term_q, home_q, "d", .dir, 120, out);
-        try self.collectFdTypeCandidates(allocator, term_q, home_q, "f", .file, 180, out);
-    }
-
-    fn collectFdTypeCandidates(
-        self: *SearchService,
-        allocator: std.mem.Allocator,
-        term_q: []const u8,
-        home_q: []const u8,
-        fd_type: []const u8,
-        kind: search.CandidateKind,
-        max_results: usize,
-        out: *search.CandidateList,
-    ) !void {
-        const cmd = try std.fmt.allocPrint(
-            allocator,
-            "fd --type {s} --hidden --follow --color never --ignore-case --max-results {d} --exclude .git --exclude node_modules --exclude .cache --exclude .codex --exclude .local/share/Trash --exclude .local/share/opencode --exclude .local/share/containers {s} {s}",
-            .{ fd_type, max_results, term_q, home_q },
-        );
-        defer allocator.free(cmd);
-
-        const rows = try runShellCapture(allocator, cmd);
-        defer allocator.free(rows);
-        var lines = std.mem.splitScalar(u8, rows, '\n');
-        while (lines.next()) |line| {
-            const path = std.mem.trim(u8, line, " \t\r");
-            if (path.len == 0) continue;
-            const title = std.fs.path.basename(path);
-            const kept_title = try self.keepDynamicString(allocator, title);
-            const kept_path = try self.keepDynamicString(allocator, path);
-            try out.append(allocator, search.Candidate.init(kind, kept_title, kept_path, kept_path));
-        }
-    }
-
-    fn collectRgCandidates(self: *SearchService, allocator: std.mem.Allocator, term: []const u8, out: *search.CandidateList) !void {
-        if (!commandExists("rg")) return;
-        const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
-        defer allocator.free(home);
-
-        const term_q = try shellSingleQuote(allocator, term);
-        defer allocator.free(term_q);
-        const home_q = try shellSingleQuote(allocator, home);
-        defer allocator.free(home_q);
-
-        const cmd = try std.fmt.allocPrint(
-            allocator,
-            "rg --line-number --no-heading --color never --smart-case --hidden --max-count 200 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null || true",
-            .{ term_q, home_q },
-        );
-        defer allocator.free(cmd);
-
-        const rows = try runShellCapture(allocator, cmd);
-        defer allocator.free(rows);
-        var lines = std.mem.splitScalar(u8, rows, '\n');
-        var count: usize = 0;
-        while (lines.next()) |line| {
-            const row = std.mem.trim(u8, line, " \t\r");
-            if (row.len == 0) continue;
-            const first_colon = std.mem.indexOfScalar(u8, row, ':') orelse continue;
-            const second_colon_rel = std.mem.indexOfScalar(u8, row[first_colon + 1 ..], ':') orelse continue;
-            const second_colon = first_colon + 1 + second_colon_rel;
-            const path = row[0..first_colon];
-            const line_num = row[first_colon + 1 .. second_colon];
-            const snippet = std.mem.trim(u8, row[second_colon + 1 ..], " \t");
-            const base = std.fs.path.basename(path);
-            const title = try std.fmt.allocPrint(allocator, "{s}:{s}", .{ base, line_num });
-            defer allocator.free(title);
-            const subtitle = if (snippet.len > 0)
-                try std.fmt.allocPrint(allocator, "{s} | {s}", .{ path, snippet })
-            else
-                try allocator.dupe(u8, path);
-            defer allocator.free(subtitle);
-            const action = try std.fmt.allocPrint(allocator, "{s}:{s}", .{ path, line_num });
-            defer allocator.free(action);
-            const kept_title = try self.keepDynamicString(allocator, title);
-            const kept_subtitle = try self.keepDynamicString(allocator, subtitle);
-            const kept_action = try self.keepDynamicString(allocator, action);
-            try out.append(allocator, search.Candidate.init(.grep, kept_title, kept_subtitle, kept_action));
-            count += 1;
-            if (count >= 200) break;
-        }
-    }
-
-    fn keepDynamicString(self: *SearchService, allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
-        const copy = try allocator.dupe(u8, value);
-        try self.dynamic_owned.append(allocator, copy);
-        return copy;
-    }
-
-    fn clearDynamicOwned(self: *SearchService, allocator: std.mem.Allocator) void {
-        for (self.dynamic_owned.items) |item| allocator.free(item);
-        self.dynamic_owned.clearRetainingCapacity();
     }
 
     pub fn prewarmProviders(self: *SearchService, allocator: std.mem.Allocator) !void {
@@ -210,11 +104,14 @@ pub const SearchService = struct {
         defer self.query_mu.unlock();
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
-        self.cached_candidates.clearRetainingCapacity();
-        try self.registry.collectAll(allocator, &self.cached_candidates);
-        self.cache_ready = true;
-        self.cache_last_refresh_ns = std.time.nanoTimestamp();
-        self.refresh_requested = false;
+        try cache_refresh.prewarmProviders(
+            self.registry,
+            allocator,
+            &self.cached_candidates,
+            &self.cache_ready,
+            &self.cache_last_refresh_ns,
+            &self.refresh_requested,
+        );
     }
 
     pub fn invalidateSnapshot(self: *SearchService) void {
@@ -222,9 +119,7 @@ pub const SearchService = struct {
         defer self.query_mu.unlock();
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
-        self.cache_ready = false;
-        self.cache_last_refresh_ns = 0;
-        self.refresh_requested = false;
+        cache_refresh.invalidateSnapshot(&self.cache_ready, &self.cache_last_refresh_ns, &self.refresh_requested);
     }
 
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {
@@ -242,20 +137,13 @@ pub const SearchService = struct {
     fn scheduleRefreshIfNeeded(self: *SearchService) !void {
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
-        if (!self.cache_ready) return;
-        if (self.cache_ttl_ns == 0) {
-            self.refresh_requested = true;
-            self.last_query_used_stale_cache = true;
-            return;
-        }
-
-        const now = std.time.nanoTimestamp();
-        const age = now - self.cache_last_refresh_ns;
-        if (age <= 0) return;
-        if (@as(u64, @intCast(age)) >= self.cache_ttl_ns) {
-            self.refresh_requested = true;
-            self.last_query_used_stale_cache = true;
-        }
+        cache_refresh.scheduleRefreshIfNeeded(
+            self.cache_ready,
+            self.cache_ttl_ns,
+            self.cache_last_refresh_ns,
+            &self.refresh_requested,
+            &self.last_query_used_stale_cache,
+        );
     }
 
     fn startAsyncRefreshWorker(self: *SearchService) !void {
@@ -278,128 +166,25 @@ pub const SearchService = struct {
     pub fn recordSelection(self: *SearchService, allocator: std.mem.Allocator, action: []const u8) !void {
         self.query_mu.lock();
         defer self.query_mu.unlock();
-        if (action.len == 0) return;
-        const copy = try allocator.dupe(u8, action);
-        try self.history.append(allocator, copy);
-
-        if (self.history.items.len > self.max_history) {
-            const oldest = self.history.orderedRemove(0);
-            allocator.free(oldest);
-        }
+        try history_store.recordSelection(&self.history, self.max_history, allocator, action);
     }
 
     pub fn loadHistory(self: *SearchService, allocator: std.mem.Allocator) !void {
-        const path = self.history_path orelse return;
-        const data = readFileAnyPath(allocator, path, 1024 * 1024) catch |err| switch (err) {
-            error.FileNotFound => return,
-            else => return err,
-        };
-        defer allocator.free(data);
-
-        var lines = std.mem.splitScalar(u8, data, '\n');
-        while (lines.next()) |line| {
-            const trimmed = std.mem.trim(u8, line, " \t\r");
-            if (trimmed.len == 0) continue;
-            try self.recordSelection(allocator, trimmed);
-        }
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
+        try history_store.loadHistory(&self.history, self.max_history, self.history_path, allocator);
     }
 
     pub fn saveHistory(self: *SearchService, allocator: std.mem.Allocator) !void {
-        const path = self.history_path orelse return;
-
-        var out = std.ArrayList(u8).empty;
-        defer out.deinit(allocator);
-        const writer = out.writer(allocator);
-
-        for (self.history.items) |entry| {
-            try writer.print("{s}\n", .{entry});
-        }
-        try writeFileAnyPath(path, out.items);
+        self.query_mu.lock();
+        defer self.query_mu.unlock();
+        try history_store.saveHistory(self.history.items, self.history_path, allocator);
     }
 
     fn historyViewNewestFirst(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {
-        var out = std.ArrayList([]const u8).empty;
-        defer out.deinit(allocator);
-
-        var idx = self.history.items.len;
-        while (idx > 0) : (idx -= 1) {
-            try out.append(allocator, self.history.items[idx - 1]);
-        }
-        return out.toOwnedSlice(allocator);
+        return history_store.historyViewNewestFirst(self.history.items, allocator);
     }
 };
-
-fn readFileAnyPath(allocator: std.mem.Allocator, path: []const u8, max_bytes: usize) ![]u8 {
-    if (std.fs.path.isAbsolute(path)) {
-        const file = try std.fs.openFileAbsolute(path, .{});
-        defer file.close();
-        return file.readToEndAlloc(allocator, max_bytes);
-    }
-    return std.fs.cwd().readFileAlloc(allocator, path, max_bytes);
-}
-
-fn writeFileAnyPath(path: []const u8, data: []const u8) !void {
-    if (std.fs.path.isAbsolute(path)) {
-        try ensureParentDirAbsolute(path);
-        const file = try std.fs.createFileAbsolute(path, .{ .truncate = true });
-        defer file.close();
-        try file.writeAll(data);
-        return;
-    }
-    try std.fs.cwd().writeFile(.{
-        .sub_path = path,
-        .data = data,
-    });
-}
-
-fn ensureParentDirAbsolute(path: []const u8) !void {
-    const parent = std.fs.path.dirname(path) orelse return;
-    try std.fs.makeDirAbsolute(parent);
-}
-
-fn commandExists(name: []const u8) bool {
-    const check_cmd = std.fmt.allocPrint(std.heap.page_allocator, "{s} --help >/dev/null 2>&1", .{name}) catch return false;
-    defer std.heap.page_allocator.free(check_cmd);
-
-    const result = std.process.Child.run(.{
-        .allocator = std.heap.page_allocator,
-        .argv = &.{ "sh", "-lc", check_cmd },
-    }) catch return false;
-    defer {
-        std.heap.page_allocator.free(result.stdout);
-        std.heap.page_allocator.free(result.stderr);
-    }
-    return result.term == .Exited and result.term.Exited == 0;
-}
-
-fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
-    var out = std.ArrayList(u8).empty;
-    defer out.deinit(allocator);
-    try out.append(allocator, '\'');
-    for (value) |ch| {
-        if (ch == '\'') {
-            try out.appendSlice(allocator, "'\\''");
-        } else {
-            try out.append(allocator, ch);
-        }
-    }
-    try out.append(allocator, '\'');
-    return out.toOwnedSlice(allocator);
-}
-
-fn runShellCapture(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
-    const result = try std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &.{ "sh", "-lc", command },
-        .max_output_bytes = 8 * 1024 * 1024,
-    });
-    defer allocator.free(result.stderr);
-    if (result.term != .Exited or result.term.Exited != 0) {
-        allocator.free(result.stdout);
-        return error.CommandFailed;
-    }
-    return result.stdout;
-}
 
 test "search service applies history boost through ranking" {
     const Fake = struct {

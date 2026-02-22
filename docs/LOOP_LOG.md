@@ -4445,3 +4445,34 @@
   - M8: optional final shell thinning pass by extracting refresh/bootstrap callbacks into a small façade module.
 
 ---
+## 2026-02-22 (Cycle 196)
+- Milestone: M8 Code Hygiene / Service Modularization
+- Task slice: split `SearchService` internals into dedicated submodules
+- Changes:
+  - Added `src/app/search_service/dynamic_routes.zig`:
+    - `%` (`fd`) and `&` (`rg`) dynamic candidate collection logic
+    - shell command helpers and dynamic owned-string retention helpers
+  - Added `src/app/search_service/history_store.zig`:
+    - selection history append/trim behavior
+    - history load/save and newest-first view materialization
+  - Added `src/app/search_service/cache_refresh.zig`:
+    - snapshot prewarm/invalidate primitives
+    - TTL-based refresh scheduling policy
+  - Updated `src/app/search_service.zig`:
+    - delegates dynamic route collection, history operations, and cache refresh policy to submodules
+    - keeps public `SearchService` API and locking model unchanged
+    - removed moved helper implementations from monolithic file
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_store.zig src/app/search_service/cache_refresh.zig src/app/search_service/dynamic_routes.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/app/search_service.zig ./src/app/search_service/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - history save/load now runs under `query_mu` lock for consistency with record/history view access.
+- Next slice:
+  - M8: split `src/ui/stub_shell.zig` into headless controller + command handlers to keep shell parity with GTK modularization.
+
+---
