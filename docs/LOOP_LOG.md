@@ -4395,3 +4395,28 @@
   - M8: split render orchestration from shell (`populateResults` + async/result routing coordinator).
 
 ---
+## 2026-02-22 (Cycle 194)
+- Milestone: M8 UX Modularization
+- Task slice: extract result/query orchestration from shell
+- Changes:
+  - Added `src/ui/gtk/results_flow.zig`:
+    - query-path orchestration (`populateResults`) for empty query/default menu, async-route handoff, and sync search fallback
+    - ranked-row render/status policy (`renderRankedRows`) with route hints, truncation notice, and stale/refresh status decisions
+    - direct module usage for list/status/nav concerns (`widgets`, `status`, `navigation`, `render`, `icons`, `query_helpers`)
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates populate flow to `gtk_results_flow.populateResults`
+    - delegates async-ready render finalization to `gtk_results_flow.renderRankedRows`
+    - removed shell-local duplicate render/list helper code that moved into `results_flow`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - async hooks are still shell-owned callbacks; deeper extraction of spinner/worker callback wiring remains optional.
+- Next slice:
+  - M8: extract async spinner/worker callback bridge from shell into a dedicated coordinator.
+
+---

@@ -14,6 +14,7 @@ const gtk_status = @import("gtk/status.zig");
 const gtk_icons = @import("gtk/icons.zig");
 const gtk_selection = @import("gtk/selection.zig");
 const gtk_controller = @import("gtk/controller.zig");
+const gtk_results_flow = @import("gtk/results_flow.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -22,6 +23,7 @@ const LaunchContext = gtk_bootstrap.LaunchContext;
 
 const UiContext = gtk_types.UiContext;
 const AsyncSearchResult = gtk_async.AsyncSearchResult;
+const ScoredCandidate = @import("../search/mod.zig").ScoredCandidate;
 
 pub const Shell = struct {
     pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink) !void {
@@ -177,86 +179,10 @@ pub const Shell = struct {
     }
 
     fn populateResults(ctx: *UiContext, query: []const u8) void {
-        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const allocator = allocator_ptr.*;
-        const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
-
-        if (query_trimmed.len == 0) {
-            cancelAsyncRouteSearch(ctx);
-            const empty_hash = std.hash.Wyhash.hash(0, "module-filter-menu");
-            if (ctx.last_render_hash != empty_hash) {
-                clearList(ctx.list);
-                appendModuleFilterMenu(ctx, allocator);
-                ctx.last_render_hash = empty_hash;
-            }
-            if (ctx.pending_power_confirm == GFALSE) {
-                setStatus(ctx, "Pick a module (Enter) or type directly for blended search");
-            }
-            gtk_nav.selectFirstActionableRow(ctx);
-            return;
-        }
-
-        if (gtk_query.shouldAsyncRouteQuery(query_trimmed)) {
-            startAsyncRouteSearch(ctx, allocator, query_trimmed);
-            return;
-        }
-        cancelAsyncRouteSearch(ctx);
-
-        const ranked = ctx.service.searchQuery(allocator, query) catch |err| {
-            const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
-            defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
-            appendInfoRow(ctx.list, msg);
-            setStatus(ctx, "Search failed");
-            return;
-        };
-        defer allocator.free(ranked);
-
-        renderRankedRows(ctx, allocator, query_trimmed, ranked, ranked.len);
-        _ = ctx.service.drainScheduledRefresh(allocator) catch false;
-        gtk_nav.selectFirstActionableRow(ctx);
-    }
-
-    fn renderRankedRows(
-        ctx: *UiContext,
-        allocator: std.mem.Allocator,
-        query_trimmed: []const u8,
-        ranked: []const @import("../search/mod.zig").ScoredCandidate,
-        total_len: usize,
-    ) void {
-        const limit = @min(ranked.len, 20);
-        const rows = ranked[0..limit];
-        const empty_query = query_trimmed.len == 0;
-        const route_hint = gtk_query.routeHintForQuery(query_trimmed);
-        const highlight_token = gtk_query.highlightTokenForQuery(query_trimmed);
-        const has_app_glyph_fallback = gtk_icons.hasAppGlyphFallback(rows);
-        const render_hash = gtk_render.computeRenderHash(query_trimmed, route_hint, rows, ranked.len);
-        if (ctx.last_render_hash != render_hash) {
-            clearList(ctx.list);
-            if (route_hint) |hint| {
-                appendInfoRow(ctx.list, hint);
-            }
-            if (rows.len == 0 and !empty_query and route_hint == null) {
-                appendInfoRow(ctx.list, "No results");
-                appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ~ dirs  % files  & grep  > run  = calc  ? web");
-            } else {
-                gtk_render.appendGroupedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = gtk_icons.candidateIconWidget });
-                if (total_len > limit) {
-                    appendInfoRow(ctx.list, "Showing top 20 results");
-                }
-            }
-            ctx.last_render_hash = render_hash;
-        }
-        if (ctx.service.last_query_used_stale_cache) {
-            setStatus(ctx, "Refresh scheduled");
-        } else if (ctx.service.last_query_refreshed_cache) {
-            setStatus(ctx, "Snapshot refreshed");
-        } else if (empty_query and has_app_glyph_fallback and ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "App icon fallback active (headless :icondiag for breakdown)");
-        } else if (empty_query and ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs % files & grep > run = calc ? web");
-        } else if (ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "");
-        }
+        gtk_results_flow.populateResults(ctx, query, .{
+            .start_async_route_search = startAsyncRouteSearch,
+            .cancel_async_route_search = cancelAsyncRouteSearch,
+        });
     }
 
     fn startAsyncRouteSearch(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) void {
@@ -284,7 +210,7 @@ pub const Shell = struct {
         }
 
         endAsyncSpinner(ctx);
-        var scored = allocator.alloc(@import("../search/mod.zig").ScoredCandidate, payload.rows.len) catch return GFALSE;
+        var scored = allocator.alloc(ScoredCandidate, payload.rows.len) catch return GFALSE;
         defer allocator.free(scored);
         for (payload.rows, 0..) |row, idx| {
             scored[idx] = .{
@@ -299,7 +225,7 @@ pub const Shell = struct {
             };
         }
 
-        renderRankedRows(ctx, allocator, std.mem.trim(u8, payload.query, " \t\r\n"), scored, payload.total_len);
+        gtk_results_flow.renderRankedRows(ctx, allocator, std.mem.trim(u8, payload.query, " \t\r\n"), scored, payload.total_len);
         gtk_nav.selectFirstActionableRow(ctx);
         return GFALSE;
     }
@@ -368,14 +294,6 @@ pub const Shell = struct {
         gtk_widgets.clearAsyncRows(list);
     }
 
-    fn appendModuleFilterMenu(ctx: *UiContext, allocator: std.mem.Allocator) void {
-        gtk_widgets.appendModuleFilterMenu(ctx.list, allocator);
-    }
-
-    fn appendInfoRow(list: *c.GtkListBox, message: []const u8) void {
-        gtk_widgets.appendInfoRow(list, message);
-    }
-
     fn appendLegendRow(list: *c.GtkListBox, message: []const u8) void {
         gtk_widgets.appendLegendRow(list, message);
     }
@@ -395,18 +313,6 @@ pub const Shell = struct {
         populateResults(ctx, query);
     }
 
-
-    fn appendHeaderRow(list: *c.GtkListBox, title: []const u8) void {
-        gtk_widgets.appendHeaderRow(list, title);
-    }
-
-    fn appendSectionSeparatorRow(list: *c.GtkListBox) void {
-        gtk_widgets.appendSectionSeparatorRow(list);
-    }
-
-    fn clearList(list: *c.GtkListBox) void {
-        gtk_widgets.clearList(list);
-    }
 
     fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path: []const u8) void {
         gtk_menus.showDirActionMenu(ctx, allocator, dir_path, .{
