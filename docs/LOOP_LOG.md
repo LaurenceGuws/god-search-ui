@@ -4476,3 +4476,29 @@
   - M8: split `src/ui/stub_shell.zig` into headless controller + command handlers to keep shell parity with GTK modularization.
 
 ---
+## 2026-02-22 (Cycle 197)
+- Milestone: M8 Code Hygiene / Shell Modularization
+- Task slice: split headless shell path into focused modules
+- Changes:
+  - Added `src/ui/headless/controller.zig`:
+    - query loop, `:q`/`:refresh`/`:icondiag` command handling, and selection recording
+  - Added `src/ui/headless/render.zig`:
+    - query timing/status metadata output and top-results rendering
+  - Added `src/ui/headless/icon_diag.zig`:
+    - icon diagnostics data path (`text` and `--json`) and JSON escaping helpers
+  - Updated `src/ui/stub_shell.zig`:
+    - reduced to thin shell entrypoint delegating to `headless/controller.zig`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/stub_shell.zig src/ui/headless/controller.zig src/ui/headless/render.zig src/ui/headless/icon_diag.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/stub_shell.zig ./src/ui/headless/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior and command surface are intentionally unchanged; this is structural separation only.
+- Next slice:
+  - M8: define shared execution/router contracts for GTK and headless so both shells reuse the same command-dispatch primitives.
+
+---
