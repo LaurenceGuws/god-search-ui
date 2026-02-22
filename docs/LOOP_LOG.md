@@ -4502,3 +4502,30 @@
   - M8: define shared execution/router contracts for GTK and headless so both shells reuse the same command-dispatch primitives.
 
 ---
+## 2026-02-22 (Cycle 198)
+- Milestone: M8 Code Hygiene / Shared Dispatch
+- Task slice: centralize candidate dispatch contracts used by GTK and headless flows
+- Changes:
+  - Added `src/ui/common/dispatch.zig`:
+    - shared command planning for actionable kinds (`action`, `app`, `dir_option`, `file_option`, `window`)
+    - shared confirmation/check helpers and selection recording predicates
+    - owned-command lifecycle handling for dynamically built command strings
+  - Updated `src/ui/gtk/selection.zig`:
+    - now delegates command planning and kind classification to shared dispatch module
+    - retained GTK-only UI hooks for status, confirmation prompt, menus, telemetry, and close-on-success behavior
+  - Updated `src/ui/headless/controller.zig`:
+    - uses shared candidate-recording predicate for consistent history behavior with GTK route semantics
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/dispatch.zig src/ui/gtk/selection.zig src/ui/headless/controller.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/common/dispatch.zig ./src/ui/gtk/selection.zig ./src/ui/headless/controller.zig --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dispatch behavior is unchanged by intent; logic moved behind a shared contract to reduce drift.
+- Next slice:
+  - M8: extract a small `ui/common/commands.zig` command-router (`:refresh`, `:icondiag`, future AI/browser commands) and reuse it in headless + upcoming GTK command palette paths.
+
+---

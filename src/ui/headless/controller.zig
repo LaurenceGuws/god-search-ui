@@ -1,5 +1,6 @@
 const std = @import("std");
 const app = @import("../../app/mod.zig");
+const common_dispatch = @import("../common/dispatch.zig");
 const render = @import("render.zig");
 const icon_diag = @import("icon_diag.zig");
 
@@ -34,7 +35,7 @@ pub fn run(allocator: std.mem.Allocator, service: *app.SearchService) !void {
         try render.printTopResults(stdout, ranked, 5);
         _ = try service.drainScheduledRefresh(allocator);
 
-        if (ranked.len > 0) {
+        if (ranked.len > 0 and common_dispatch.shouldRecordCandidate(ranked[0].candidate.kind)) {
             try service.recordSelection(allocator, ranked[0].candidate.action);
         }
     }
