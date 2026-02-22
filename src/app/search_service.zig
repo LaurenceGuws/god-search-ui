@@ -123,8 +123,6 @@ pub const SearchService = struct {
     }
 
     pub fn prewarmProviders(self: *SearchService, allocator: std.mem.Allocator) !void {
-        self.query_mu.lock();
-        defer self.query_mu.unlock();
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
         try cache_coordinator.prewarmLocked(
@@ -140,8 +138,6 @@ pub const SearchService = struct {
     }
 
     pub fn invalidateSnapshot(self: *SearchService) void {
-        self.query_mu.lock();
-        defer self.query_mu.unlock();
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
         cache_coordinator.invalidateLocked(&self.cache_ready, &self.cache_last_refresh_ns, &self.refresh_requested);

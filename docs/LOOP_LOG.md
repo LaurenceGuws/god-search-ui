@@ -5097,3 +5097,24 @@
   - M8: remove remaining small lock-wrapper boilerplate by extracting query metrics reset/set helpers at call sites via a compact scoped utility.
 
 ---
+## 2026-02-22 (Cycle 223)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: reduce lock coupling between cache-refresh paths and query/history mutex
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - removed `query_mu` locking from `prewarmProviders(...)`
+    - removed `query_mu` locking from `invalidateSnapshot(...)`
+    - kept cache state coordination under `cache_mu` and metric flags under `query_mu`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this intentionally narrows lock scope; cache refresh/invalidate no longer participates in query/history lock ordering, which reduces deadlock surfaces.
+- Next slice:
+  - M8: add focused concurrency test covering `drainScheduledRefresh` + repeated query calls to guard lock-order regressions.
+
+---
