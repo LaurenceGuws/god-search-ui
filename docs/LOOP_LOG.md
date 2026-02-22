@@ -4939,3 +4939,27 @@
   - M8: extract cache-refresh orchestration glue (`prewarm/invalidate/drain` lock choreography) into a focused coordinator module.
 
 ---
+## 2026-02-22 (Cycle 216)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract cache refresh orchestration glue into dedicated coordinator module
+- Changes:
+  - Added `src/app/search_service/cache_coordinator.zig`:
+    - `prewarmLocked` for provider prewarm + rank snapshot generation append/prune
+    - `invalidateLocked` for cache invalidation state updates
+    - `shouldDrain` guard for drain orchestration
+  - Updated `src/app/search_service.zig`:
+    - `prewarmProviders`, `invalidateSnapshot`, and `drainScheduledRefresh` now delegate to coordinator helpers
+    - removed inline prewarm/invalidate glue logic from service orchestration body
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/cache_coordinator.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no semantic intent change; lock choreography remains in service entrypoints with glue logic extracted.
+- Next slice:
+  - M8: extract `searchQuery` non-route orchestration into `search_service/query_engine.zig` and keep `SearchService` as thin state/coordination façade.
+
+---

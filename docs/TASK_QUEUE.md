@@ -255,3 +255,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: Hygiene - extract dynamic generation lifecycle into `search_service/dynamic_generations.zig`.
 - [x] M8: Hygiene - extract query metric/flag mutation helpers into `search_service/query_metrics.zig`.
 - [x] M8: Hygiene - extract async refresh worker state transitions into `search_service/refresh_worker.zig`.
+- [x] M8: Hygiene - extract cache refresh orchestration glue (`prewarm/invalidate/drain`) into `search_service/cache_coordinator.zig`.

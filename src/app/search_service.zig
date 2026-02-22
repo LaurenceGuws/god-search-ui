@@ -3,6 +3,7 @@ const providers = @import("../providers/mod.zig");
 const search = @import("../search/mod.zig");
 const history_store = @import("search_service/history_store.zig");
 const cache_refresh = @import("search_service/cache_refresh.zig");
+const cache_coordinator = @import("search_service/cache_coordinator.zig");
 const cache_snapshots = @import("search_service/cache_snapshots.zig");
 const dynamic_generations = @import("search_service/dynamic_generations.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
@@ -122,17 +123,16 @@ pub const SearchService = struct {
         defer self.query_mu.unlock();
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
-        try cache_refresh.prewarmProviders(
+        try cache_coordinator.prewarmLocked(
             self.registry,
             allocator,
             &self.cached_candidates,
             &self.cache_ready,
             &self.cache_last_refresh_ns,
             &self.refresh_requested,
+            &self.cached_rank_generations,
+            self.cache_generation_keep,
         );
-        const snapshot = try cache_snapshots.cloneCandidatesOwned(allocator, self.cached_candidates.items);
-        try self.cached_rank_generations.append(allocator, snapshot);
-        cache_snapshots.pruneGenerations(&self.cached_rank_generations, self.cache_generation_keep, allocator);
     }
 
     pub fn invalidateSnapshot(self: *SearchService) void {
@@ -140,14 +140,14 @@ pub const SearchService = struct {
         defer self.query_mu.unlock();
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
-        cache_refresh.invalidateSnapshot(&self.cache_ready, &self.cache_last_refresh_ns, &self.refresh_requested);
+        cache_coordinator.invalidateLocked(&self.cache_ready, &self.cache_last_refresh_ns, &self.refresh_requested);
     }
 
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {
         self.cache_mu.lock();
         const requested = self.refresh_requested;
         self.cache_mu.unlock();
-        if (!requested) return false;
+        if (!cache_coordinator.shouldDrain(requested)) return false;
         try self.prewarmProviders(allocator);
         self.query_mu.lock();
         query_metrics.markRefreshed(&self.last_query_refreshed_cache);
