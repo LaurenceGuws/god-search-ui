@@ -4755,3 +4755,29 @@
   - M8: introduce bounded dynamic string interning/generation cleanup strategy so `%`/`&` route memory cannot grow indefinitely in long-running sessions.
 
 ---
+## 2026-02-22 (Cycle 208)
+- Milestone: M8 Code Hygiene / Dynamic Route Memory Bounding
+- Task slice: cap long-session `%`/`&` route memory growth via retained generation pruning
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - replaced single unbounded `dynamic_owned` pool with retained `dynamic_generations`
+    - added `dynamic_generation_keep` policy (default 12) and prune helper
+    - dynamic route collection now allocates into a fresh generation and prunes oldest generations beyond retention cap
+    - updated deinit to free all retained generations safely
+  - Updated `src/app/search_service/dynamic_routes.zig`:
+    - retained tool-state cache integration from prior slice remains compatible with per-generation storage writes
+  - Updated `src/app/search_service/history_store.zig`:
+    - retained owned history snapshot and atomic write hardening from prior slice
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_store.zig src/app/search_service/dynamic_routes.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - generation pruning is count-based (`dynamic_generation_keep`) and intentionally conservative to avoid immediate reclaim races with short-lived consumers.
+- Next slice:
+  - M8: reduce `cache_mu` hold time by ranking on a copied snapshot (or immutable snapshot pointer swap) rather than while holding the cache mutex.
+
+---

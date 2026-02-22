@@ -21,7 +21,8 @@ pub const SearchService = struct {
     refresh_thread: ?std.Thread = null,
     dynamic_mu: std.Thread.Mutex = .{},
     dynamic_tool_state: dynamic_routes.ToolState = .{},
-    dynamic_owned: std.ArrayListUnmanaged([]u8) = .{},
+    dynamic_generations: std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)) = .{},
+    dynamic_generation_keep: usize = 12,
     max_history: usize = 32,
     last_query_elapsed_ns: u64 = 0,
     last_query_refreshed_cache: bool = false,
@@ -40,7 +41,10 @@ pub const SearchService = struct {
 
     pub fn deinit(self: *SearchService, allocator: std.mem.Allocator) void {
         if (self.refresh_thread) |t| t.join();
-        dynamic_routes.clearOwned(&self.dynamic_owned, allocator);
+        for (self.dynamic_generations.items) |*generation| {
+            dynamic_routes.clearOwned(generation, allocator);
+        }
+        self.dynamic_generations.deinit(allocator);
         for (self.history.items) |item| allocator.free(item);
         self.history.deinit(allocator);
         self.cached_candidates.deinit(allocator);
@@ -84,16 +88,20 @@ pub const SearchService = struct {
     }
 
     fn searchDynamicRoute(self: *SearchService, allocator: std.mem.Allocator, query: search.Query) ![]search.ScoredCandidate {
-        // Dynamic route candidates are copied by async GTK workers after this call returns.
-        // Clearing shared dynamic-owned buffers here can invalidate slices still in use.
-        // Keep them alive for process lifetime and release in deinit.
+        // Dynamic route candidates reference owned strings stored in retained generations.
+        // We keep a bounded number of generations to cap long-session memory growth.
         var dynamic_candidates = search.CandidateList.empty;
         defer dynamic_candidates.deinit(allocator);
         const term = std.mem.trim(u8, query.term, " \t\r\n");
         if (term.len == 0) return allocator.alloc(search.ScoredCandidate, 0);
-        self.dynamic_mu.lock();
-        dynamic_routes.collectForRoute(&self.dynamic_tool_state, &self.dynamic_owned, allocator, query, &dynamic_candidates) catch {};
-        self.dynamic_mu.unlock();
+        {
+            self.dynamic_mu.lock();
+            defer self.dynamic_mu.unlock();
+
+            const generation = try self.beginDynamicGeneration(allocator);
+            dynamic_routes.collectForRoute(&self.dynamic_tool_state, generation, allocator, query, &dynamic_candidates) catch {};
+            self.pruneDynamicGenerations(allocator);
+        }
 
         const recent = try self.historySnapshotNewestFirstOwned(allocator);
         defer history_store.freeOwnedHistorySnapshot(allocator, recent);
@@ -199,6 +207,18 @@ pub const SearchService = struct {
         defer self.query_mu.unlock();
         self.last_query_refreshed_cache = false;
         self.last_query_used_stale_cache = false;
+    }
+
+    fn beginDynamicGeneration(self: *SearchService, allocator: std.mem.Allocator) !*std.ArrayListUnmanaged([]u8) {
+        try self.dynamic_generations.append(allocator, .{});
+        return &self.dynamic_generations.items[self.dynamic_generations.items.len - 1];
+    }
+
+    fn pruneDynamicGenerations(self: *SearchService, allocator: std.mem.Allocator) void {
+        while (self.dynamic_generations.items.len > self.dynamic_generation_keep) {
+            var oldest = self.dynamic_generations.orderedRemove(0);
+            dynamic_routes.clearOwned(&oldest, allocator);
+        }
     }
 };
 
