@@ -1237,6 +1237,8 @@ pub const Shell = struct {
         clearPowerConfirmation(ctx);
         c.gtk_editable_set_text(@ptrCast(ctx.entry), text_z.ptr);
         c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
+        const caret = c.gtk_editable_get_position(@ptrCast(ctx.entry));
+        c.gtk_editable_select_region(@ptrCast(ctx.entry), caret, caret);
         _ = c.gtk_widget_grab_focus(@ptrCast(@alignCast(ctx.entry)));
         const status = std.fmt.allocPrint(allocator, "Module filter active: {s}", .{route}) catch return;
         defer allocator.free(status);
