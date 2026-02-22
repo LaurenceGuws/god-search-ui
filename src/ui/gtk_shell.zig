@@ -98,6 +98,7 @@ pub const Shell = struct {
         c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
         const scroller = c.gtk_scrolled_window_new();
         c.gtk_widget_set_vexpand(scroller, GTRUE);
+        c.gtk_widget_set_margin_end(scroller, -12);
         c.gtk_scrolled_window_set_policy(@ptrCast(scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
         c.gtk_scrolled_window_set_overlay_scrolling(@ptrCast(scroller), GFALSE);
         c.gtk_scrolled_window_set_child(@ptrCast(scroller), list);
