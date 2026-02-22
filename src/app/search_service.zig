@@ -82,7 +82,9 @@ pub const SearchService = struct {
     }
 
     fn searchDynamicRoute(self: *SearchService, allocator: std.mem.Allocator, query: search.Query) ![]search.ScoredCandidate {
-        self.clearDynamicOwned(allocator);
+        // Dynamic route candidates are copied by async GTK workers after this call returns.
+        // Clearing shared dynamic-owned buffers here can invalidate slices still in use.
+        // Keep them alive for process lifetime and release in deinit.
         var dynamic_candidates = search.CandidateList.empty;
         defer dynamic_candidates.deinit(allocator);
         const term = std.mem.trim(u8, query.term, " \t\r\n");
