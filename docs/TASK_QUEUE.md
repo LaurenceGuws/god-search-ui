@@ -231,3 +231,4 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] M8: UX Phase 8 - extract directory/file option menu presentation into `gtk/menus.zig`.
 - [x] M8: UX Phase 8 - extract status/feedback tone engine into `gtk/status.zig`.
 - [x] M8: UX Phase 8 - extract app icon resolution/fallback helpers into `gtk/icons.zig`.
+- [x] M8: UX Phase 8 - extract GTK activation/bootstrap assembly into `gtk/bootstrap.zig`.

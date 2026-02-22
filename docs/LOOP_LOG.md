@@ -4339,3 +4339,29 @@
   - M8: optional final split of shell activation/bootstrap glue into `gtk/bootstrap.zig`.
 
 ---
+## 2026-02-22 (Cycle 192)
+- Milestone: M8 UX Modularization
+- Task slice: extract GTK activate/bootstrap assembly from shell
+- Changes:
+  - Added `src/ui/gtk/bootstrap.zig`:
+    - window construction + monitor-aware initial sizing
+    - base widget/context allocation and initialization
+    - signal wiring for input/list/destroy hooks
+    - post-activate callback hook for shell-specific initial render/setup
+  - Updated `src/ui/gtk_shell.zig`:
+    - `onActivate` now delegates to `gtk_bootstrap.activate`
+    - removed in-file window/bootstrap assembly and sizing helper
+    - added small `afterActivate` hook for route icon + initial render + scrollbar class sync
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - callback signatures are now centralized in `gtk/bootstrap.zig` hook contract; shell callback changes should keep that contract in sync.
+- Next slice:
+  - M8: optional final cleanup pass (`gtk_shell.zig` naming/section ordering and thin wrappers removal).
+
+---
