@@ -5053,3 +5053,25 @@
   - M8: extract query-route classification + entry dispatch gate from `searchQuery` into a small helper to keep top-level flow linear.
 
 ---
+## 2026-02-22 (Cycle 221)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract query parse + route dispatch gating from `searchQuery`
+- Changes:
+  - Added `src/app/search_service/query_dispatch.zig`:
+    - `parseAndClassify(...)` helper returning parsed query plus dynamic-route classification
+  - Updated `src/app/search_service.zig`:
+    - `searchQuery(...)` now delegates route dispatch classification to `query_dispatch`
+    - preserved existing dynamic/static query execution behavior while reducing top-level branching noise
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_dispatch.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior unchanged by intent; helper only centralizes query classification logic.
+- Next slice:
+  - M8: extract refresh scheduling + async-worker kickoff gate in `searchQuery` into a dedicated helper to simplify control flow.
+
+---

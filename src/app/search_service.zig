@@ -9,6 +9,7 @@ const cache_snapshots = @import("search_service/cache_snapshots.zig");
 const dynamic_generations = @import("search_service/dynamic_generations.zig");
 const dynamic_query_engine = @import("search_service/dynamic_query_engine.zig");
 const dynamic_routes = @import("search_service/dynamic_routes.zig");
+const query_dispatch = @import("search_service/query_dispatch.zig");
 const query_metrics = @import("search_service/query_metrics.zig");
 const query_engine = @import("search_service/query_engine.zig");
 const refresh_worker = @import("search_service/refresh_worker.zig");
@@ -62,9 +63,9 @@ pub const SearchService = struct {
         const sw = @import("metrics.zig").Stopwatch.start();
         self.resetQueryMetrics();
 
-        const parsed = search.parseQuery(raw_query);
-        if (parsed.route == .files or parsed.route == .grep) {
-            const ranked_dynamic = try self.searchDynamicRoute(allocator, parsed);
+        const dispatch = query_dispatch.parseAndClassify(raw_query);
+        if (dispatch.use_dynamic) {
+            const ranked_dynamic = try self.searchDynamicRoute(allocator, dispatch.parsed);
             self.setQueryElapsed(sw.elapsedNs());
             return ranked_dynamic;
         }
@@ -84,7 +85,7 @@ pub const SearchService = struct {
             const ranked_cache_or_collect = try query_engine.rankFromCacheOrCollect(
                 allocator,
                 self.registry,
-                parsed,
+                dispatch.parsed,
                 recent,
                 cache_view.snapshot,
                 &query_candidates,
@@ -96,7 +97,7 @@ pub const SearchService = struct {
         const ranked = try query_engine.rankFromCacheOrCollect(
             allocator,
             self.registry,
-            parsed,
+            dispatch.parsed,
             recent,
             &.{},
             &query_candidates,
