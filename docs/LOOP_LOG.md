@@ -4157,3 +4157,31 @@
   - M8: extract async route worker + event-controller logic from `gtk_shell.zig`.
 
 ---
+## 2026-02-22 (Cycle 185)
+- Milestone: M8 UX Modularization
+- Task slice: extract GTK navigation and query helper logic from shell
+- Changes:
+  - Added `src/ui/gtk/navigation.zig`:
+    - row navigation/activation helpers
+    - selected-row visibility scrolling helper
+    - scrollbar active-class toggling
+  - Added `src/ui/gtk/query_helpers.zig`:
+    - route debounce, route icon/hint, async-route detection
+    - token highlighting + markup helper pipeline
+    - status label text helpers
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates navigation + query helper calls to new modules
+    - removed in-file implementations for extracted helpers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - shell still owns async worker lifecycle and render pipeline; next extraction should target `startAsyncRouteSearch`/worker callbacks.
+- Next slice:
+  - M8: extract async route worker lifecycle into `gtk/async_search.zig`.
+
+---

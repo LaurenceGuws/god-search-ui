@@ -5,6 +5,8 @@ const gtk_types = @import("gtk/types.zig");
 const gtk_styles = @import("gtk/styles.zig");
 const gtk_widgets = @import("gtk/widgets.zig");
 const gtk_actions = @import("gtk/actions.zig");
+const gtk_nav = @import("gtk/navigation.zig");
+const gtk_query = @import("gtk/query_helpers.zig");
 const c = gtk_types.c;
 const CandidateKind = gtk_types.CandidateKind;
 const GTRUE = gtk_types.GTRUE;
@@ -128,7 +130,7 @@ pub const Shell = struct {
         c.gtk_window_present(@ptrCast(window));
 
         populateResults(ctx, "");
-        updateScrollbarActiveClass(ctx);
+        gtk_nav.updateScrollbarActiveClass(ctx);
     }
 
     fn configureInitialWindowSize(window: *c.GtkWidget) void {
@@ -214,31 +216,31 @@ pub const Shell = struct {
                 return GFALSE;
             },
             c.GDK_KEY_Down => {
-                selectActionableDelta(ctx, 1);
+                gtk_nav.selectActionableDelta(ctx, 1);
                 return GTRUE;
             },
             c.GDK_KEY_Up => {
-                selectActionableDelta(ctx, -1);
+                gtk_nav.selectActionableDelta(ctx, -1);
                 return GTRUE;
             },
             c.GDK_KEY_Page_Down => {
-                selectActionableDelta(ctx, 5);
+                gtk_nav.selectActionableDelta(ctx, 5);
                 return GTRUE;
             },
             c.GDK_KEY_Page_Up => {
-                selectActionableDelta(ctx, -5);
+                gtk_nav.selectActionableDelta(ctx, -5);
                 return GTRUE;
             },
             c.GDK_KEY_Home => {
-                selectFirstActionableRow(ctx);
+                gtk_nav.selectFirstActionableRow(ctx);
                 return GTRUE;
             },
             c.GDK_KEY_End => {
-                selectLastActionableRow(ctx);
+                gtk_nav.selectLastActionableRow(ctx);
                 return GTRUE;
             },
             c.GDK_KEY_Return, c.GDK_KEY_KP_Enter => {
-                activateSelectedRow(ctx);
+                gtk_nav.activateSelectedRow(ctx);
                 return GTRUE;
             },
             else => return GFALSE,
@@ -248,16 +250,7 @@ pub const Shell = struct {
     fn onEntryActivate(_: ?*c.GtkEntry, user_data: ?*anyopaque) callconv(.c) void {
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        activateSelectedRow(ctx);
-    }
-
-    fn activateSelectedRow(ctx: *UiContext) void {
-        var row = c.gtk_list_box_get_selected_row(ctx.list);
-        if (row == null) {
-            selectFirstActionableRow(ctx);
-            row = c.gtk_list_box_get_selected_row(ctx.list);
-        }
-        if (row != null) c.g_signal_emit_by_name(ctx.list, "row-activated", row);
+        gtk_nav.activateSelectedRow(ctx);
     }
 
     fn onSearchChanged(entry: ?*c.GtkEditable, user_data: ?*anyopaque) callconv(.c) void {
@@ -301,34 +294,11 @@ pub const Shell = struct {
     fn onResultsAdjustmentChanged(_: ?*c.GtkAdjustment, user_data: ?*anyopaque) callconv(.c) void {
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        updateScrollbarActiveClass(ctx);
-    }
-
-    fn updateScrollbarActiveClass(ctx: *UiContext) void {
-        const vadj = c.gtk_scrolled_window_get_vadjustment(ctx.scroller);
-        if (vadj == null) return;
-        const upper = c.gtk_adjustment_get_upper(vadj);
-        const page = c.gtk_adjustment_get_page_size(vadj);
-        const active = (upper - page) > 1.0;
-        if (active) {
-            c.gtk_widget_add_css_class(@ptrCast(@alignCast(ctx.list)), "gs-scroll-active");
-        } else {
-            c.gtk_widget_remove_css_class(@ptrCast(@alignCast(ctx.list)), "gs-scroll-active");
-        }
+        gtk_nav.updateScrollbarActiveClass(ctx);
     }
 
     fn searchDebounceMsForQuery(query_trimmed: []const u8) c.guint {
-        const query_len = query_trimmed.len;
-        if (query_len == 0) return 110;
-        if (query_len >= 1 and (query_trimmed[0] == '%' or query_trimmed[0] == '&')) {
-            const term_len = if (query_len > 1) std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len else 0;
-            if (term_len <= 1) return 300;
-            if (term_len <= 3) return 220;
-            return 160;
-        }
-        if (query_len <= 2) return 90;
-        if (query_len <= 5) return 75;
-        return 60;
+        return gtk_query.searchDebounceMsForQuery(query_trimmed);
     }
 
     fn updateEntryRouteIcon(ctx: *UiContext, query: []const u8) void {
@@ -346,18 +316,7 @@ pub const Shell = struct {
     }
 
     fn routeIconForLeadingPrefix(query: []const u8) ?[]const u8 {
-        if (query.len == 0) return null;
-        return switch (query[0]) {
-            '@' => "applications-system-symbolic",
-            '#' => "window-new-symbolic",
-            '~' => "folder-symbolic",
-            '%' => "text-x-generic-symbolic",
-            '&' => "edit-find-symbolic",
-            '>' => "utilities-terminal-symbolic",
-            '=' => "accessories-calculator-symbolic",
-            '?' => "web-browser-symbolic",
-            else => null,
-        };
+        return gtk_query.routeIconForLeadingPrefix(query);
     }
 
     fn onRowActivated(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {
@@ -384,94 +343,11 @@ pub const Shell = struct {
         const title = std.mem.span(@as([*:0]const u8, @ptrCast(title_ptr)));
         const kind_ptr = c.g_object_get_data(@ptrCast(row), "gs-kind");
         const kind = if (kind_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(kind_ptr))) else "";
-        const kind_label = kindStatusLabel(kind);
+        const kind_label = gtk_query.kindStatusLabel(kind);
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const msg = std.fmt.allocPrint(allocator_ptr.*, "Enter launch {s}: {s}", .{ kind_label, title }) catch return;
         defer allocator_ptr.*.free(msg);
         setStatus(ctx, msg);
-    }
-
-    fn selectActionableDelta(ctx: *UiContext, delta: i32) void {
-        if (delta == 0) return;
-        const step: i32 = if (delta > 0) 1 else -1;
-        const target_moves: i32 = @intCast(@abs(delta));
-        const selected = c.gtk_list_box_get_selected_row(ctx.list);
-        if (selected == null) {
-            if (delta > 0) {
-                selectFirstActionableRow(ctx);
-            } else {
-                selectLastActionableRow(ctx);
-            }
-            return;
-        }
-
-        var idx: i32 = c.gtk_list_box_row_get_index(selected) + step;
-        if (idx < 0) return;
-
-        var moved: i32 = 0;
-        while (idx >= 0) : (idx += step) {
-            const target = c.gtk_list_box_get_row_at_index(ctx.list, idx);
-            if (target == null) return;
-            if (c.g_object_get_data(@ptrCast(target), "gs-action") != null) {
-                moved += 1;
-                if (moved >= target_moves) {
-                    c.gtk_list_box_select_row(ctx.list, target);
-                    ensureSelectedRowVisible(ctx);
-                    return;
-                }
-            }
-        }
-    }
-
-    fn selectFirstActionableRow(ctx: *UiContext) void {
-        var idx: i32 = 0;
-        while (true) : (idx += 1) {
-            const row = c.gtk_list_box_get_row_at_index(ctx.list, idx);
-            if (row == null) break;
-            if (c.g_object_get_data(@ptrCast(row), "gs-action") != null) {
-                c.gtk_list_box_select_row(ctx.list, row);
-                ensureSelectedRowVisible(ctx);
-                return;
-            }
-        }
-        c.gtk_list_box_select_row(ctx.list, null);
-    }
-
-    fn selectLastActionableRow(ctx: *UiContext) void {
-        var idx: i32 = 0;
-        while (c.gtk_list_box_get_row_at_index(ctx.list, idx) != null) : (idx += 1) {}
-        idx -= 1;
-        while (idx >= 0) : (idx -= 1) {
-            const row = c.gtk_list_box_get_row_at_index(ctx.list, idx);
-            if (row == null) break;
-            if (c.g_object_get_data(@ptrCast(row), "gs-action") != null) {
-                c.gtk_list_box_select_row(ctx.list, row);
-                ensureSelectedRowVisible(ctx);
-                return;
-            }
-        }
-        c.gtk_list_box_select_row(ctx.list, null);
-    }
-
-    fn ensureSelectedRowVisible(ctx: *UiContext) void {
-        const row = c.gtk_list_box_get_selected_row(ctx.list);
-        if (row == null) return;
-
-        const adjustment = c.gtk_scrolled_window_get_vadjustment(ctx.scroller);
-        if (adjustment == null) return;
-
-        var alloc: c.GtkAllocation = undefined;
-        c.gtk_widget_get_allocation(@ptrCast(row), &alloc);
-        const top = @as(f64, @floatFromInt(alloc.y));
-        const bottom = @as(f64, @floatFromInt(alloc.y + alloc.height));
-        const value = c.gtk_adjustment_get_value(adjustment);
-        const page_size = c.gtk_adjustment_get_page_size(adjustment);
-
-        if (top < value) {
-            c.gtk_adjustment_set_value(adjustment, top);
-        } else if (bottom > (value + page_size)) {
-            c.gtk_adjustment_set_value(adjustment, bottom - page_size);
-        }
     }
 
     fn populateResults(ctx: *UiContext, query: []const u8) void {
@@ -490,11 +366,11 @@ pub const Shell = struct {
             if (ctx.pending_power_confirm == GFALSE) {
                 setStatus(ctx, "Pick a module (Enter) or type directly for blended search");
             }
-            selectFirstActionableRow(ctx);
+            gtk_nav.selectFirstActionableRow(ctx);
             return;
         }
 
-        if (shouldAsyncRouteQuery(query_trimmed)) {
+        if (gtk_query.shouldAsyncRouteQuery(query_trimmed)) {
             startAsyncRouteSearch(ctx, allocator, query_trimmed);
             return;
         }
@@ -511,7 +387,7 @@ pub const Shell = struct {
 
         renderRankedRows(ctx, allocator, query_trimmed, ranked, ranked.len);
         _ = ctx.service.drainScheduledRefresh(allocator) catch false;
-        selectFirstActionableRow(ctx);
+        gtk_nav.selectFirstActionableRow(ctx);
     }
 
     fn renderRankedRows(
@@ -524,8 +400,8 @@ pub const Shell = struct {
         const limit = @min(ranked.len, 20);
         const rows = ranked[0..limit];
         const empty_query = query_trimmed.len == 0;
-        const route_hint = routeHintForQuery(query_trimmed);
-        const highlight_token = highlightTokenForQuery(query_trimmed);
+        const route_hint = gtk_query.routeHintForQuery(query_trimmed);
+        const highlight_token = gtk_query.highlightTokenForQuery(query_trimmed);
         const has_app_glyph_fallback = hasAppGlyphFallback(rows);
         const render_hash = computeRenderHash(query_trimmed, route_hint, rows, ranked.len);
         if (ctx.last_render_hash != render_hash) {
@@ -576,13 +452,6 @@ pub const Shell = struct {
             h.update(row.candidate.action);
         }
         return h.final();
-    }
-
-    fn shouldAsyncRouteQuery(query_trimmed: []const u8) bool {
-        if (query_trimmed.len < 2) return false;
-        const route = query_trimmed[0];
-        if (route != '%' and route != '&') return false;
-        return std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len > 0;
     }
 
     fn startAsyncRouteSearch(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) void {
@@ -693,7 +562,7 @@ pub const Shell = struct {
         }
 
         renderRankedRows(ctx, allocator, std.mem.trim(u8, payload.query, " \t\r\n"), scored, payload.total_len);
-        selectFirstActionableRow(ctx);
+        gtk_nav.selectFirstActionableRow(ctx);
         return GFALSE;
     }
 
@@ -889,7 +758,7 @@ pub const Shell = struct {
         row: @import("../search/mod.zig").ScoredCandidate,
         highlight_token: []const u8,
     ) void {
-        const title_markup = highlightedMarkup(allocator, row.candidate.title, highlight_token) catch return;
+        const title_markup = gtk_query.highlightedMarkup(allocator, row.candidate.title, highlight_token) catch return;
         defer allocator.free(title_markup);
         const primary_markup = std.fmt.allocPrint(
             allocator,
@@ -919,7 +788,7 @@ pub const Shell = struct {
         c.gtk_box_append(@ptrCast(primary_row), primary_label);
         c.gtk_box_append(@ptrCast(primary_row), chip);
 
-        const subtitle_markup = highlightedMarkup(allocator, row.candidate.subtitle, highlight_token) catch return;
+        const subtitle_markup = gtk_query.highlightedMarkup(allocator, row.candidate.subtitle, highlight_token) catch return;
         defer allocator.free(subtitle_markup);
         const subtitle_markup_z = allocator.dupeZ(u8, subtitle_markup) catch return;
         defer allocator.free(subtitle_markup_z);
@@ -1126,7 +995,7 @@ pub const Shell = struct {
         }
 
         setStatus(ctx, "Directory action menu");
-        selectFirstActionableRow(ctx);
+        gtk_nav.selectFirstActionableRow(ctx);
     }
 
     fn appendDirOptionRow(list: *c.GtkListBox, allocator: std.mem.Allocator, title: []const u8, subtitle: []const u8, command: []const u8) void {
@@ -1246,7 +1115,7 @@ pub const Shell = struct {
         }
 
         setStatus(ctx, "File action menu");
-        selectFirstActionableRow(ctx);
+        gtk_nav.selectFirstActionableRow(ctx);
     }
 
     fn appendFileOptionRow(list: *c.GtkListBox, allocator: std.mem.Allocator, title: []const u8, subtitle: []const u8, command: []const u8) void {
@@ -1341,9 +1210,9 @@ pub const Shell = struct {
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
         clearLaunchFeedbackRows(ctx.list);
         appendLaunchFeedbackRow(ctx.list, message);
-        setStatusWithTone(ctx, postLaunchStatus(message), launchStatusTone(message));
+        setStatusWithTone(ctx, gtk_query.postLaunchStatus(message), launchStatusTone(message));
         scheduleStatusReset(ctx);
-        selectFirstActionableRow(ctx);
+        gtk_nav.selectFirstActionableRow(ctx);
     }
 
     fn scheduleStatusReset(ctx: *UiContext) void {
@@ -1447,87 +1316,6 @@ pub const Shell = struct {
 
     fn installCss(window: *c.GtkWidget) void {
         gtk_styles.installCss(window);
-    }
-
-    fn routeHintForQuery(query_trimmed: []const u8) ?[]const u8 {
-        if (query_trimmed.len != 1) return null;
-        return switch (query_trimmed[0]) {
-            '@' => "Apps route active: type app name after @",
-            '#' => "Windows route active: type window title/class after #",
-            '~' => "Recent dirs route active: zoxide terminal locations after ~",
-            '%' => "Files route active: find files and folders after %",
-            '&' => "Grep route active: type text to search after &",
-            '>' => "Run route active: type command after >",
-            '=' => "Calc route active: type expression after =",
-            '?' => "Web route active: type search terms after ?",
-            else => null,
-        };
-    }
-
-    fn highlightTokenForQuery(query_trimmed: []const u8) []const u8 {
-        var token = std.mem.trim(u8, query_trimmed, " \t\r\n");
-        if (token.len == 0) return "";
-        if (token.len > 1) {
-            token = switch (token[0]) {
-                '@', '#', '~', '%', '&', '>', '=', '?' => std.mem.trim(u8, token[1..], " \t\r\n"),
-                else => token,
-            };
-        }
-        return token;
-    }
-
-    fn highlightedMarkup(allocator: std.mem.Allocator, text: []const u8, token: []const u8) ![]u8 {
-        if (text.len == 0) return allocator.dupe(u8, "");
-
-        const trimmed_token = std.mem.trim(u8, token, " \t\r\n");
-        if (trimmed_token.len == 0) return escapeMarkupAlloc(allocator, text);
-
-        const idx = firstCaseInsensitiveIndex(text, trimmed_token) orelse return escapeMarkupAlloc(allocator, text);
-        const head = try escapeMarkupAlloc(allocator, text[0..idx]);
-        defer allocator.free(head);
-        const hit = try escapeMarkupAlloc(allocator, text[idx .. idx + trimmed_token.len]);
-        defer allocator.free(hit);
-        const tail = try escapeMarkupAlloc(allocator, text[idx + trimmed_token.len ..]);
-        defer allocator.free(tail);
-
-        return std.fmt.allocPrint(allocator, "{s}<b>{s}</b>{s}", .{ head, hit, tail });
-    }
-
-    fn escapeMarkupAlloc(allocator: std.mem.Allocator, text: []const u8) ![]u8 {
-        const escaped_ptr = c.g_markup_escape_text(text.ptr, @intCast(text.len));
-        if (escaped_ptr == null) return error.OutOfMemory;
-        defer c.g_free(escaped_ptr);
-        const escaped = std.mem.span(@as([*:0]const u8, @ptrCast(escaped_ptr)));
-        return allocator.dupe(u8, escaped);
-    }
-
-    fn firstCaseInsensitiveIndex(haystack: []const u8, needle: []const u8) ?usize {
-        if (needle.len == 0 or haystack.len < needle.len) return null;
-        var idx: usize = 0;
-        while (idx + needle.len <= haystack.len) : (idx += 1) {
-            if (std.ascii.eqlIgnoreCase(haystack[idx .. idx + needle.len], needle)) return idx;
-        }
-        return null;
-    }
-
-    fn kindStatusLabel(kind: []const u8) []const u8 {
-        if (std.mem.eql(u8, kind, "app")) return "app";
-        if (std.mem.eql(u8, kind, "window")) return "window";
-        if (std.mem.eql(u8, kind, "dir")) return "directory";
-        if (std.mem.eql(u8, kind, "file")) return "file";
-        if (std.mem.eql(u8, kind, "grep")) return "match";
-        if (std.mem.eql(u8, kind, "module")) return "module filter";
-        if (std.mem.eql(u8, kind, "action")) return "action";
-        if (std.mem.eql(u8, kind, "hint")) return "hint";
-        return "item";
-    }
-
-    fn postLaunchStatus(message: []const u8) []const u8 {
-        if (std.mem.eql(u8, message, "Action launched")) return "Action launched | Enter repeats selected action";
-        if (std.mem.eql(u8, message, "App launched")) return "App launched | Enter repeats selected app";
-        if (std.mem.eql(u8, message, "Directory opened")) return "Directory opened | Enter repeats selected item";
-        if (std.mem.eql(u8, message, "Window focused")) return "Window focused | Enter repeats selected window";
-        return message;
     }
 
     fn launchStatusTone(message: []const u8) StatusTone {
