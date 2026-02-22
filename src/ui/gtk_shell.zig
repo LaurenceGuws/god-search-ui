@@ -1,12 +1,14 @@
 const std = @import("std");
 const app_mod = @import("../app/mod.zig");
 const providers_mod = @import("../providers/mod.zig");
-const c = @cImport({
-    @cInclude("gtk/gtk.h");
-});
-const CandidateKind = @import("../search/mod.zig").CandidateKind;
-const GTRUE: c.gboolean = 1;
-const GFALSE: c.gboolean = 0;
+const gtk_types = @import("gtk/types.zig");
+const gtk_styles = @import("gtk/styles.zig");
+const gtk_widgets = @import("gtk/widgets.zig");
+const gtk_actions = @import("gtk/actions.zig");
+const c = gtk_types.c;
+const CandidateKind = gtk_types.CandidateKind;
+const GTRUE = gtk_types.GTRUE;
+const GFALSE = gtk_types.GFALSE;
 
 const LaunchContext = struct {
     allocator: std.mem.Allocator,
@@ -14,29 +16,7 @@ const LaunchContext = struct {
     telemetry: *app_mod.TelemetrySink,
 };
 
-const UiContext = extern struct {
-    window: *c.GtkWidget,
-    entry: *c.GtkEntry,
-    status: *c.GtkLabel,
-    list: *c.GtkListBox,
-    scroller: *c.GtkScrolledWindow,
-    allocator: *anyopaque,
-    service: *app_mod.SearchService,
-    telemetry: *app_mod.TelemetrySink,
-    pending_power_confirm: c.gboolean,
-    search_debounce_id: c.guint,
-    status_reset_id: c.guint,
-    last_status_hash: u64,
-    last_status_tone: u8,
-    last_render_hash: u64,
-    async_search_generation: u64,
-    async_spinner_id: c.guint,
-    async_spinner_phase: u8,
-    async_inflight: c.gboolean,
-    async_worker_active: c.gboolean,
-    async_pending_query_ptr: ?[*]u8,
-    async_pending_query_len: usize,
-};
+const UiContext = gtk_types.UiContext;
 
 const AsyncRenderedRow = struct {
     kind: CandidateKind,
@@ -805,38 +785,11 @@ pub const Shell = struct {
     }
 
     fn appendAsyncRow(list: *c.GtkListBox, frame: []const u8, message: []const u8) void {
-        const markup = std.fmt.allocPrint(
-            std.heap.page_allocator,
-            "<span foreground=\"#b5d6ff\" size=\"x-large\" weight=\"700\">{s}</span> <span foreground=\"#aeb8cc\">{s}</span>",
-            .{ frame, message },
-        ) catch return;
-        defer std.heap.page_allocator.free(markup);
-        const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
-        defer std.heap.page_allocator.free(markup_z);
-
-        const label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-        c.gtk_widget_add_css_class(label, "gs-async-search");
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-meta-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), label);
-        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
-        c.g_object_set_data_full(@ptrCast(row), "gs-async", c.g_strdup("1"), c.g_free);
-        c.gtk_list_box_append(@ptrCast(list), row);
+        gtk_widgets.appendAsyncRow(list, frame, message);
     }
 
     fn clearAsyncRows(list: *c.GtkListBox) void {
-        var child = c.gtk_widget_get_first_child(@ptrCast(@alignCast(list)));
-        while (child != null) {
-            const next = c.gtk_widget_get_next_sibling(child);
-            if (c.g_object_get_data(@ptrCast(child), "gs-async") != null) {
-                c.gtk_list_box_remove(list, child);
-            }
-            child = next;
-        }
+        gtk_widgets.clearAsyncRows(list);
     }
 
     fn freeAsyncSearchResult(allocator: std.mem.Allocator, payload: *AsyncSearchResult) void {
@@ -852,125 +805,15 @@ pub const Shell = struct {
     }
 
     fn appendModuleFilterMenu(ctx: *UiContext, allocator: std.mem.Allocator) void {
-        appendHeaderRow(ctx.list, "Quick Modules");
-        appendInfoRow(ctx.list, "Pick a module (Enter) or type directly for blended search.");
-        appendLegendRow(ctx.list, "Hotkeys: Enter select | Ctrl+L focus | PgUp/PgDn move | Home/End jump | Ctrl+R refresh | Esc close");
-
-        appendModuleFilterRow(ctx.list, allocator, "Apps", "Launch installed applications", "@", "@", .app);
-        appendModuleFilterRow(ctx.list, allocator, "Windows", "Focus open windows", "#", "#", .window);
-        appendModuleFilterRow(ctx.list, allocator, "Recent Dirs", "Jump to zoxide terminal locations", "~", "~", .dir);
-        appendModuleFilterRow(ctx.list, allocator, "Files + Folders", "Find paths with fd", "%", "%", .file);
-        appendModuleFilterRow(ctx.list, allocator, "Code Search", "Search file contents with rg", "&", "&", .grep);
-        appendModuleFilterRow(ctx.list, allocator, "Run Command", "Execute a shell command", ">", ">", .action);
-        appendModuleFilterRow(ctx.list, allocator, "Calculator", "Evaluate an expression", "=", "=", .action);
-        appendModuleFilterRow(ctx.list, allocator, "Web Search", "Search the web", "?", "?", .action);
-    }
-
-    fn appendModuleFilterRow(
-        list: *c.GtkListBox,
-        allocator: std.mem.Allocator,
-        title: []const u8,
-        subtitle: []const u8,
-        route: []const u8,
-        chip_text: []const u8,
-        kind: CandidateKind,
-    ) void {
-        const title_markup = std.fmt.allocPrint(allocator, "<span weight=\"600\">{s}</span>", .{title}) catch return;
-        defer allocator.free(title_markup);
-        const title_markup_z = allocator.dupeZ(u8, title_markup) catch return;
-        defer allocator.free(title_markup_z);
-
-        const primary_label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(primary_label), title_markup_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(primary_label), 0.0);
-        c.gtk_label_set_ellipsize(@ptrCast(primary_label), c.PANGO_ELLIPSIZE_END);
-        c.gtk_label_set_single_line_mode(@ptrCast(primary_label), GTRUE);
-        c.gtk_widget_set_hexpand(primary_label, GTRUE);
-        c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
-
-        const icon_text_z = allocator.dupeZ(u8, kindIcon(kind)) catch return;
-        defer allocator.free(icon_text_z);
-        const icon = c.gtk_label_new(icon_text_z.ptr);
-        c.gtk_widget_add_css_class(icon, "gs-kind-icon");
-        c.gtk_widget_set_valign(icon, c.GTK_ALIGN_CENTER);
-
-        const chip = moduleChipWidget(allocator, chip_text, kind);
-        c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
-
-        const primary_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
-        c.gtk_widget_add_css_class(primary_row, "gs-primary-row");
-        c.gtk_box_append(@ptrCast(primary_row), primary_label);
-        c.gtk_box_append(@ptrCast(primary_row), chip);
-
-        const subtitle_z = allocator.dupeZ(u8, subtitle) catch return;
-        defer allocator.free(subtitle_z);
-        const secondary_label = c.gtk_label_new(subtitle_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(secondary_label), 0.0);
-        c.gtk_label_set_ellipsize(@ptrCast(secondary_label), c.PANGO_ELLIPSIZE_END);
-        c.gtk_label_set_single_line_mode(@ptrCast(secondary_label), GTRUE);
-        c.gtk_label_set_max_width_chars(@ptrCast(secondary_label), 64);
-        c.gtk_widget_add_css_class(secondary_label, "gs-candidate-secondary");
-
-        const text_col = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
-        c.gtk_widget_set_margin_top(text_col, 2);
-        c.gtk_widget_set_margin_bottom(text_col, 2);
-        c.gtk_widget_add_css_class(text_col, "gs-candidate-content");
-        c.gtk_box_append(@ptrCast(text_col), primary_row);
-        c.gtk_box_append(@ptrCast(text_col), secondary_label);
-
-        const content = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
-        c.gtk_widget_add_css_class(content, "gs-entry-layout");
-        c.gtk_box_append(@ptrCast(content), icon);
-        c.gtk_box_append(@ptrCast(content), text_col);
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-actionable-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), content);
-
-        const kind_z = allocator.dupeZ(u8, "module") catch return;
-        defer allocator.free(kind_z);
-        const action_z = allocator.dupeZ(u8, route) catch return;
-        defer allocator.free(action_z);
-        const title_z = allocator.dupeZ(u8, title) catch return;
-        defer allocator.free(title_z);
-        c.g_object_set_data_full(@ptrCast(row), "gs-kind", c.g_strdup(kind_z.ptr), c.g_free);
-        c.g_object_set_data_full(@ptrCast(row), "gs-action", c.g_strdup(action_z.ptr), c.g_free);
-        c.g_object_set_data_full(@ptrCast(row), "gs-title", c.g_strdup(title_z.ptr), c.g_free);
-        c.gtk_list_box_append(@ptrCast(list), row);
+        gtk_widgets.appendModuleFilterMenu(ctx.list, allocator);
     }
 
     fn appendInfoRow(list: *c.GtkListBox, message: []const u8) void {
-        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
-        defer std.heap.page_allocator.free(msg_z);
-
-        const label = c.gtk_label_new(null);
-        c.gtk_label_set_text(@ptrCast(label), msg_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-        c.gtk_widget_add_css_class(label, "gs-info");
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-meta-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), label);
-        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_append(@ptrCast(list), row);
+        gtk_widgets.appendInfoRow(list, message);
     }
 
     fn appendLegendRow(list: *c.GtkListBox, message: []const u8) void {
-        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
-        defer std.heap.page_allocator.free(msg_z);
-
-        const label = c.gtk_label_new(null);
-        c.gtk_label_set_text(@ptrCast(label), msg_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-        c.gtk_widget_add_css_class(label, "gs-legend");
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-meta-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), label);
-        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_append(@ptrCast(list), row);
+        gtk_widgets.appendLegendRow(list, message);
     }
 
     fn refreshSnapshot(ctx: *UiContext) void {
@@ -1033,38 +876,11 @@ pub const Shell = struct {
     }
 
     fn appendHeaderRow(list: *c.GtkListBox, title: []const u8) void {
-        const title_escaped = c.g_markup_escape_text(title.ptr, @intCast(title.len));
-        if (title_escaped == null) return;
-        defer c.g_free(title_escaped);
-
-        const markup = std.fmt.allocPrint(std.heap.page_allocator, "<b>{s}</b>", .{std.mem.span(@as([*:0]const u8, @ptrCast(title_escaped)))}) catch return;
-        defer std.heap.page_allocator.free(markup);
-        const markup_z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
-        defer std.heap.page_allocator.free(markup_z);
-
-        const label = c.gtk_label_new(null);
-        c.gtk_label_set_markup(@ptrCast(label), markup_z.ptr);
-        c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-        c.gtk_widget_add_css_class(label, "gs-header");
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-meta-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), label);
-        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_append(@ptrCast(list), row);
+        gtk_widgets.appendHeaderRow(list, title);
     }
 
     fn appendSectionSeparatorRow(list: *c.GtkListBox) void {
-        const separator = c.gtk_separator_new(c.GTK_ORIENTATION_HORIZONTAL);
-        c.gtk_widget_add_css_class(separator, "gs-separator");
-
-        const row = c.gtk_list_box_row_new();
-        c.gtk_widget_add_css_class(row, "gs-meta-row");
-        c.gtk_list_box_row_set_child(@ptrCast(row), separator);
-        c.gtk_list_box_row_set_selectable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_row_set_activatable(@ptrCast(row), GFALSE);
-        c.gtk_list_box_append(@ptrCast(list), row);
+        gtk_widgets.appendSectionSeparatorRow(list);
     }
 
     fn appendCandidateRow(
@@ -1163,12 +979,7 @@ pub const Shell = struct {
     }
 
     fn clearList(list: *c.GtkListBox) void {
-        var child = c.gtk_widget_get_first_child(@ptrCast(@alignCast(list)));
-        while (child != null) {
-            const next = c.gtk_widget_get_next_sibling(child);
-            c.gtk_list_box_remove(list, child);
-            child = next;
-        }
+        gtk_widgets.clearList(list);
     }
 
     fn executeSelected(ctx: *UiContext, kind: []const u8, action: []const u8) void {
@@ -1386,39 +1197,19 @@ pub const Shell = struct {
     }
 
     fn buildDirTerminalCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
-        const quoted = try shellSingleQuote(allocator, dir_path);
-        defer allocator.free(quoted);
-        return std.fmt.allocPrint(
-            allocator,
-            "sh -lc 'cd -- \"$1\" || exit 1; term=\"${{TERMINAL:-}}\"; if [ -n \"$term\" ] && command -v \"$term\" >/dev/null 2>&1; then exec \"$term\"; fi; for t in kitty alacritty footclient foot wezterm gnome-terminal konsole xfce4-terminal tilix xterm; do if command -v \"$t\" >/dev/null 2>&1; then exec \"$t\"; fi; done; exit 127' _ {s}",
-            .{quoted},
-        );
+        return gtk_actions.buildDirTerminalCommand(allocator, dir_path);
     }
 
     fn buildDirExplorerCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
-        const quoted = try shellSingleQuote(allocator, dir_path);
-        defer allocator.free(quoted);
-        return std.fmt.allocPrint(allocator, "xdg-open {s}", .{quoted});
+        return gtk_actions.buildDirExplorerCommand(allocator, dir_path);
     }
 
     fn buildDirEditorCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
-        const quoted = try shellSingleQuote(allocator, dir_path);
-        defer allocator.free(quoted);
-        return std.fmt.allocPrint(
-            allocator,
-            "sh -lc 'if [ -n \"$VISUAL\" ]; then exec \"$VISUAL\" \"$1\"; elif [ -n \"$EDITOR\" ]; then exec \"$EDITOR\" \"$1\"; else exec xdg-open \"$1\"; fi' _ {s}",
-            .{quoted},
-        );
+        return gtk_actions.buildDirEditorCommand(allocator, dir_path);
     }
 
     fn buildDirCopyPathCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
-        const quoted = try shellSingleQuote(allocator, dir_path);
-        defer allocator.free(quoted);
-        return std.fmt.allocPrint(
-            allocator,
-            "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard' _ {s}",
-            .{quoted},
-        );
+        return gtk_actions.buildDirCopyPathCommand(allocator, dir_path);
     }
 
     fn showFileActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, file_action: []const u8) void {
@@ -1525,86 +1316,26 @@ pub const Shell = struct {
         c.gtk_list_box_append(@ptrCast(list), row);
     }
 
-    const ParsedFileAction = struct {
-        path: []const u8,
-        line: ?[]const u8,
-    };
+    const ParsedFileAction = gtk_actions.ParsedFileAction;
 
     fn parseFileAction(file_action: []const u8) ParsedFileAction {
-        if (std.mem.lastIndexOfScalar(u8, file_action, ':')) |idx| {
-            if (idx + 1 < file_action.len) {
-                const suffix = file_action[idx + 1 ..];
-                if (isDigitsOnly(suffix)) {
-                    return .{ .path = file_action[0..idx], .line = suffix };
-                }
-            }
-        }
-        return .{ .path = file_action, .line = null };
-    }
-
-    fn isDigitsOnly(value: []const u8) bool {
-        if (value.len == 0) return false;
-        for (value) |ch| {
-            if (!std.ascii.isDigit(ch)) return false;
-        }
-        return true;
+        return gtk_actions.parseFileAction(file_action);
     }
 
     fn buildFileOpenCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
-        const quoted = try shellSingleQuote(allocator, file_path);
-        defer allocator.free(quoted);
-        return std.fmt.allocPrint(allocator, "xdg-open {s}", .{quoted});
+        return gtk_actions.buildFileOpenCommand(allocator, file_path);
     }
 
     fn buildFileRevealCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
-        const parent = std.fs.path.dirname(file_path) orelse file_path;
-        const quoted = try shellSingleQuote(allocator, parent);
-        defer allocator.free(quoted);
-        return std.fmt.allocPrint(allocator, "xdg-open {s}", .{quoted});
+        return gtk_actions.buildFileRevealCommand(allocator, file_path);
     }
 
     fn buildFileCopyPathCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
-        const quoted = try shellSingleQuote(allocator, file_path);
-        defer allocator.free(quoted);
-        return std.fmt.allocPrint(
-            allocator,
-            "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard' _ {s}",
-            .{quoted},
-        );
+        return gtk_actions.buildFileCopyPathCommand(allocator, file_path);
     }
 
     fn buildFileEditCommand(allocator: std.mem.Allocator, file_path: []const u8, line: ?[]const u8) ![]u8 {
-        const quoted = try shellSingleQuote(allocator, file_path);
-        defer allocator.free(quoted);
-        if (line) |line_num| {
-            const line_q = try shellSingleQuote(allocator, line_num);
-            defer allocator.free(line_q);
-            return std.fmt.allocPrint(
-                allocator,
-                "sh -lc 'editor=\"${{VISUAL:-${{EDITOR:-}}}}\"; if [ -z \"$editor\" ]; then exec xdg-open \"$1\"; fi; case \"$editor\" in nvim|vim|vi|helix|hx|kak|nano) exec \"$editor\" +\"$2\" \"$1\" ;; code|codium|code-insiders) exec \"$editor\" --goto \"$1:$2\" ;; subl) exec \"$editor\" \"$1:$2\" ;; *) exec \"$editor\" \"$1\" ;; esac' _ {s} {s}",
-                .{ quoted, line_q },
-            );
-        }
-        return std.fmt.allocPrint(
-            allocator,
-            "sh -lc 'if [ -n \"$VISUAL\" ]; then exec \"$VISUAL\" \"$1\"; elif [ -n \"$EDITOR\" ]; then exec \"$EDITOR\" \"$1\"; else exec xdg-open \"$1\"; fi' _ {s}",
-            .{quoted},
-        );
-    }
-
-    fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
-        var out = std.ArrayList(u8).empty;
-        defer out.deinit(allocator);
-        try out.append(allocator, '\'');
-        for (value) |ch| {
-            if (ch == '\'') {
-                try out.appendSlice(allocator, "'\\''");
-            } else {
-                try out.append(allocator, ch);
-            }
-        }
-        try out.append(allocator, '\'');
-        return out.toOwnedSlice(allocator);
+        return gtk_actions.buildFileEditCommand(allocator, file_path, line);
     }
 
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
@@ -1715,80 +1446,7 @@ pub const Shell = struct {
     }
 
     fn installCss(window: *c.GtkWidget) void {
-        const css =
-            ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
-            ".gs-status-info { color: #80a6d8; }\n" ++
-            ".gs-status-success { color: #87c97f; }\n" ++
-            ".gs-status-failure { color: #e58a8a; }\n" ++
-            ".gs-status-searching { color: #c6e0ff; font-size: 1.02em; font-weight: 700; }\n" ++
-            ".gs-header { color: #8b93a8; }\n" ++
-            ".gs-info { color: #9aa1b5; }\n" ++
-            ".gs-async-search { color: #aeb8cc; }\n" ++
-            ".gs-legend { color: #7c8498; font-size: 0.88em; }\n" ++
-            ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
-            ".gs-results-scroll, .gs-results-scroll > viewport { background: transparent; border: none; box-shadow: none; }\n" ++
-            ".gs-results-scroll junction { background: transparent; border: none; box-shadow: none; }\n" ++
-            ".gs-results-scroll undershoot.left, .gs-results-scroll undershoot.right { background-image: none; background: transparent; }\n" ++
-            ".gs-results-scroll scrollbar { min-width: 4px; border: none; box-shadow: none; background: transparent; margin: 0; padding: 0; }\n" ++
-            ".gs-results-scroll scrollbar separator { min-width: 0; min-height: 0; background: transparent; }\n" ++
-            ".gs-results-scroll scrollbar trough { background: transparent; border: none; box-shadow: none; border-radius: 0; margin: 0; padding: 0; }\n" ++
-            ".gs-results-scroll scrollbar slider { min-width: 4px; min-height: 20px; background: rgba(140, 170, 235, 0.20); border: none; box-shadow: none; border-radius: 3px; margin: 0; }\n" ++
-            ".gs-results > row { background: transparent; background-color: transparent; background-image: none; border: none; padding: 4px 8px; border-radius: 8px; }\n" ++
-            ".gs-results > row:selected,\n" ++
-            ".gs-results > row:selected:focus,\n" ++
-            ".gs-results > row:selected:focus-visible,\n" ++
-            ".gs-results > row:selected:backdrop,\n" ++
-            ".gs-results > row:hover,\n" ++
-            ".gs-results > row:focus,\n" ++
-            ".gs-results > row:focus-visible,\n" ++
-            ".gs-results > row:focus-within { background: transparent; background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; }\n" ++
-            ".gs-results > row > box { border-radius: 8px; }\n" ++
-            ".gs-results.gs-scroll-active > row > box { margin-right: 4px; }\n" ++
-            ".gs-results.gs-scroll-active .gs-kind-icon { margin-left: -2px; }\n" ++
-            ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
-            ".gs-results > row.gs-meta-row { padding-top: 2px; padding-bottom: 2px; }\n" ++
-            ".gs-results > row.gs-actionable-row:hover > box,\n" ++
-            ".gs-results > row.gs-actionable-row:selected > box,\n" ++
-            ".gs-results > row.gs-actionable-row:selected:focus > box,\n" ++
-            ".gs-results > row.gs-actionable-row:selected:focus-visible > box,\n" ++
-            ".gs-results > row.gs-actionable-row:focus > box,\n" ++
-            ".gs-results > row.gs-actionable-row:focus-visible > box,\n" ++
-            ".gs-results > row.gs-actionable-row:focus-within > box {\n" ++
-            "  background: rgba(140, 170, 235, 0.20);\n" ++
-            "  border: 1px solid rgba(164, 192, 255, 0.55);\n" ++
-            "  border-radius: 8px;\n" ++
-            "  outline: none;\n" ++
-            "  box-shadow: none;\n" ++
-            "}\n" ++
-            ".gs-results > row.gs-actionable-row:selected .gs-candidate-primary { color: #f5f8ff; }\n" ++
-            ".gs-results > row.gs-actionable-row:selected .gs-candidate-secondary { color: #d6def1; }\n" ++
-            ".gs-kind-icon { color: #a9b1c7; font-size: 2.35em; margin-left: 6px; margin-right: 8px; }\n" ++
-            ".gs-candidate-primary { color: #e8ecf7; transition: color 120ms ease; }\n" ++
-            ".gs-candidate-secondary { color: #9aa1b5; font-size: 0.92em; transition: color 120ms ease; }\n" ++
-            ".gs-entry-layout > .gs-candidate-content { min-width: 0; }\n" ++
-            ".gs-primary-row { min-height: 20px; }\n" ++
-            ".gs-chip { font-size: 0.72em; font-weight: 700; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; }\n" ++
-            ".gs-chip-module-key { min-width: 1.8em; text-align: center; font-size: 0.78em; }\n" ++
-            ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
-            ".gs-chip-window { color: #78d2c7; background: rgba(120, 210, 199, 0.16); }\n" ++
-            ".gs-chip-dir { color: #ddb26f; background: rgba(221, 178, 111, 0.16); }\n" ++
-            ".gs-chip-file { color: #8bc3ff; background: rgba(139, 195, 255, 0.16); }\n" ++
-            ".gs-chip-grep { color: #b8a6ff; background: rgba(184, 166, 255, 0.16); }\n" ++
-            ".gs-chip-action { color: #f18cb6; background: rgba(241, 140, 182, 0.16); }\n" ++
-            ".gs-chip-hint { color: #9aa1b5; background: rgba(154, 161, 181, 0.16); }\n";
-
-        const provider = c.gtk_css_provider_new();
-        defer c.g_object_unref(provider);
-        c.gtk_css_provider_load_from_data(provider, css.ptr, @intCast(css.len));
-
-        const display = c.gtk_widget_get_display(window);
-        if (display != null) {
-            c.gtk_style_context_add_provider_for_display(
-                display,
-                @ptrCast(provider),
-                c.GTK_STYLE_PROVIDER_PRIORITY_USER,
-            );
-        }
+        gtk_styles.installCss(window);
     }
 
     fn routeHintForQuery(query_trimmed: []const u8) ?[]const u8 {
@@ -2023,15 +1681,7 @@ pub const Shell = struct {
     }
 
     fn runShellCommand(command: []const u8) !void {
-        const command_z = try std.heap.page_allocator.dupeZ(u8, command);
-        defer std.heap.page_allocator.free(command_z);
-
-        var gerr: ?*c.GError = null;
-        const ok = c.g_spawn_command_line_async(command_z.ptr, &gerr);
-        if (ok == 0) {
-            if (gerr != null) c.g_error_free(gerr);
-            return error.CommandFailed;
-        }
+        return gtk_actions.runShellCommand(command);
     }
 
     fn armPowerConfirmation(ctx: *UiContext) void {
@@ -2063,63 +1713,11 @@ pub const Shell = struct {
     }
 
     fn kindIcon(kind: @import("../search/mod.zig").CandidateKind) []const u8 {
-        return switch (kind) {
-            .app => "󰀻",
-            .window => "",
-            .dir => "󰉋",
-            .file => "󰈙",
-            .grep => "󰍉",
-            .action => "",
-            .hint => "󰘥",
-        };
+        return gtk_widgets.kindIcon(kind);
     }
 
     fn kindChipWidget(kind: @import("../search/mod.zig").CandidateKind) *c.GtkWidget {
-        const label = c.gtk_label_new(kindChipText(kind).ptr);
-        c.gtk_widget_add_css_class(label, "gs-chip");
-        switch (kind) {
-            .app => c.gtk_widget_add_css_class(label, "gs-chip-app"),
-            .window => c.gtk_widget_add_css_class(label, "gs-chip-window"),
-            .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
-            .file => c.gtk_widget_add_css_class(label, "gs-chip-file"),
-            .grep => c.gtk_widget_add_css_class(label, "gs-chip-grep"),
-            .action => c.gtk_widget_add_css_class(label, "gs-chip-action"),
-            .hint => c.gtk_widget_add_css_class(label, "gs-chip-hint"),
-        }
-        return @ptrCast(label);
+        return gtk_widgets.kindChipWidget(kind);
     }
 
-    fn moduleChipWidget(
-        allocator: std.mem.Allocator,
-        chip_text: []const u8,
-        kind: @import("../search/mod.zig").CandidateKind,
-    ) *c.GtkWidget {
-        const chip_text_z = allocator.dupeZ(u8, chip_text) catch return kindChipWidget(kind);
-        defer allocator.free(chip_text_z);
-        const label = c.gtk_label_new(chip_text_z.ptr);
-        c.gtk_widget_add_css_class(label, "gs-chip");
-        c.gtk_widget_add_css_class(label, "gs-chip-module-key");
-        switch (kind) {
-            .app => c.gtk_widget_add_css_class(label, "gs-chip-app"),
-            .window => c.gtk_widget_add_css_class(label, "gs-chip-window"),
-            .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
-            .file => c.gtk_widget_add_css_class(label, "gs-chip-file"),
-            .grep => c.gtk_widget_add_css_class(label, "gs-chip-grep"),
-            .action => c.gtk_widget_add_css_class(label, "gs-chip-action"),
-            .hint => c.gtk_widget_add_css_class(label, "gs-chip-hint"),
-        }
-        return @ptrCast(label);
-    }
-
-    fn kindChipText(kind: @import("../search/mod.zig").CandidateKind) [:0]const u8 {
-        return switch (kind) {
-            .app => "APP",
-            .window => "WIN",
-            .dir => "DIR",
-            .file => "FILE",
-            .grep => "GREP",
-            .action => "ACT",
-            .hint => "TIP",
-        };
-    }
 };

@@ -4131,3 +4131,29 @@
   - M8: UX responsiveness - progressive async result streaming (first-N early paint for `%`/`&`).
 
 ---
+## 2026-02-22 (Cycle 184)
+- Milestone: M8 UX Modularization
+- Task slice: split GTK shell responsibilities into `src/ui/gtk/` modules
+- Changes:
+  - Added `src/ui/gtk/types.zig`:
+    - shared GTK C bindings/constants and `UiContext` type
+  - Added `src/ui/gtk/styles.zig`:
+    - centralized GTK CSS install/theme payload
+  - Added `src/ui/gtk/widgets.zig`:
+    - shared row builders (`header/info/legend/async/module menu`) and chip/icon helpers
+  - Added `src/ui/gtk/actions.zig`:
+    - command execution + dir/file action command builders/parsing
+  - Updated `src/ui/gtk_shell.zig` to delegate style/widget/action concerns to new modules.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `gtk_shell.zig` is reduced but still hosts controller/async/render orchestration; next split should target async/controller submodules.
+- Next slice:
+  - M8: extract async route worker + event-controller logic from `gtk_shell.zig`.
+
+---
