@@ -14,7 +14,7 @@ pub const DynamicCollector = *const fn (
 pub fn rankDynamicRoute(
     dynamic_mu: *std.Thread.Mutex,
     dynamic_tool_state: *dynamic_routes.ToolState,
-    generations: *std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)),
+    generations: *std.ArrayListUnmanaged(dynamic_generations.Generation),
     generation_keep: usize,
     allocator: std.mem.Allocator,
     query: search.Query,
@@ -35,7 +35,7 @@ pub fn rankDynamicRoute(
 pub fn rankDynamicRouteWithCollector(
     dynamic_mu: *std.Thread.Mutex,
     dynamic_tool_state: *dynamic_routes.ToolState,
-    generations: *std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)),
+    generations: *std.ArrayListUnmanaged(dynamic_generations.Generation),
     generation_keep: usize,
     allocator: std.mem.Allocator,
     query: search.Query,
@@ -47,14 +47,32 @@ pub fn rankDynamicRouteWithCollector(
     const term = std.mem.trim(u8, query.term, " \t\r\n");
     if (term.len == 0) return allocator.alloc(search.ScoredCandidate, 0);
 
-    dynamic_mu.lock();
-    defer dynamic_mu.unlock();
-
-    const generation = try dynamic_generations.begin(generations, allocator);
-    collector(dynamic_tool_state, generation, allocator, query, &dynamic_candidates) catch {};
     const keep = @max(generation_keep, @as(usize, 1));
-    dynamic_generations.prune(generations, keep, allocator);
-    return search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);
+
+    var generation: dynamic_generations.BeginPinned = undefined;
+    {
+        dynamic_mu.lock();
+        defer dynamic_mu.unlock();
+
+        generation = try dynamic_generations.beginPinned(generations, allocator);
+        collector(dynamic_tool_state, generation.owned, allocator, query, &dynamic_candidates) catch |err| {
+            std.log.err("dynamic collector failed for route {s}: {s}", .{ @tagName(query.route), @errorName(err) });
+            dynamic_generations.finishPinned(generations, generation.id, keep, allocator, false);
+            return err;
+        };
+        dynamic_generations.prune(generations, keep, allocator);
+    }
+
+    var keep_generation = false;
+    defer {
+        dynamic_mu.lock();
+        dynamic_generations.finishPinned(generations, generation.id, keep, allocator, keep_generation);
+        dynamic_mu.unlock();
+    }
+
+    const ranked = try search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);
+    keep_generation = true;
+    return ranked;
 }
 
 var churn_slow_collected = std.atomic.Value(bool).init(false);
@@ -98,8 +116,8 @@ fn churnCollector(
     out: *search.CandidateList,
 ) !void {
     if (std.mem.eql(u8, query.term, "slow")) {
+        try testAppendSynthetic(dynamic_owned, allocator, 40_000, out);
         churn_slow_collected.store(true, .release);
-        try testAppendSynthetic(dynamic_owned, allocator, 12_000, out);
         return;
     }
     try testAppendSynthetic(dynamic_owned, allocator, 2, out);
@@ -108,7 +126,7 @@ fn churnCollector(
 fn slowChurnWorker(
     dynamic_mu: *std.Thread.Mutex,
     tool_state: *dynamic_routes.ToolState,
-    generations: *std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)),
+    generations: *std.ArrayListUnmanaged(dynamic_generations.Generation),
 ) void {
     const ranked = rankDynamicRouteWithCollector(
         dynamic_mu,
@@ -130,7 +148,7 @@ fn slowChurnWorker(
 fn fastChurnWorker(
     dynamic_mu: *std.Thread.Mutex,
     tool_state: *dynamic_routes.ToolState,
-    generations: *std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)),
+    generations: *std.ArrayListUnmanaged(dynamic_generations.Generation),
 ) void {
     const ranked = rankDynamicRouteWithCollector(
         dynamic_mu,
@@ -149,7 +167,7 @@ fn fastChurnWorker(
     churn_fast_done.store(true, .release);
 }
 
-test "rankDynamicRoute keeps generation lock through ranking under churn" {
+test "rankDynamicRoute releases generation lock before ranking under churn" {
     const allocator = std.testing.allocator;
     churn_slow_collected.store(false, .release);
     churn_slow_done.store(false, .release);
@@ -158,7 +176,7 @@ test "rankDynamicRoute keeps generation lock through ranking under churn" {
 
     var dynamic_mu = std.Thread.Mutex{};
     var tool_state = dynamic_routes.ToolState{};
-    var generations = std.ArrayListUnmanaged(std.ArrayListUnmanaged([]u8)){};
+    var generations = std.ArrayListUnmanaged(dynamic_generations.Generation){};
     defer dynamic_generations.clear(&generations, allocator);
 
     const slow = try std.Thread.spawn(.{}, slowChurnWorker, .{ &dynamic_mu, &tool_state, &generations });
@@ -168,7 +186,7 @@ test "rankDynamicRoute keeps generation lock through ranking under churn" {
 
     const fast = try std.Thread.spawn(.{}, fastChurnWorker, .{ &dynamic_mu, &tool_state, &generations });
     std.time.sleep(2 * std.time.ns_per_ms);
-    try std.testing.expect(!churn_fast_done.load(.acquire));
+    try std.testing.expect(churn_fast_done.load(.acquire));
 
     slow.join();
     fast.join();
@@ -176,4 +194,37 @@ test "rankDynamicRoute keeps generation lock through ranking under churn" {
     try std.testing.expect(churn_slow_done.load(.acquire));
     try std.testing.expect(churn_fast_done.load(.acquire));
     try std.testing.expect(!churn_failed.load(.acquire));
+}
+
+fn failingCollector(
+    _: *dynamic_routes.ToolState,
+    _: *std.ArrayListUnmanaged([]u8),
+    _: std.mem.Allocator,
+    _: search.Query,
+    _: *search.CandidateList,
+) !void {
+    return error.TestCollectorFailure;
+}
+
+test "rankDynamicRouteWithCollector propagates collector errors" {
+    const allocator = std.testing.allocator;
+    var dynamic_mu = std.Thread.Mutex{};
+    var tool_state = dynamic_routes.ToolState{};
+    var generations = std.ArrayListUnmanaged(dynamic_generations.Generation){};
+    defer dynamic_generations.clear(&generations, allocator);
+
+    try std.testing.expectError(
+        error.TestCollectorFailure,
+        rankDynamicRouteWithCollector(
+            &dynamic_mu,
+            &tool_state,
+            &generations,
+            2,
+            allocator,
+            search.parseQuery("% fail"),
+            &.{},
+            failingCollector,
+        ),
+    );
+    try std.testing.expectEqual(@as(usize, 0), generations.items.len);
 }

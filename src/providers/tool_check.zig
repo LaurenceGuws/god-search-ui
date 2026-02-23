@@ -26,12 +26,9 @@ pub fn commandExistsCached(name: []const u8) bool {
 }
 
 fn commandExistsUncached(name: []const u8) bool {
-    const check_cmd = std.fmt.allocPrint(std.heap.page_allocator, "{s} --help >/dev/null 2>&1", .{name}) catch return false;
-    defer std.heap.page_allocator.free(check_cmd);
-
     const result = std.process.Child.run(.{
         .allocator = std.heap.page_allocator,
-        .argv = &.{ "sh", "-lc", check_cmd },
+        .argv = &.{ name, "--help" },
     }) catch return false;
     defer {
         std.heap.page_allocator.free(result.stdout);

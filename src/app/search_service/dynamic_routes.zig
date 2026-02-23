@@ -34,6 +34,21 @@ const ParsedRgRow = struct {
     snippet: []const u8,
 };
 
+const RgJsonEvent = struct {
+    type: []const u8,
+    data: ?Data = null,
+
+    const Data = struct {
+        path: ?TextField = null,
+        line_number: ?usize = null,
+        lines: ?TextField = null,
+    };
+
+    const TextField = struct {
+        text: ?[]const u8 = null,
+    };
+};
+
 fn collectFdCandidates(
     tool_state: *ToolState,
     dynamic_owned: *std.ArrayListUnmanaged([]u8),
@@ -98,7 +113,7 @@ fn collectRgCandidates(
 
     const cmd = try std.fmt.allocPrint(
         allocator,
-        "rg --line-number --no-heading --color never --smart-case --hidden --max-count 200 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null || true",
+        "rg --json --line-number --color never --smart-case --hidden --max-count 200 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null || true",
         .{ term_q, home_q },
     );
     defer allocator.free(cmd);
@@ -108,8 +123,10 @@ fn collectRgCandidates(
     var lines = std.mem.splitScalar(u8, rows, '\n');
     var count: usize = 0;
     while (lines.next()) |line| {
-        const parsed = parseRgOutputRow(line) orelse continue;
+        const parsed = parseRgJsonRow(allocator, line) orelse continue;
+        errdefer freeParsedRgRow(allocator, parsed);
         try appendRgCandidate(dynamic_owned, allocator, parsed, out);
+        freeParsedRgRow(allocator, parsed);
         count += 1;
         if (count >= 200) break;
     }
@@ -121,18 +138,36 @@ fn parseFdOutputRow(line: []const u8) ?[]const u8 {
     return path;
 }
 
-fn parseRgOutputRow(line: []const u8) ?ParsedRgRow {
+fn parseRgJsonRow(allocator: std.mem.Allocator, line: []const u8) ?ParsedRgRow {
     const row = std.mem.trim(u8, line, " \t\r");
     if (row.len == 0) return null;
+    var parsed = std.json.parseFromSlice(RgJsonEvent, allocator, row, .{
+        .ignore_unknown_fields = true,
+    }) catch return null;
+    defer parsed.deinit();
 
-    const first_colon = std.mem.indexOfScalar(u8, row, ':') orelse return null;
-    const second_colon_rel = std.mem.indexOfScalar(u8, row[first_colon + 1 ..], ':') orelse return null;
-    const second_colon = first_colon + 1 + second_colon_rel;
+    if (!std.mem.eql(u8, parsed.value.type, "match")) return null;
+    const data = parsed.value.data orelse return null;
+    const path_field = data.path orelse return null;
+    const path = path_field.text orelse return null;
+    const line_number = data.line_number orelse return null;
+    const line_num = std.fmt.allocPrint(allocator, "{d}", .{line_number}) catch return null;
+    errdefer allocator.free(line_num);
+    const line_field = data.lines orelse return null;
+    const raw_snippet = line_field.text orelse return null;
+    const snippet = std.mem.trim(u8, raw_snippet, " \t\r\n");
+    const path_out = allocator.dupe(u8, path) catch return null;
+    errdefer allocator.free(path_out);
+    const snippet_out = allocator.dupe(u8, snippet) catch {
+        allocator.free(path_out);
+        return null;
+    };
+    errdefer allocator.free(snippet_out);
 
     return .{
-        .path = row[0..first_colon],
-        .line_num = row[first_colon + 1 .. second_colon],
-        .snippet = std.mem.trim(u8, row[second_colon + 1 ..], " \t"),
+        .path = path_out,
+        .line_num = line_num,
+        .snippet = snippet_out,
     };
 }
 
@@ -169,6 +204,12 @@ fn appendRgCandidate(
     const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, subtitle);
     const kept_action = try keepDynamicString(dynamic_owned, allocator, action);
     try out.append(allocator, search.Candidate.init(.grep, kept_title, kept_subtitle, kept_action));
+}
+
+fn freeParsedRgRow(allocator: std.mem.Allocator, row: ParsedRgRow) void {
+    allocator.free(row.path);
+    allocator.free(row.line_num);
+    allocator.free(row.snippet);
 }
 
 fn keepDynamicString(
@@ -280,17 +321,38 @@ test "parseFdOutputRow trims and skips blanks" {
     try std.testing.expect(parseFdOutputRow(" \t\r ") == null);
 }
 
-test "parseRgOutputRow trims fields and preserves colons in snippet" {
-    const parsed = parseRgOutputRow("  /tmp/file.txt:42:  alpha:beta  \r") orelse unreachable;
-    try std.testing.expectEqualStrings("/tmp/file.txt", parsed.path);
+test "parseRgJsonRow handles colons in file paths and snippets" {
+    const allocator = std.testing.allocator;
+    const parsed = parseRgJsonRow(
+        allocator,
+        " {\"type\":\"match\",\"data\":{\"path\":{\"text\":\"/tmp/a:b/file.txt\"},\"lines\":{\"text\":\"  alpha:beta\\n\"},\"line_number\":42}} ",
+    ) orelse unreachable;
+    defer freeParsedRgRow(allocator, parsed);
+
+    try std.testing.expectEqualStrings("/tmp/a:b/file.txt", parsed.path);
     try std.testing.expectEqualStrings("42", parsed.line_num);
     try std.testing.expectEqualStrings("alpha:beta", parsed.snippet);
 }
 
-test "parseRgOutputRow rejects malformed rows" {
-    try std.testing.expect(parseRgOutputRow("") == null);
-    try std.testing.expect(parseRgOutputRow(" /tmp/file ") == null);
-    try std.testing.expect(parseRgOutputRow("/tmp/file:42") == null);
+test "parseRgJsonRow ignores non-match events and malformed rows" {
+    const allocator = std.testing.allocator;
+    try std.testing.expect(parseRgJsonRow(allocator, "") == null);
+    try std.testing.expect(parseRgJsonRow(allocator, "{\"type\":\"begin\",\"data\":{}}") == null);
+    try std.testing.expect(parseRgJsonRow(allocator, "{\"type\":\"match\",\"data\":{\"line_number\":1}}") == null);
+    try std.testing.expect(parseRgJsonRow(allocator, "{not-json}") == null);
+}
+
+test "parseRgJsonRow keeps empty snippets" {
+    const allocator = std.testing.allocator;
+    const parsed = parseRgJsonRow(
+        allocator,
+        "{\"type\":\"match\",\"data\":{\"path\":{\"text\":\"/tmp/file.txt\"},\"lines\":{\"text\":\"\\n\"},\"line_number\":7}}",
+    ) orelse unreachable;
+    defer freeParsedRgRow(allocator, parsed);
+
+    try std.testing.expectEqualStrings("/tmp/file.txt", parsed.path);
+    try std.testing.expectEqualStrings("7", parsed.line_num);
+    try std.testing.expectEqualStrings("", parsed.snippet);
 }
 
 test "appendFdCandidate copies dynamic strings" {
@@ -333,9 +395,13 @@ test "appendRgCandidate copies parsed data and handles empty snippet" {
     var out = search.CandidateList.empty;
     defer out.deinit(allocator);
 
-    const row_buf = try allocator.dupe(u8, "/tmp/note.md:7:   ");
+    const row_buf = try allocator.dupe(
+        u8,
+        "{\"type\":\"match\",\"data\":{\"path\":{\"text\":\"/tmp/note.md\"},\"lines\":{\"text\":\"\\n\"},\"line_number\":7}}",
+    );
     defer allocator.free(row_buf);
-    const parsed = parseRgOutputRow(row_buf) orelse unreachable;
+    const parsed = parseRgJsonRow(allocator, row_buf) orelse unreachable;
+    defer freeParsedRgRow(allocator, parsed);
 
     try appendRgCandidate(&owned, allocator, parsed, &out);
     try std.testing.expectEqual(@as(usize, 1), out.items.len);
