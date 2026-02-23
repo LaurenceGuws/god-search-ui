@@ -259,6 +259,8 @@ fn loadBrowserBookmarksLocked() !void {
     const allocator = std.heap.page_allocator;
     const config_root = try configHomePath(allocator);
     defer allocator.free(config_root);
+    const home_root = try homePath(allocator);
+    defer allocator.free(home_root);
 
     const sources = [_]struct { browser: []const u8, rel: []const u8 }{
         .{ .browser = "Chromium", .rel = "chromium/Default/Bookmarks" },
@@ -280,6 +282,11 @@ fn loadBrowserBookmarksLocked() !void {
         defer parsed.deinit();
         try collectChromiumBookmarksLocked(source.browser, parsed.value);
     }
+
+    try loadFirefoxFamilyBookmarksFromRootLocked("Firefox", tryJoin(allocator, &.{ home_root, ".mozilla/firefox" }));
+    try loadFirefoxFamilyBookmarksFromRootLocked("Zen", tryJoin(allocator, &.{ home_root, ".zen" }));
+    try loadFirefoxFamilyBookmarksFromRootLocked("Firefox", tryJoin(allocator, &.{ home_root, ".var/app/org.mozilla.firefox/.mozilla/firefox" }));
+    try loadFirefoxFamilyBookmarksFromRootLocked("Zen", tryJoin(allocator, &.{ home_root, ".var/app/app.zen_browser.zen/.zen" }));
 }
 
 fn configHomePath(allocator: std.mem.Allocator) ![]u8 {
@@ -289,6 +296,14 @@ fn configHomePath(allocator: std.mem.Allocator) ![]u8 {
     const home = try std.process.getEnvVarOwned(allocator, "HOME");
     defer allocator.free(home);
     return std.fmt.allocPrint(allocator, "{s}/.config", .{home});
+}
+
+fn homePath(allocator: std.mem.Allocator) ![]u8 {
+    return std.process.getEnvVarOwned(allocator, "HOME");
+}
+
+fn tryJoin(allocator: std.mem.Allocator, parts: []const []const u8) ?[]u8 {
+    return std.fs.path.join(allocator, parts) catch null;
 }
 
 fn collectChromiumBookmarksLocked(browser_label: []const u8, value: std.json.Value) !void {
@@ -348,6 +363,72 @@ fn keepBrowserBookmarkStringLocked(value: []const u8) ![]const u8 {
     const copy = try std.heap.page_allocator.dupe(u8, value);
     try browser_bookmarks_owned.append(std.heap.page_allocator, copy);
     return copy;
+}
+
+fn loadFirefoxFamilyBookmarksFromRootLocked(browser_label: []const u8, maybe_root_path: ?[]u8) !void {
+    const root_path = maybe_root_path orelse return;
+    defer std.heap.page_allocator.free(root_path);
+    if (browser_bookmarks.items.len >= browser_bookmark_limit) return;
+
+    var root_dir = std.fs.openDirAbsolute(root_path, .{ .iterate = true }) catch return;
+    defer root_dir.close();
+
+    var it = root_dir.iterate();
+    while (it.next() catch null) |entry| {
+        if (browser_bookmarks.items.len >= browser_bookmark_limit) return;
+        if (entry.kind != .directory) continue;
+
+        const db_path = std.fs.path.join(std.heap.page_allocator, &.{ root_path, entry.name, "places.sqlite" }) catch continue;
+        defer std.heap.page_allocator.free(db_path);
+        loadFirefoxPlacesSqliteLocked(browser_label, db_path) catch {};
+    }
+}
+
+fn loadFirefoxPlacesSqliteLocked(browser_label: []const u8, db_path: []const u8) !void {
+    if (!sqlite3Available()) return;
+
+    const sql =
+        "SELECT COALESCE(NULLIF(moz_bookmarks.title,''), moz_places.url), moz_places.url " ++
+        "FROM moz_bookmarks JOIN moz_places ON moz_bookmarks.fk = moz_places.id " ++
+        "WHERE moz_bookmarks.type = 1 AND moz_places.url LIKE 'http%' LIMIT 10000;";
+    const result = std.process.Child.run(.{
+        .allocator = std.heap.page_allocator,
+        .argv = &.{ "sqlite3", "-readonly", "-separator", "\t", db_path, sql },
+        .max_output_bytes = 8 * 1024 * 1024,
+    }) catch return;
+    defer {
+        std.heap.page_allocator.free(result.stdout);
+        std.heap.page_allocator.free(result.stderr);
+    }
+    if (result.term != .Exited or result.term.Exited != 0) return;
+    try parseSqliteBookmarkRowsLocked(browser_label, result.stdout);
+}
+
+fn sqlite3Available() bool {
+    const result = std.process.Child.run(.{
+        .allocator = std.heap.page_allocator,
+        .argv = &.{ "sqlite3", "--version" },
+        .max_output_bytes = 256,
+    }) catch return false;
+    defer {
+        std.heap.page_allocator.free(result.stdout);
+        std.heap.page_allocator.free(result.stderr);
+    }
+    return result.term == .Exited and result.term.Exited == 0;
+}
+
+fn parseSqliteBookmarkRowsLocked(browser_label: []const u8, rows: []const u8) !void {
+    var lines = std.mem.splitScalar(u8, rows, '\n');
+    while (lines.next()) |line| {
+        if (browser_bookmarks.items.len >= browser_bookmark_limit) return;
+        const row = std.mem.trimRight(u8, line, "\r");
+        if (row.len == 0) continue;
+        var fields = std.mem.splitScalar(u8, row, '\t');
+        const title = std.mem.trim(u8, fields.next() orelse continue, " \t");
+        const url = std.mem.trim(u8, fields.next() orelse continue, " \t");
+        if (title.len == 0 or url.len == 0) continue;
+        try appendBrowserBookmarkLocked(browser_label, title, url);
+    }
 }
 
 test "appendRouteCandidates adds one web result for non-empty ? query" {
