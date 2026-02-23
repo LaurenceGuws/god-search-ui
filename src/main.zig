@@ -17,7 +17,9 @@ pub fn main() !void {
         runtime.rebindProviderContexts();
         try runtime.service.loadHistory(allocator);
         try runtime.service.prewarmProviders(allocator);
-        defer runtime.service.saveHistory(allocator) catch {};
+        defer runtime.service.saveHistory(allocator) catch |err| {
+            logger.err("failed to save history: {s}", .{@errorName(err)});
+        };
         logger.info("runtime ready in {d:.2} ms", .{startup_sw.elapsedMs()});
         try god_search_ui.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry);
         return;

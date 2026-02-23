@@ -155,3 +155,23 @@ test "saveHistory creates relative nested parent directories" {
     defer std.testing.allocator.free(saved);
     try std.testing.expectEqualStrings("settings\npower\n", saved);
 }
+
+test "saveHistory creates absolute nested parent directories" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const base = try tmp.dir.realpathAlloc(std.testing.allocator, ".");
+    defer std.testing.allocator.free(base);
+
+    const history_path = try std.fmt.allocPrint(std.testing.allocator, "{s}/nested/history/history.log", .{base});
+    defer std.testing.allocator.free(history_path);
+
+    const entries = [_][]const u8{ "settings", "power" };
+    try saveHistory(entries[0..], history_path, std.testing.allocator);
+
+    const file = try std.fs.openFileAbsolute(history_path, .{});
+    defer file.close();
+    const saved = try file.readToEndAlloc(std.testing.allocator, 1024);
+    defer std.testing.allocator.free(saved);
+    try std.testing.expectEqualStrings("settings\npower\n", saved);
+}

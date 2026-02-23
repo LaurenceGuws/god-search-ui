@@ -110,3 +110,22 @@ test "telemetry sink creates relative parent and escapes newlines" {
     }
     try std.testing.expectEqual(@as(usize, 1), newline_count);
 }
+
+test "telemetry sink creates absolute parent directories" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const base = try tmp.dir.realpathAlloc(std.testing.allocator, ".");
+    defer std.testing.allocator.free(base);
+    const log_path = try std.fmt.allocPrint(std.testing.allocator, "{s}/nested/events.log", .{base});
+    defer std.testing.allocator.free(log_path);
+
+    const sink = TelemetrySink.init(log_path);
+    try sink.emitActionEvent(std.testing.allocator, "action", "power", "ok", "absolute");
+
+    const file = try std.fs.openFileAbsolute(log_path, .{});
+    defer file.close();
+    const data = try file.readToEndAlloc(std.testing.allocator, 1024);
+    defer std.testing.allocator.free(data);
+    try std.testing.expect(std.mem.indexOf(u8, data, "detail=absolute") != null);
+}

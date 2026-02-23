@@ -27,7 +27,10 @@ pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks:
     defer decision.deinit(allocator);
 
     if (decision.record_selection) {
-        ctx.service.recordSelection(allocator, action) catch {};
+        ctx.service.recordSelection(allocator, action) catch |err| {
+            std.log.warn("history recordSelection failed for action '{s}': {s}", .{ action, @errorName(err) });
+            hooks.set_status(ctx, "History write failed");
+        };
     }
 
     if (decision.guard_waiting_confirmation) {
