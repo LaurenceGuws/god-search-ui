@@ -222,6 +222,7 @@ pub fn kindIcon(kind: CandidateKind) []const u8 {
         .dir => "󰉋",
         .file => "󰈙",
         .grep => "󰍉",
+        .web => "󰖟",
         .action => "",
         .hint => "󰘥",
     };
@@ -236,6 +237,7 @@ pub fn kindChipWidget(kind: CandidateKind) *c.GtkWidget {
         .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
         .file => c.gtk_widget_add_css_class(label, "gs-chip-file"),
         .grep => c.gtk_widget_add_css_class(label, "gs-chip-grep"),
+        .web => c.gtk_widget_add_css_class(label, "gs-chip-app"),
         .action => c.gtk_widget_add_css_class(label, "gs-chip-action"),
         .hint => c.gtk_widget_add_css_class(label, "gs-chip-hint"),
     }
@@ -254,6 +256,7 @@ pub fn moduleChipWidget(allocator: std.mem.Allocator, chip_text: []const u8, kin
         .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
         .file => c.gtk_widget_add_css_class(label, "gs-chip-file"),
         .grep => c.gtk_widget_add_css_class(label, "gs-chip-grep"),
+        .web => c.gtk_widget_add_css_class(label, "gs-chip-app"),
         .action => c.gtk_widget_add_css_class(label, "gs-chip-action"),
         .hint => c.gtk_widget_add_css_class(label, "gs-chip-hint"),
     }
@@ -267,6 +270,7 @@ fn kindChipText(kind: CandidateKind) [:0]const u8 {
         .dir => "DIR",
         .file => "FILE",
         .grep => "GREP",
+        .web => "WEB",
         .action => "ACT",
         .hint => "TIP",
     };

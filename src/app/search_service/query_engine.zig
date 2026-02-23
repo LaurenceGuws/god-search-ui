@@ -36,7 +36,53 @@ pub fn collectAndRank(
     query_candidates: *search.CandidateList,
     had_provider_runtime_failure: *bool,
 ) ![]search.ScoredCandidate {
+    if (parsed.route == .web) {
+        had_provider_runtime_failure.* = false;
+        try providers.appendWebRouteCandidates(allocator, parsed, query_candidates);
+        return search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
+    }
+
     const report = try registry.collectAllWithReport(allocator, query_candidates);
     had_provider_runtime_failure.* = report.had_runtime_failure;
     return search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
+}
+
+test "collectAndRank web route bypasses registry providers and emits web result" {
+    const Fake = struct {
+        fn collectFail(_: *anyopaque, _: std.mem.Allocator, _: *search.CandidateList) !void {
+            return error.ShouldNotBeCalled;
+        }
+
+        fn healthReady(_: *anyopaque) search.ProviderHealth {
+            return .ready;
+        }
+    };
+
+    var dummy: u8 = 0;
+    const fake_providers = [_]search.Provider{
+        .{
+            .name = "broken-if-called",
+            .context = &dummy,
+            .vtable = &.{ .collect = Fake.collectFail, .health = Fake.healthReady },
+        },
+    };
+    const registry = providers.ProviderRegistry.init(&fake_providers);
+
+    var query_candidates = search.CandidateList.empty;
+    defer query_candidates.deinit(std.testing.allocator);
+    var had_failure = true;
+    const ranked = try collectAndRank(
+        std.testing.allocator,
+        registry,
+        search.parseQuery("? dota 2"),
+        &.{},
+        &query_candidates,
+        &had_failure,
+    );
+    defer std.testing.allocator.free(ranked);
+
+    try std.testing.expect(!had_failure);
+    try std.testing.expectEqual(@as(usize, 1), ranked.len);
+    try std.testing.expectEqual(search.CandidateKind.web, ranked[0].candidate.kind);
+    try std.testing.expectEqualStrings("dota 2", ranked[0].candidate.action);
 }

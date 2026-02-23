@@ -5,6 +5,7 @@ pub const CollectReport = @import("registry.zig").CollectReport;
 pub const ProviderCollectFailure = @import("registry.zig").ProviderCollectFailure;
 pub const ProviderRegistry = @import("registry.zig").ProviderRegistry;
 pub const ProviderStatus = @import("registry.zig").ProviderStatus;
+pub const appendWebRouteCandidates = @import("web.zig").appendRouteCandidates;
 pub const WindowsProvider = @import("windows.zig").WindowsProvider;
 pub const executeAction = @import("actions.zig").executeAction;
 pub const requiresConfirmation = @import("actions.zig").requiresConfirmation;

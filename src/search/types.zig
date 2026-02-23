@@ -6,6 +6,7 @@ pub const CandidateKind = enum {
     dir,
     file,
     grep,
+    web,
     action,
     hint,
 };

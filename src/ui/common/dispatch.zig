@@ -133,6 +133,25 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 .close_on_success = true,
             };
         },
+        .web => {
+            const term = std.mem.trim(u8, action, " \t\r\n");
+            if (term.len == 0) return .{};
+            const encoded = try percentEncodeQuery(allocator, term);
+            defer allocator.free(encoded);
+            const url = try std.fmt.allocPrint(allocator, "https://duckduckgo.com/?q={s}", .{encoded});
+            defer allocator.free(url);
+            const url_q = try shellSingleQuote(allocator, url);
+            defer allocator.free(url_q);
+            const cmd = try std.fmt.allocPrint(allocator, "xdg-open {s}", .{url_q});
+            return .{
+                .command = cmd,
+                .owned_command = cmd,
+                .telemetry_kind = "web",
+                .telemetry_ok_detail = "duckduckgo",
+                .error_message = "Web search failed to launch",
+                .close_on_success = true,
+            };
+        },
         else => {},
     }
     return .{};
@@ -151,6 +170,29 @@ fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
     }
     try out.append(allocator, '\'');
     return out.toOwnedSlice(allocator);
+}
+
+fn percentEncodeQuery(allocator: std.mem.Allocator, term: []const u8) ![]u8 {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+
+    for (term) |ch| {
+        if (std.ascii.isAlphanumeric(ch) or ch == '-' or ch == '.' or ch == '_' or ch == '~') {
+            try out.append(allocator, ch);
+            continue;
+        }
+        const hex = [_]u8{
+            '%',
+            toUpperHex(ch >> 4),
+            toUpperHex(ch & 0x0f),
+        };
+        try out.appendSlice(allocator, &hex);
+    }
+    return out.toOwnedSlice(allocator);
+}
+
+fn toUpperHex(nibble: u8) u8 {
+    return if (nibble < 10) ('0' + nibble) else ('A' + (nibble - 10));
 }
 
 test "window focus command shell-quotes metacharacters in address" {
@@ -173,4 +215,16 @@ test "window focus command escapes apostrophes in address" {
         "hyprctl dispatch focuswindow 'address:win'\\''42'",
         plan.command.?,
     );
+}
+
+test "web command percent-encodes query and quotes url" {
+    var plan = try planCommandKind(std.testing.allocator, .web, "dota 2 + mmr");
+    defer plan.deinit(std.testing.allocator);
+
+    try std.testing.expect(plan.command != null);
+    try std.testing.expectEqualStrings(
+        "xdg-open 'https://duckduckgo.com/?q=dota%202%20%2B%20mmr'",
+        plan.command.?,
+    );
+    try std.testing.expectEqualStrings("web", plan.telemetry_kind);
 }

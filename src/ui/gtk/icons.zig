@@ -7,6 +7,19 @@ const CandidateKind = gtk_types.CandidateKind;
 const ScoredCandidate = @import("../../search/mod.zig").ScoredCandidate;
 
 pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget {
+    if (kind == .web) {
+        const explicit = std.mem.trim(u8, icon, " \t\r\n");
+        if (explicit.len > 0) {
+            const icon_name_z = allocator.dupeZ(u8, explicit) catch null;
+            if (icon_name_z) |name| {
+                defer allocator.free(name);
+                const image = c.gtk_image_new_from_icon_name(name.ptr);
+                c.gtk_image_set_pixel_size(@ptrCast(image), 30);
+                c.gtk_widget_add_css_class(image, "gs-kind-icon");
+                return @ptrCast(image);
+            }
+        }
+    }
     if (kind == .app) {
         if (resolveAppIconFilePath(allocator, icon)) |icon_path_z| {
             defer allocator.free(icon_path_z);
