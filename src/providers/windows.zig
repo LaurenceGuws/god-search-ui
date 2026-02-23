@@ -85,6 +85,11 @@ pub const WindowsProvider = struct {
     }
 };
 
+fn testStubListWorkspaces(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WorkspaceSnapshot {
+    _ = allocator;
+    return .{ .items = &.{} };
+}
+
 test "windows provider parses command rows into candidates" {
     const Fake = struct {
         var health_state: wm_mod.Health = .ready;
@@ -117,6 +122,7 @@ test "windows provider parses command rows into candidates" {
         .context = &fake_ctx,
         .vtable = &.{
             .list_windows = Fake.listWindows,
+            .list_workspaces = testStubListWorkspaces,
             .health = Fake.health,
             .capabilities = Fake.capabilities,
         },
@@ -162,6 +168,7 @@ test "windows provider reports unavailable when tools are unavailable" {
         .context = &fake_ctx,
         .vtable = &.{
             .list_windows = Fake.listWindows,
+            .list_workspaces = testStubListWorkspaces,
             .health = Fake.health,
             .capabilities = Fake.capabilities,
         },
@@ -205,6 +212,7 @@ test "windows provider runtime query failure degrades health while keeping UX gr
         .context = &fake_ctx,
         .vtable = &.{
             .list_windows = Fake.listWindows,
+            .list_workspaces = testStubListWorkspaces,
             .health = Fake.health,
             .capabilities = Fake.capabilities,
         },
@@ -267,6 +275,7 @@ test "windows provider keeps prior generations alive on transient failure" {
         .context = &fake_ctx,
         .vtable = &.{
             .list_windows = Fake.listWindows,
+            .list_workspaces = testStubListWorkspaces,
             .health = Fake.health,
             .capabilities = Fake.capabilities,
         },
@@ -345,23 +354,42 @@ test "windows provider maps hyprland backend runtime parse without jq escapes de
 
 test "windows provider rotates owned strings across collects with bounded growth" {
     const Fake = struct {
-        fn hasTools() bool {
-            return true;
+        fn listWindows(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WindowSnapshot {
+            var items = try allocator.alloc(wm_mod.WindowInfo, 2);
+            items[0] = .{
+                .title = try allocator.dupe(u8, "Terminal"),
+                .class_name = try allocator.dupe(u8, "kitty"),
+                .id = try allocator.dupe(u8, "0xabc"),
+            };
+            items[1] = .{
+                .title = try allocator.dupe(u8, "Browser"),
+                .class_name = try allocator.dupe(u8, "zen"),
+                .id = try allocator.dupe(u8, "0xdef"),
+            };
+            return .{ .items = items };
         }
 
-        fn listWindows(allocator: std.mem.Allocator) ![]u8 {
-            return allocator.dupe(u8,
-                \\Terminal\tkitty\t0xabc
-                \\Browser\tzen\t0xdef
-                \\
-            );
+        fn health(_: *anyopaque) wm_mod.Health {
+            return .ready;
+        }
+
+        fn capabilities(_: *anyopaque) wm_mod.Capability {
+            return .{ .windows = true };
         }
     };
-
-    var provider_impl = WindowsProvider{
-        .list_windows_fn = Fake.listWindows,
-        .has_tools_fn = Fake.hasTools,
+    var fake_ctx: u8 = 0;
+    const fake_backend = wm_mod.Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = Fake.listWindows,
+            .list_workspaces = testStubListWorkspaces,
+            .health = Fake.health,
+            .capabilities = Fake.capabilities,
+        },
     };
+
+    var provider_impl = WindowsProvider{ .backend_override = fake_backend };
     defer provider_impl.deinit(std.testing.allocator);
 
     var list = search.CandidateList.empty;

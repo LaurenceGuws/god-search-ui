@@ -15,6 +15,7 @@ pub fn appendModuleFilterMenu(list: *c.GtkListBox, allocator: std.mem.Allocator)
 
     appendModuleFilterRow(list, allocator, "Apps", "Launch installed applications", "@", "@", .app);
     appendModuleFilterRow(list, allocator, "Windows", "Focus open windows", "#", "#", .window);
+    appendModuleFilterRow(list, allocator, "Workspaces", "Switch Hyprland workspace", "!", "!", .workspace);
     appendModuleFilterRow(list, allocator, "Recent Dirs", "Jump to zoxide terminal locations", "~", "~", .dir);
     appendModuleFilterRow(list, allocator, "Files + Folders", "Find paths with fd", "%", "%", .file);
     appendModuleFilterRow(list, allocator, "Code Search", "Search file contents with rg", "&", "&", .grep);
@@ -219,6 +220,7 @@ pub fn kindIcon(kind: CandidateKind) []const u8 {
     return switch (kind) {
         .app => "󰀻",
         .window => "",
+        .workspace => "󰍹",
         .dir => "󰉋",
         .file => "󰈙",
         .grep => "󰍉",
@@ -234,6 +236,7 @@ pub fn kindChipWidget(kind: CandidateKind) *c.GtkWidget {
     switch (kind) {
         .app => c.gtk_widget_add_css_class(label, "gs-chip-app"),
         .window => c.gtk_widget_add_css_class(label, "gs-chip-window"),
+        .workspace => c.gtk_widget_add_css_class(label, "gs-chip-window"),
         .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
         .file => c.gtk_widget_add_css_class(label, "gs-chip-file"),
         .grep => c.gtk_widget_add_css_class(label, "gs-chip-grep"),
@@ -253,6 +256,7 @@ pub fn moduleChipWidget(allocator: std.mem.Allocator, chip_text: []const u8, kin
     switch (kind) {
         .app => c.gtk_widget_add_css_class(label, "gs-chip-app"),
         .window => c.gtk_widget_add_css_class(label, "gs-chip-window"),
+        .workspace => c.gtk_widget_add_css_class(label, "gs-chip-window"),
         .dir => c.gtk_widget_add_css_class(label, "gs-chip-dir"),
         .file => c.gtk_widget_add_css_class(label, "gs-chip-file"),
         .grep => c.gtk_widget_add_css_class(label, "gs-chip-grep"),
@@ -267,6 +271,7 @@ fn kindChipText(kind: CandidateKind) [:0]const u8 {
     return switch (kind) {
         .app => "APP",
         .window => "WIN",
+        .workspace => "WS",
         .dir => "DIR",
         .file => "FILE",
         .grep => "GREP",

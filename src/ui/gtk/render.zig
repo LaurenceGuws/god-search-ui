@@ -46,6 +46,7 @@ pub fn appendGroupedRows(
     var rendered_any = false;
     rendered_any = appendGroup(ctx, allocator, rows, .app, "Apps", rendered_any, highlight_token, hooks) or rendered_any;
     rendered_any = appendGroup(ctx, allocator, rows, .window, "Windows", rendered_any, highlight_token, hooks) or rendered_any;
+    rendered_any = appendGroup(ctx, allocator, rows, .workspace, "Workspaces", rendered_any, highlight_token, hooks) or rendered_any;
     rendered_any = appendGroup(ctx, allocator, rows, .dir, "Directories", rendered_any, highlight_token, hooks) or rendered_any;
     rendered_any = appendGroup(ctx, allocator, rows, .file, "Files", rendered_any, highlight_token, hooks) or rendered_any;
     rendered_any = appendGroup(ctx, allocator, rows, .grep, "Code Search", rendered_any, highlight_token, hooks) or rendered_any;

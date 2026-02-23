@@ -21,6 +21,7 @@ pub fn routeIconForLeadingPrefix(query: []const u8) ?[]const u8 {
     return switch (query[0]) {
         '@' => "applications-system-symbolic",
         '#' => "window-new-symbolic",
+        '!' => "view-grid-symbolic",
         '~' => "folder-symbolic",
         '%' => "text-x-generic-symbolic",
         '&' => "edit-find-symbolic",
@@ -43,6 +44,7 @@ pub fn routeHintForQuery(query_trimmed: []const u8) ?[]const u8 {
     return switch (query_trimmed[0]) {
         '@' => "Apps route active: type app name after @",
         '#' => "Windows route active: type window title/class after #",
+        '!' => "Workspaces route active: type workspace name/id after !",
         '~' => "Recent dirs route active: zoxide terminal locations after ~",
         '%' => "Files route active: find files and folders after %",
         '&' => "Grep route active: type text to search after &",
@@ -58,7 +60,7 @@ pub fn highlightTokenForQuery(query_trimmed: []const u8) []const u8 {
     if (token.len == 0) return "";
     if (token.len > 1) {
         token = switch (token[0]) {
-            '@', '#', '~', '%', '&', '>', '=', '?' => std.mem.trim(u8, token[1..], " \t\r\n"),
+            '@', '#', '!', '~', '%', '&', '>', '=', '?' => std.mem.trim(u8, token[1..], " \t\r\n"),
             else => token,
         };
     }
@@ -87,6 +89,7 @@ pub fn postLaunchStatus(message: []const u8) []const u8 {
     if (std.mem.eql(u8, message, "App launched")) return "App launched | Enter repeats selected app";
     if (std.mem.eql(u8, message, "Directory opened")) return "Directory opened | Enter repeats selected item";
     if (std.mem.eql(u8, message, "Window focused")) return "Window focused | Enter repeats selected window";
+    if (std.mem.eql(u8, message, "Workspace switched")) return "Workspace switched | Enter repeats selected workspace";
     return message;
 }
 

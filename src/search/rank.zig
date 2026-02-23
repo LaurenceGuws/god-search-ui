@@ -63,6 +63,7 @@ fn matchesRoute(route: query_mod.Route, kind: types.CandidateKind) bool {
         .blended => true,
         .apps => kind == .app,
         .windows => kind == .window,
+        .workspaces => kind == .workspace,
         .dirs => kind == .dir,
         .files => kind == .file or kind == .dir,
         .grep => kind == .grep,
@@ -117,6 +118,7 @@ fn shortQueryBias(needle_len: usize, kind: types.CandidateKind) i32 {
         .action => 50,
         .app => 0,
         .window => -5,
+        .workspace => -4,
         .dir => -10,
         .file => -8,
         .grep => -6,
@@ -139,6 +141,7 @@ fn baseWeight(kind: types.CandidateKind) i32 {
     return switch (kind) {
         .app => 100,
         .window => 90,
+        .workspace => 88,
         .dir => 80,
         .file => 78,
         .grep => 76,

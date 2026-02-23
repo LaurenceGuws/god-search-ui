@@ -133,6 +133,19 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 .close_on_success = true,
             };
         },
+        .workspace => {
+            const target_q = try shellSingleQuote(allocator, action);
+            defer allocator.free(target_q);
+            const cmd = try std.fmt.allocPrint(allocator, "hyprctl dispatch workspace {s}", .{target_q});
+            return .{
+                .command = cmd,
+                .owned_command = cmd,
+                .telemetry_kind = "workspace",
+                .telemetry_ok_detail = cmd,
+                .error_message = "Workspace switch failed",
+                .close_on_success = true,
+            };
+        },
         .web => {
             if (std.mem.startsWith(u8, action, "http://") or std.mem.startsWith(u8, action, "https://")) {
                 const url_q = try shellSingleQuote(allocator, action);
@@ -226,6 +239,17 @@ test "window focus command escapes apostrophes in address" {
     try std.testing.expect(plan.command != null);
     try std.testing.expectEqualStrings(
         "hyprctl dispatch focuswindow 'address:win'\\''42'",
+        plan.command.?,
+    );
+}
+
+test "workspace switch command shell-quotes workspace token" {
+    var plan = try planCommandKind(std.testing.allocator, .workspace, "name with 'quote'");
+    defer plan.deinit(std.testing.allocator);
+
+    try std.testing.expect(plan.command != null);
+    try std.testing.expectEqualStrings(
+        "hyprctl dispatch workspace 'name with '\\''quote'\\'''",
         plan.command.?,
     );
 }

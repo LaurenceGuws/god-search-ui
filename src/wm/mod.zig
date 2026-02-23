@@ -4,4 +4,6 @@ pub const Capability = types.Capability;
 pub const Health = types.Health;
 pub const WindowInfo = types.WindowInfo;
 pub const WindowSnapshot = types.WindowSnapshot;
+pub const WorkspaceInfo = types.WorkspaceInfo;
+pub const WorkspaceSnapshot = types.WorkspaceSnapshot;
 pub const HyprlandBackend = @import("hyprland.zig").HyprlandBackend;

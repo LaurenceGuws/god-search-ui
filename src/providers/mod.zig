@@ -1,6 +1,7 @@
 pub const AppsProvider = @import("apps.zig").AppsProvider;
 pub const ActionsProvider = @import("actions.zig").ActionsProvider;
 pub const DirsProvider = @import("dirs.zig").DirsProvider;
+pub const WorkspacesProvider = @import("workspaces.zig").WorkspacesProvider;
 pub const CollectReport = @import("registry.zig").CollectReport;
 pub const ProviderCollectFailure = @import("registry.zig").ProviderCollectFailure;
 pub const ProviderRegistry = @import("registry.zig").ProviderRegistry;

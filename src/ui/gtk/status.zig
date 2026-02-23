@@ -64,7 +64,7 @@ fn onStatusReset(user_data: ?*anyopaque) callconv(.c) c.gboolean {
     const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
     const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
     if (query_trimmed.len == 0) {
-        setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ~ dirs % files & grep > run = calc ? web");
+        setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ! workspaces ~ dirs % files & grep > run = calc ? web");
     } else {
         setStatus(ctx, "");
     }
@@ -163,6 +163,7 @@ fn launchStatusTone(message: []const u8) StatusTone {
     if (std.mem.indexOf(u8, message, "launched") != null) return .success;
     if (std.mem.indexOf(u8, message, "opened") != null) return .success;
     if (std.mem.indexOf(u8, message, "focused") != null) return .success;
+    if (std.mem.indexOf(u8, message, "switched") != null) return .success;
     return .neutral;
 }
 

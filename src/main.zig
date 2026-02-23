@@ -36,14 +36,16 @@ const Runtime = struct {
     actions: god_search_ui.providers.ActionsProvider = .{},
     apps: god_search_ui.providers.AppsProvider,
     windows: god_search_ui.providers.WindowsProvider = .{},
+    workspaces: god_search_ui.providers.WorkspacesProvider = .{},
     dirs: god_search_ui.providers.DirsProvider = .{},
-    provider_list: [4]god_search_ui.search.Provider,
+    provider_list: [5]god_search_ui.search.Provider,
     service: god_search_ui.app.SearchService,
     telemetry: god_search_ui.app.TelemetrySink,
 
     fn deinit(self: *Runtime, allocator: std.mem.Allocator) void {
         self.apps.deinit(allocator);
         self.windows.deinit(allocator);
+        self.workspaces.deinit(allocator);
         self.dirs.deinit(allocator);
         self.service.deinit(allocator);
         allocator.free(self.app_cache_path);
@@ -56,6 +58,7 @@ const Runtime = struct {
             self.actions.provider(),
             self.apps.provider(),
             self.windows.provider(),
+            self.workspaces.provider(),
             self.dirs.provider(),
         };
         const registry = god_search_ui.providers.ProviderRegistry.init(&self.provider_list);
@@ -85,6 +88,7 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
         .actions = .{},
         .apps = god_search_ui.providers.AppsProvider.init(app_cache),
         .windows = .{},
+        .workspaces = .{},
         .dirs = .{},
         .provider_list = undefined,
         .service = undefined,
@@ -95,6 +99,7 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
         runtime.actions.provider(),
         runtime.apps.provider(),
         runtime.windows.provider(),
+        runtime.workspaces.provider(),
         runtime.dirs.provider(),
     };
 

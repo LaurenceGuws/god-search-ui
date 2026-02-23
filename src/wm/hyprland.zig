@@ -4,6 +4,7 @@ const wm = @import("types.zig");
 
 pub const HyprlandBackend = struct {
     list_windows_json_fn: *const fn (allocator: std.mem.Allocator) anyerror![]u8 = listWindowsJsonWithSystemTools,
+    list_workspaces_json_fn: *const fn (allocator: std.mem.Allocator) anyerror![]u8 = listWorkspacesJsonWithSystemTools,
     has_tools_fn: *const fn () bool = hasSystemTools,
     had_runtime_failure: bool = false,
 
@@ -13,6 +14,7 @@ pub const HyprlandBackend = struct {
             .context = self,
             .vtable = &.{
                 .list_windows = listWindows,
+                .list_workspaces = listWorkspaces,
                 .health = health,
                 .capabilities = capabilities,
             },
@@ -51,6 +53,31 @@ pub const HyprlandBackend = struct {
         return .ready;
     }
 
+    fn listWorkspaces(context: *anyopaque, allocator: std.mem.Allocator) !wm.WorkspaceSnapshot {
+        const self: *HyprlandBackend = @ptrCast(@alignCast(context));
+        if (!self.has_tools_fn()) return error.ToolsUnavailable;
+
+        const json_bytes = self.list_workspaces_json_fn(allocator) catch |err| {
+            self.had_runtime_failure = true;
+            std.log.warn("hyprland wm list workspaces failed: {s}", .{@errorName(err)});
+            return err;
+        };
+        defer allocator.free(json_bytes);
+
+        var parsed = std.json.parseFromSlice(std.json.Value, allocator, json_bytes, .{}) catch |err| {
+            self.had_runtime_failure = true;
+            return err;
+        };
+        defer parsed.deinit();
+
+        const snapshot = parseWorkspacesJson(allocator, parsed.value) catch |err| {
+            self.had_runtime_failure = true;
+            return err;
+        };
+        self.had_runtime_failure = false;
+        return snapshot;
+    }
+
     fn capabilities(_: *anyopaque) wm.Capability {
         return .{
             .windows = true,
@@ -79,6 +106,20 @@ fn listWindowsJsonWithSystemTools(allocator: std.mem.Allocator) ![]u8 {
     return result.stdout;
 }
 
+fn listWorkspacesJsonWithSystemTools(allocator: std.mem.Allocator) ![]u8 {
+    const result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "hyprctl", "workspaces", "-j" },
+        .max_output_bytes = 4 * 1024 * 1024,
+    });
+    defer allocator.free(result.stderr);
+    if (result.term != .Exited or result.term.Exited != 0) {
+        allocator.free(result.stdout);
+        return error.WorkspaceQueryFailed;
+    }
+    return result.stdout;
+}
+
 fn parseClientsJson(allocator: std.mem.Allocator, root: std.json.Value) !wm.WindowSnapshot {
     if (root != .array) return error.InvalidJson;
 
@@ -103,6 +144,34 @@ fn parseClientsJson(allocator: std.mem.Allocator, root: std.json.Value) !wm.Wind
     }
 
     return .{ .items = try out.toOwnedSlice(allocator) };
+}
+
+fn parseWorkspacesJson(allocator: std.mem.Allocator, root: std.json.Value) !wm.WorkspaceSnapshot {
+    if (root != .array) return error.InvalidJson;
+
+    var out = std.ArrayList(wm.WorkspaceInfo).empty;
+    defer out.deinit(allocator);
+
+    for (root.array.items) |workspace| {
+        const parsed = parseWorkspaceObject(workspace) orelse continue;
+        if (parsed.id <= 0) continue;
+
+        const name = if (parsed.name.len > 0) parsed.name else "Workspace";
+        try out.append(allocator, .{
+            .id = parsed.id,
+            .name = try allocator.dupe(u8, name),
+            .monitor_name = try allocator.dupe(u8, parsed.monitor_name),
+            .window_count = parsed.window_count,
+        });
+    }
+
+    std.mem.sort(wm.WorkspaceInfo, out.items, {}, lessWorkspaceById);
+    return .{ .items = try out.toOwnedSlice(allocator) };
+}
+
+fn lessWorkspaceById(_: void, a: wm.WorkspaceInfo, b: wm.WorkspaceInfo) bool {
+    if (a.id != b.id) return a.id < b.id;
+    return std.mem.order(u8, a.name, b.name) == .lt;
 }
 
 const ParsedClient = struct {
@@ -163,6 +232,57 @@ fn parseClientObject(value: std.json.Value) ?ParsedClient {
     };
 }
 
+const ParsedWorkspace = struct {
+    id: i32,
+    name: []const u8,
+    monitor_name: []const u8,
+    window_count: u32,
+};
+
+fn parseWorkspaceObject(value: std.json.Value) ?ParsedWorkspace {
+    if (value != .object) return null;
+    const obj = value.object;
+
+    const id: i32 = blk: {
+        const id_val = obj.get("id") orelse break :blk -1;
+        break :blk switch (id_val) {
+            .integer => |v| std.math.cast(i32, v) orelse -1,
+            else => -1,
+        };
+    };
+
+    const name = if (obj.get("name")) |v|
+        switch (v) {
+            .string => |s| s,
+            else => "",
+        }
+    else
+        "";
+
+    const monitor_name = if (obj.get("monitor")) |v|
+        switch (v) {
+            .string => |s| s,
+            else => "",
+        }
+    else
+        "";
+
+    const window_count: u32 = blk: {
+        const count_val = obj.get("windows") orelse break :blk 0;
+        break :blk switch (count_val) {
+            .integer => |v| std.math.cast(u32, if (v < 0) 0 else v) orelse 0,
+            else => 0,
+        };
+    };
+
+    return .{
+        .id = id,
+        .name = name,
+        .monitor_name = monitor_name,
+        .window_count = window_count,
+    };
+}
+
 test "parseClientsJson filters unmapped and invalid workspace clients" {
     const json =
         \\[
@@ -198,4 +318,42 @@ test "parseClientsJson falls back title and class labels" {
     try std.testing.expectEqual(@as(usize, 1), snapshot.items.len);
     try std.testing.expectEqualStrings("Window", snapshot.items[0].title);
     try std.testing.expectEqualStrings("Window", snapshot.items[0].class_name);
+}
+
+test "parseWorkspacesJson filters invalid ids and sorts by id" {
+    const json =
+        \\[
+        \\  {"id":3,"name":"3","monitor":"HDMI-A-1","windows":1},
+        \\  {"id":-99,"name":"special:scratch","monitor":"HDMI-A-1","windows":2},
+        \\  {"id":1,"name":"dev","monitor":"eDP-1","windows":4}
+        \\]
+    ;
+    var parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, json, .{});
+    defer parsed.deinit();
+
+    var snapshot = try parseWorkspacesJson(std.testing.allocator, parsed.value);
+    defer snapshot.deinit(std.testing.allocator);
+
+    try std.testing.expectEqual(@as(usize, 2), snapshot.items.len);
+    try std.testing.expectEqual(@as(i32, 1), snapshot.items[0].id);
+    try std.testing.expectEqualStrings("dev", snapshot.items[0].name);
+    try std.testing.expectEqualStrings("eDP-1", snapshot.items[0].monitor_name);
+    try std.testing.expectEqual(@as(u32, 4), snapshot.items[0].window_count);
+    try std.testing.expectEqual(@as(i32, 3), snapshot.items[1].id);
+}
+
+test "parseWorkspacesJson applies default name" {
+    const json =
+        \\[
+        \\  {"id":2,"name":"","monitor":"eDP-1","windows":0}
+        \\]
+    ;
+    var parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, json, .{});
+    defer parsed.deinit();
+
+    var snapshot = try parseWorkspacesJson(std.testing.allocator, parsed.value);
+    defer snapshot.deinit(std.testing.allocator);
+
+    try std.testing.expectEqual(@as(usize, 1), snapshot.items.len);
+    try std.testing.expectEqualStrings("Workspace", snapshot.items[0].name);
 }

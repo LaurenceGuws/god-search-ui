@@ -6,6 +6,7 @@ pub const UiKind = enum {
     action,
     app,
     window,
+    workspace,
     dir,
     file,
     grep,
@@ -20,6 +21,7 @@ pub fn parse(kind: []const u8) UiKind {
     if (std.mem.eql(u8, kind, "action")) return .action;
     if (std.mem.eql(u8, kind, "app")) return .app;
     if (std.mem.eql(u8, kind, "window")) return .window;
+    if (std.mem.eql(u8, kind, "workspace")) return .workspace;
     if (std.mem.eql(u8, kind, "dir")) return .dir;
     if (std.mem.eql(u8, kind, "file")) return .file;
     if (std.mem.eql(u8, kind, "grep")) return .grep;
@@ -36,6 +38,7 @@ pub fn tag(kind: UiKind) []const u8 {
         .action => "action",
         .app => "app",
         .window => "window",
+        .workspace => "workspace",
         .dir => "dir",
         .file => "file",
         .grep => "grep",
@@ -52,6 +55,7 @@ pub fn statusLabel(kind: UiKind) []const u8 {
     return switch (kind) {
         .app => "app",
         .window => "window",
+        .workspace => "workspace",
         .dir => "directory",
         .file => "file",
         .grep => "match",
@@ -67,6 +71,7 @@ pub fn fromCandidateKind(kind: search.CandidateKind) UiKind {
     return switch (kind) {
         .app => .app,
         .window => .window,
+        .workspace => .workspace,
         .dir => .dir,
         .file => .file,
         .grep => .grep,

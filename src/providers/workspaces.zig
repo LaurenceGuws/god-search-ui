@@ -1,0 +1,221 @@
+const std = @import("std");
+const search = @import("../search/mod.zig");
+const wm_mod = @import("../wm/mod.zig");
+
+pub const WorkspacesProvider = struct {
+    owned_strings_current: std.ArrayListUnmanaged([]u8) = .{},
+    owned_strings_previous: std.ArrayListUnmanaged([]u8) = .{},
+    hyprland_backend: wm_mod.HyprlandBackend = .{},
+    backend_override: ?wm_mod.Backend = null,
+
+    pub fn deinit(self: *WorkspacesProvider, allocator: std.mem.Allocator) void {
+        self.freeOwnedStrings(allocator, &self.owned_strings_current);
+        self.freeOwnedStrings(allocator, &self.owned_strings_previous);
+        self.owned_strings_current.deinit(allocator);
+        self.owned_strings_previous.deinit(allocator);
+    }
+
+    pub fn provider(self: *WorkspacesProvider) search.Provider {
+        return .{
+            .name = "workspaces",
+            .context = self,
+            .vtable = &.{
+                .collect = collect,
+                .health = health,
+            },
+        };
+    }
+
+    fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+        const self: *WorkspacesProvider = @ptrCast(@alignCast(context));
+        const wm_backend = self.backend();
+        if (!wm_backend.capabilities().workspaces) return;
+        if (wm_backend.health() == .unavailable) return;
+
+        var snapshot = wm_backend.listWorkspaces(allocator) catch |err| {
+            std.log.warn("workspaces provider query failed: {s}", .{@errorName(err)});
+            return;
+        };
+        defer snapshot.deinit(allocator);
+        self.rotateOwnedStringsForCollect(allocator);
+
+        for (snapshot.items) |row| {
+            const title = try self.keepString(allocator, row.name);
+            const subtitle_tmp = try formatWorkspaceSubtitle(allocator, row);
+            defer allocator.free(subtitle_tmp);
+            const subtitle = try self.keepString(allocator, subtitle_tmp);
+            const action_tmp = try std.fmt.allocPrint(allocator, "{d}", .{row.id});
+            defer allocator.free(action_tmp);
+            const action = try self.keepString(allocator, action_tmp);
+            try out.append(allocator, search.Candidate.init(.workspace, title, subtitle, action));
+        }
+    }
+
+    fn health(context: *anyopaque) search.ProviderHealth {
+        const self: *WorkspacesProvider = @ptrCast(@alignCast(context));
+        return switch (self.backend().health()) {
+            .ready => .ready,
+            .degraded => .degraded,
+            .unavailable => .unavailable,
+        };
+    }
+
+    fn keepString(self: *WorkspacesProvider, allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
+        const copy = try allocator.dupe(u8, value);
+        try self.owned_strings_current.append(allocator, copy);
+        return copy;
+    }
+
+    fn rotateOwnedStringsForCollect(self: *WorkspacesProvider, allocator: std.mem.Allocator) void {
+        self.freeOwnedStrings(allocator, &self.owned_strings_previous);
+        std.mem.swap(std.ArrayListUnmanaged([]u8), &self.owned_strings_current, &self.owned_strings_previous);
+        self.owned_strings_current.clearRetainingCapacity();
+    }
+
+    fn freeOwnedStrings(self: *WorkspacesProvider, allocator: std.mem.Allocator, strings: *std.ArrayListUnmanaged([]u8)) void {
+        _ = self;
+        for (strings.items) |item| allocator.free(item);
+        strings.clearRetainingCapacity();
+    }
+
+    fn backend(self: *WorkspacesProvider) wm_mod.Backend {
+        return self.backend_override orelse self.hyprland_backend.backend();
+    }
+};
+
+fn formatWorkspaceSubtitle(allocator: std.mem.Allocator, row: wm_mod.WorkspaceInfo) ![]u8 {
+    if (row.monitor_name.len == 0) {
+        return std.fmt.allocPrint(allocator, "{d} window{s}", .{ row.window_count, if (row.window_count == 1) "" else "s" });
+    }
+    return std.fmt.allocPrint(allocator, "{s} | {d} window{s}", .{ row.monitor_name, row.window_count, if (row.window_count == 1) "" else "s" });
+}
+
+fn testStubListWindows(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WindowSnapshot {
+    _ = allocator;
+    return .{ .items = &.{} };
+}
+
+test "workspaces provider maps workspace snapshot into candidates" {
+    const Fake = struct {
+        var health_state: wm_mod.Health = .ready;
+        fn listWorkspaces(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WorkspaceSnapshot {
+            var items = try allocator.alloc(wm_mod.WorkspaceInfo, 2);
+            items[0] = .{
+                .id = 1,
+                .name = try allocator.dupe(u8, "dev"),
+                .monitor_name = try allocator.dupe(u8, "eDP-1"),
+                .window_count = 4,
+            };
+            items[1] = .{
+                .id = 2,
+                .name = try allocator.dupe(u8, "www"),
+                .monitor_name = try allocator.dupe(u8, "HDMI-A-1"),
+                .window_count = 1,
+            };
+            return .{ .items = items };
+        }
+        fn health(_: *anyopaque) wm_mod.Health {
+            return health_state;
+        }
+        fn capabilities(_: *anyopaque) wm_mod.Capability {
+            return .{ .workspaces = true };
+        }
+    };
+    var fake_ctx: u8 = 0;
+    const fake_backend = wm_mod.Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = testStubListWindows,
+            .list_workspaces = Fake.listWorkspaces,
+            .health = Fake.health,
+            .capabilities = Fake.capabilities,
+        },
+    };
+
+    var provider_impl = WorkspacesProvider{ .backend_override = fake_backend };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    try provider_impl.provider().collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 2), list.items.len);
+    try std.testing.expectEqual(search.CandidateKind.workspace, list.items[0].kind);
+    try std.testing.expectEqualStrings("dev", list.items[0].title);
+    try std.testing.expectEqualStrings("eDP-1 | 4 windows", list.items[0].subtitle);
+    try std.testing.expectEqualStrings("1", list.items[0].action);
+    try std.testing.expectEqualStrings("HDMI-A-1 | 1 window", list.items[1].subtitle);
+}
+
+test "workspaces provider reports unavailable when backend tools are unavailable" {
+    const Fake = struct {
+        fn listWorkspaces(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WorkspaceSnapshot {
+            _ = allocator;
+            return .{ .items = &.{} };
+        }
+        fn health(_: *anyopaque) wm_mod.Health {
+            return .unavailable;
+        }
+        fn capabilities(_: *anyopaque) wm_mod.Capability {
+            return .{ .workspaces = true };
+        }
+    };
+    var fake_ctx: u8 = 0;
+    const fake_backend = wm_mod.Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = testStubListWindows,
+            .list_workspaces = Fake.listWorkspaces,
+            .health = Fake.health,
+            .capabilities = Fake.capabilities,
+        },
+    };
+
+    var provider_impl = WorkspacesProvider{ .backend_override = fake_backend };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+    try std.testing.expectEqual(search.ProviderHealth.unavailable, provider.health());
+    try std.testing.expectEqual(@as(usize, 0), list.items.len);
+}
+
+test "workspaces provider maps hyprland backend workspace json" {
+    const FakeHypr = struct {
+        fn hasTools() bool {
+            return true;
+        }
+        fn listJson(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8,
+                \\[
+                \\ {"id":2,"name":"www","monitor":"HDMI-A-1","windows":1},
+                \\ {"id":1,"name":"dev","monitor":"eDP-1","windows":3}
+                \\]
+            );
+        }
+    };
+
+    var provider_impl = WorkspacesProvider{
+        .hyprland_backend = .{
+            .list_workspaces_json_fn = FakeHypr.listJson,
+            .has_tools_fn = FakeHypr.hasTools,
+        },
+    };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    try provider_impl.provider().collect(std.testing.allocator, &list);
+
+    try std.testing.expectEqual(@as(usize, 2), list.items.len);
+    try std.testing.expectEqualStrings("dev", list.items[0].title);
+    try std.testing.expectEqualStrings("1", list.items[0].action);
+    try std.testing.expectEqualStrings("www", list.items[1].title);
+}

@@ -3,6 +3,7 @@ const std = @import("std");
 pub const CandidateKind = enum {
     app,
     window,
+    workspace,
     dir,
     file,
     grep,
