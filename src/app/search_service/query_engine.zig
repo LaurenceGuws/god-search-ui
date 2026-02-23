@@ -39,7 +39,14 @@ pub fn collectAndRank(
     if (parsed.route == .web) {
         had_provider_runtime_failure.* = false;
         try providers.appendWebRouteCandidates(allocator, parsed, query_candidates);
-        return search.rankCandidatesWithHistory(allocator, parsed, query_candidates.items, recent);
+        var rank_query = parsed;
+        if (providers.parseWebCommand(parsed.term)) |cmd| {
+            switch (cmd) {
+                .bookmark => |b| rank_query.term = b.query,
+                .search => {},
+            }
+        }
+        return search.rankCandidatesWithHistory(allocator, rank_query, query_candidates.items, recent);
     }
 
     const report = try registry.collectAllWithReport(allocator, query_candidates);

@@ -13,13 +13,25 @@ pub const ParsedWebQuery = struct {
 };
 
 pub const ParsedBookmarkQuery = struct {
-    alias: []const u8,
+    query: []const u8,
 };
 
 pub const ParsedWebCommand = union(enum) {
     search: ParsedWebQuery,
     bookmark: ParsedBookmarkQuery,
 };
+
+const BrowserBookmark = struct {
+    title: []const u8,
+    url: []const u8,
+    subtitle: []const u8,
+};
+
+var browser_bookmarks_mu: std.Thread.Mutex = .{};
+var browser_bookmarks_loaded: bool = false;
+var browser_bookmarks: std.ArrayListUnmanaged(BrowserBookmark) = .{};
+var browser_bookmarks_owned: std.ArrayListUnmanaged([]u8) = .{};
+const browser_bookmark_limit: usize = 20_000;
 
 pub fn appendRouteCandidates(
     allocator: std.mem.Allocator,
@@ -46,15 +58,16 @@ pub fn appendRouteCandidates(
             });
         },
         .bookmark => |_| {
-            try out.append(allocator, .{
-                .kind = .web,
-                .title = "Open Bookmark",
-                .subtitle = trimmed_term,
-                .action = trimmed_term,
-                .icon = "bookmark-new-symbolic",
-            });
+            appendBrowserBookmarkCandidates(allocator, parsed_web_query(parsed_cmd), out);
         },
     }
+}
+
+fn parsed_web_query(cmd: ParsedWebCommand) []const u8 {
+    return switch (cmd) {
+        .bookmark => |b| b.query,
+        .search => |s| s.query,
+    };
 }
 
 pub fn parseWebQuery(term_raw: []const u8) ?ParsedWebQuery {
@@ -90,9 +103,8 @@ pub fn parseWebCommand(term_raw: []const u8) ?ParsedWebCommand {
     const first_end = std.mem.indexOfAny(u8, term, " \t") orelse term.len;
     const first = term[0..first_end];
     if (std.ascii.eqlIgnoreCase(first, "b")) {
-        const alias = std.mem.trim(u8, term[first.len..], " \t");
-        if (alias.len == 0) return null;
-        return .{ .bookmark = .{ .alias = alias } };
+        const query = std.mem.trim(u8, term[first.len..], " \t");
+        return .{ .bookmark = .{ .query = query } };
     }
     return .{ .search = parseWebQuery(term) orelse return null };
 }
@@ -108,6 +120,9 @@ pub fn buildSearchUrl(allocator: std.mem.Allocator, parsed: ParsedWebQuery) ![]u
 }
 
 pub fn resolveBookmarkUrl(allocator: std.mem.Allocator, alias: []const u8) !?[]u8 {
+    const direct = try resolveBrowserBookmarkUrl(allocator, alias);
+    if (direct != null) return direct;
+
     const path = try bookmarksPath(allocator);
     defer allocator.free(path);
     const data = readFileAnyPath(allocator, path, 1024 * 1024) catch |err| switch (err) {
@@ -116,6 +131,27 @@ pub fn resolveBookmarkUrl(allocator: std.mem.Allocator, alias: []const u8) !?[]u
     };
     defer allocator.free(data);
     return lookupBookmarkUrlFromTsv(allocator, data, alias);
+}
+
+pub fn resolveBrowserBookmarkUrl(allocator: std.mem.Allocator, query: []const u8) !?[]u8 {
+    const trimmed = std.mem.trim(u8, query, " \t\r\n");
+    if (trimmed.len == 0) return null;
+
+    ensureBrowserBookmarksLoaded();
+    browser_bookmarks_mu.lock();
+    defer browser_bookmarks_mu.unlock();
+
+    for (browser_bookmarks.items) |row| {
+        if (std.ascii.eqlIgnoreCase(row.title, trimmed)) {
+            const dup = try allocator.dupe(u8, row.url);
+            return dup;
+        }
+        if (std.ascii.eqlIgnoreCase(row.url, trimmed)) {
+            const dup = try allocator.dupe(u8, row.url);
+            return dup;
+        }
+    }
+    return null;
 }
 
 pub fn engineLabel(engine: WebEngine) []const u8 {
@@ -174,6 +210,146 @@ fn looksLikeUrl(value: []const u8) bool {
     return std.mem.startsWith(u8, value, "http://") or std.mem.startsWith(u8, value, "https://");
 }
 
+fn appendBrowserBookmarkCandidates(allocator: std.mem.Allocator, query: []const u8, out: *search.CandidateList) void {
+    ensureBrowserBookmarksLoaded();
+
+    browser_bookmarks_mu.lock();
+    defer browser_bookmarks_mu.unlock();
+
+    const needle = std.mem.trim(u8, query, " \t\r\n");
+    for (browser_bookmarks.items) |row| {
+        if (needle.len > 0 and
+            !containsCaseInsensitive(row.title, needle) and
+            !containsCaseInsensitive(row.url, needle) and
+            !containsCaseInsensitive(row.subtitle, needle))
+        {
+            continue;
+        }
+        out.append(allocator, .{
+            .kind = .web,
+            .title = row.title,
+            .subtitle = row.subtitle,
+            .action = row.url,
+            .icon = "bookmark-new-symbolic",
+        }) catch return;
+    }
+}
+
+fn containsCaseInsensitive(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len == 0) return true;
+    if (haystack.len < needle.len) return false;
+    var i: usize = 0;
+    while (i + needle.len <= haystack.len) : (i += 1) {
+        if (std.ascii.eqlIgnoreCase(haystack[i .. i + needle.len], needle)) return true;
+    }
+    return false;
+}
+
+fn ensureBrowserBookmarksLoaded() void {
+    browser_bookmarks_mu.lock();
+    defer browser_bookmarks_mu.unlock();
+    if (browser_bookmarks_loaded) return;
+    browser_bookmarks_loaded = true;
+    loadBrowserBookmarksLocked() catch |err| {
+        std.log.warn("browser bookmarks load failed: {s}", .{@errorName(err)});
+    };
+}
+
+fn loadBrowserBookmarksLocked() !void {
+    const allocator = std.heap.page_allocator;
+    const config_root = try configHomePath(allocator);
+    defer allocator.free(config_root);
+
+    const sources = [_]struct { browser: []const u8, rel: []const u8 }{
+        .{ .browser = "Chromium", .rel = "chromium/Default/Bookmarks" },
+        .{ .browser = "Chrome", .rel = "google-chrome/Default/Bookmarks" },
+        .{ .browser = "Brave", .rel = "BraveSoftware/Brave-Browser/Default/Bookmarks" },
+        .{ .browser = "Edge", .rel = "microsoft-edge/Default/Bookmarks" },
+        .{ .browser = "Vivaldi", .rel = "vivaldi/Default/Bookmarks" },
+    };
+
+    for (sources) |source| {
+        if (browser_bookmarks.items.len >= browser_bookmark_limit) break;
+        const path = try std.fs.path.join(allocator, &.{ config_root, source.rel });
+        defer allocator.free(path);
+
+        const data = std.fs.cwd().readFileAlloc(allocator, path, 16 * 1024 * 1024) catch continue;
+        defer allocator.free(data);
+
+        var parsed = std.json.parseFromSlice(std.json.Value, allocator, data, .{}) catch continue;
+        defer parsed.deinit();
+        try collectChromiumBookmarksLocked(source.browser, parsed.value);
+    }
+}
+
+fn configHomePath(allocator: std.mem.Allocator) ![]u8 {
+    if (std.process.getEnvVarOwned(allocator, "XDG_CONFIG_HOME")) |xdg| {
+        return xdg;
+    } else |_| {}
+    const home = try std.process.getEnvVarOwned(allocator, "HOME");
+    defer allocator.free(home);
+    return std.fmt.allocPrint(allocator, "{s}/.config", .{home});
+}
+
+fn collectChromiumBookmarksLocked(browser_label: []const u8, value: std.json.Value) !void {
+    if (browser_bookmarks.items.len >= browser_bookmark_limit) return;
+    if (value != .object) return;
+
+    if (value.object.get("type")) |type_val| {
+        if (type_val == .string and std.mem.eql(u8, type_val.string, "url")) {
+            const name_val = value.object.get("name") orelse return;
+            const url_val = value.object.get("url") orelse return;
+            if (name_val != .string or url_val != .string) return;
+            const raw_title = std.mem.trim(u8, name_val.string, " \t\r\n");
+            const title = if (raw_title.len > 0) raw_title else url_val.string;
+            try appendBrowserBookmarkLocked(browser_label, title, url_val.string);
+            return;
+        }
+    }
+
+    if (value.object.get("children")) |children_val| {
+        if (children_val == .array) {
+            for (children_val.array.items) |child| {
+                try collectChromiumBookmarksLocked(browser_label, child);
+                if (browser_bookmarks.items.len >= browser_bookmark_limit) return;
+            }
+        }
+    }
+
+    if (value.object.get("roots")) |roots_val| {
+        if (roots_val == .object) {
+            var it = roots_val.object.iterator();
+            while (it.next()) |entry| {
+                try collectChromiumBookmarksLocked(browser_label, entry.value_ptr.*);
+                if (browser_bookmarks.items.len >= browser_bookmark_limit) return;
+            }
+        }
+    }
+}
+
+fn appendBrowserBookmarkLocked(browser_label: []const u8, title: []const u8, url: []const u8) !void {
+    if (!looksLikeUrl(url)) return;
+    if (browser_bookmarks.items.len >= browser_bookmark_limit) return;
+
+    const kept_title = try keepBrowserBookmarkStringLocked(title);
+    const kept_url = try keepBrowserBookmarkStringLocked(url);
+    const subtitle = try std.fmt.allocPrint(std.heap.page_allocator, "{s} | {s}", .{ browser_label, url });
+    const kept_subtitle = try keepBrowserBookmarkStringLocked(subtitle);
+    std.heap.page_allocator.free(subtitle);
+
+    try browser_bookmarks.append(std.heap.page_allocator, .{
+        .title = kept_title,
+        .url = kept_url,
+        .subtitle = kept_subtitle,
+    });
+}
+
+fn keepBrowserBookmarkStringLocked(value: []const u8) ![]const u8 {
+    const copy = try std.heap.page_allocator.dupe(u8, value);
+    try browser_bookmarks_owned.append(std.heap.page_allocator, copy);
+    return copy;
+}
+
 test "appendRouteCandidates adds one web result for non-empty ? query" {
     var out = search.CandidateList.empty;
     defer out.deinit(std.testing.allocator);
@@ -196,18 +372,6 @@ test "appendRouteCandidates preserves executable selector payload but renders pa
     try std.testing.expectEqualStrings("Search Google", out.items[0].title);
     try std.testing.expectEqualStrings("dota 2", out.items[0].subtitle);
     try std.testing.expectEqualStrings("G  dota 2", out.items[0].action);
-}
-
-test "appendRouteCandidates supports bookmark subcommand" {
-    var out = search.CandidateList.empty;
-    defer out.deinit(std.testing.allocator);
-
-    try appendRouteCandidates(std.testing.allocator, search.parseQuery("?b docs"), &out);
-    try std.testing.expectEqual(@as(usize, 1), out.items.len);
-    try std.testing.expectEqual(search.CandidateKind.web, out.items[0].kind);
-    try std.testing.expectEqualStrings("Open Bookmark", out.items[0].title);
-    try std.testing.expectEqualStrings("b docs", out.items[0].subtitle);
-    try std.testing.expectEqualStrings("b docs", out.items[0].action);
 }
 
 test "appendRouteCandidates ignores non-web and empty web terms" {
@@ -254,7 +418,13 @@ test "parseWebQuery supports engine selectors and defaults" {
 test "parseWebCommand routes bookmark subcommand and search commands" {
     const bookmark = parseWebCommand("b docs") orelse unreachable;
     switch (bookmark) {
-        .bookmark => |b| try std.testing.expectEqualStrings("docs", b.alias),
+        .bookmark => |b| try std.testing.expectEqualStrings("docs", b.query),
+        else => return std.testing.expect(false),
+    }
+
+    const bookmark_empty = parseWebCommand("b") orelse unreachable;
+    switch (bookmark_empty) {
+        .bookmark => |b| try std.testing.expectEqualStrings("", b.query),
         else => return std.testing.expect(false),
     }
 
@@ -267,7 +437,11 @@ test "parseWebCommand routes bookmark subcommand and search commands" {
         else => return std.testing.expect(false),
     }
 
-    try std.testing.expect(parseWebCommand("b   ") == null);
+    const bookmark_space = parseWebCommand("b   ") orelse unreachable;
+    switch (bookmark_space) {
+        .bookmark => |b| try std.testing.expectEqualStrings("", b.query),
+        else => return std.testing.expect(false),
+    }
 }
 
 test "lookupBookmarkUrlFromTsv supports two and three column rows" {

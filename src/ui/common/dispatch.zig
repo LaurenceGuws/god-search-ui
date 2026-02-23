@@ -134,6 +134,19 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
             };
         },
         .web => {
+            if (std.mem.startsWith(u8, action, "http://") or std.mem.startsWith(u8, action, "https://")) {
+                const url_q = try shellSingleQuote(allocator, action);
+                defer allocator.free(url_q);
+                const cmd = try std.fmt.allocPrint(allocator, "xdg-open {s}", .{url_q});
+                return .{
+                    .command = cmd,
+                    .owned_command = cmd,
+                    .telemetry_kind = "web",
+                    .telemetry_ok_detail = "Bookmark",
+                    .error_message = "Bookmark failed to launch",
+                    .close_on_success = true,
+                };
+            }
             const parsed_cmd = providers_mod.parseWebCommand(action) orelse return .{};
             switch (parsed_cmd) {
                 .search => |parsed_web| {
@@ -152,7 +165,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                     };
                 },
                 .bookmark => |b| {
-                    const url = (try providers_mod.resolveBookmarkUrl(allocator, b.alias)) orelse {
+                    const url = (try providers_mod.resolveBookmarkUrl(allocator, b.query)) orelse {
                         return .{
                             .telemetry_kind = "web",
                             .telemetry_ok_detail = "bookmark-miss",
