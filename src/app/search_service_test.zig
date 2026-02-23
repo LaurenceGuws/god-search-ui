@@ -78,6 +78,46 @@ test "prewarm cache avoids repeated provider collection" {
     try std.testing.expectEqual(@as(usize, 1), Fake.collect_calls);
 }
 
+test "web route bypasses cached snapshot and still returns web result" {
+    const Fake = struct {
+        var collect_calls: usize = 0;
+
+        fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
+            _ = context;
+            collect_calls += 1;
+            try out.append(allocator, search.Candidate.init(.action, "Settings", "System", "settings"));
+        }
+
+        fn health(context: *anyopaque) search.ProviderHealth {
+            _ = context;
+            return .ready;
+        }
+    };
+
+    Fake.collect_calls = 0;
+    var dummy: u8 = 0;
+    const source = [_]search.Provider{
+        .{
+            .name = "fake",
+            .context = &dummy,
+            .vtable = &.{ .collect = Fake.collect, .health = Fake.health },
+        },
+    };
+
+    const registry = providers.ProviderRegistry.init(&source);
+    var service = SearchService.init(registry);
+    defer service.deinit(std.testing.allocator);
+
+    try service.prewarmProviders(std.testing.allocator);
+    const ranked = try service.searchQuery(std.testing.allocator, "?g dota 2");
+    defer std.testing.allocator.free(ranked);
+
+    try std.testing.expectEqual(@as(usize, 1), ranked.len);
+    try std.testing.expectEqual(search.CandidateKind.web, ranked[0].candidate.kind);
+    try std.testing.expect(std.mem.indexOf(u8, ranked[0].candidate.title, "dota 2") != null);
+    try std.testing.expectEqual(@as(usize, 1), Fake.collect_calls);
+}
+
 test "invalidateSnapshot forces provider recollection" {
     const Fake = struct {
         var collect_calls: usize = 0;

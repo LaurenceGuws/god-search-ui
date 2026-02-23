@@ -90,6 +90,29 @@ pub const SearchService = struct {
             return ranked_dynamic;
         }
 
+        if (dispatch.parsed.route == .web) {
+            var query_candidates = search.CandidateList.empty;
+            defer query_candidates.deinit(allocator);
+
+            const recent = try self.historySnapshotNewestFirstOwned(allocator);
+            defer history_access.freeSnapshot(allocator, recent);
+
+            var had_provider_runtime_failure = false;
+            const ranked_web = try query_engine.collectAndRank(
+                allocator,
+                self.registry,
+                dispatch.parsed,
+                recent,
+                &query_candidates,
+                &had_provider_runtime_failure,
+            );
+            self.query_mu.lock();
+            self.last_query_had_provider_runtime_failure = had_provider_runtime_failure;
+            self.query_mu.unlock();
+            query_metrics_access.setElapsed(&self.query_mu, &self.last_query_elapsed_ns, sw.elapsedNs());
+            return ranked_web;
+        }
+
         try self.prepareRefreshForStaticQuery();
         var query_candidates = search.CandidateList.empty;
         defer query_candidates.deinit(allocator);
