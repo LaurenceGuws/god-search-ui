@@ -51,7 +51,7 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-entry-layout > .gs-candidate-content { min-width: 0; }\n" ++
         ".gs-primary-row { min-height: 20px; }\n" ++
         ".gs-chip { font-size: 0.72em; font-weight: 700; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; }\n" ++
-        ".gs-chip-module-key { min-width: 1.8em; text-align: center; font-size: 0.78em; }\n" ++
+        ".gs-chip-module-key { min-width: 1.8em; font-size: 0.78em; }\n" ++
         ".gs-chip-app { color: #7fb0ff; background: rgba(127, 176, 255, 0.16); }\n" ++
         ".gs-chip-window { color: #78d2c7; background: rgba(120, 210, 199, 0.16); }\n" ++
         ".gs-chip-dir { color: #ddb26f; background: rgba(221, 178, 111, 0.16); }\n" ++

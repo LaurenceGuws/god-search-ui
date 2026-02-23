@@ -57,12 +57,17 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_scrolled_window_set_child(@ptrCast(scroller), list);
 
     const ctx: *UiContext = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(UiContext))));
+    const allocator_box = launch.allocator.create(std.mem.Allocator) catch {
+        c.g_free(ctx);
+        return;
+    };
+    allocator_box.* = launch.allocator;
     ctx.window = @ptrCast(window);
     ctx.entry = @ptrCast(entry);
     ctx.status = @ptrCast(status);
     ctx.list = @ptrCast(list);
     ctx.scroller = @ptrCast(scroller);
-    ctx.allocator = @ptrCast(@constCast(&launch.allocator));
+    ctx.allocator = @ptrCast(allocator_box);
     ctx.service = launch.service;
     ctx.telemetry = launch.telemetry;
     ctx.pending_power_confirm = gtk_types.GFALSE;

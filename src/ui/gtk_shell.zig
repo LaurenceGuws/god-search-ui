@@ -63,6 +63,13 @@ pub const Shell = struct {
     fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        disconnectSignalsByData(@ptrCast(ctx.window), ctx);
+        disconnectSignalsByData(@ptrCast(ctx.entry), ctx);
+        disconnectSignalsByData(@ptrCast(ctx.list), ctx);
+        const vadj = c.gtk_scrolled_window_get_vadjustment(ctx.scroller);
+        if (vadj != null) {
+            disconnectSignalsByData(@ptrCast(vadj), ctx);
+        }
         if (ctx.search_debounce_id != 0) {
             _ = c.g_source_remove(ctx.search_debounce_id);
             ctx.search_debounce_id = 0;
@@ -84,7 +91,22 @@ pub const Shell = struct {
         gtk_async.freePendingAsyncQuery(ctx);
         c.g_mutex_clear(&ctx.async_worker_lock);
         c.g_cond_clear(&ctx.async_worker_cond);
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+        allocator.destroy(allocator_ptr);
         c.g_free(ctx);
+    }
+
+    fn disconnectSignalsByData(instance: *anyopaque, data: *anyopaque) void {
+        _ = c.g_signal_handlers_disconnect_matched(
+            instance,
+            c.G_SIGNAL_MATCH_DATA,
+            0,
+            0,
+            null,
+            null,
+            data,
+        );
     }
 
     fn onKeyPressed(
