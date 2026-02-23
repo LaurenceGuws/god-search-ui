@@ -29,7 +29,7 @@ pub fn appendRouteCandidates(
     try out.append(allocator, .{
         .kind = .web,
         .title = title,
-        .subtitle = trimmed_term,
+        .subtitle = parsed_web.query,
         .action = trimmed_term,
         .icon = "web-browser-symbolic",
     });
@@ -42,17 +42,17 @@ pub fn parseWebQuery(term_raw: []const u8) ?ParsedWebQuery {
     const first_end = std.mem.indexOfAny(u8, term, " \t") orelse term.len;
     const first = term[0..first_end];
 
-    if (std.mem.eql(u8, first, "g")) {
+    if (std.ascii.eqlIgnoreCase(first, "g")) {
         const query = std.mem.trim(u8, term[first.len..], " \t");
         if (query.len == 0) return null;
         return .{ .engine = .google, .query = query };
     }
-    if (std.mem.eql(u8, first, "ddg")) {
+    if (std.ascii.eqlIgnoreCase(first, "ddg")) {
         const query = std.mem.trim(u8, term[first.len..], " \t");
         if (query.len == 0) return null;
         return .{ .engine = .duckduckgo, .query = query };
     }
-    if (std.mem.eql(u8, first, "w")) {
+    if (std.ascii.eqlIgnoreCase(first, "w")) {
         const query = std.mem.trim(u8, term[first.len..], " \t");
         if (query.len == 0) return null;
         return .{ .engine = .wikipedia, .query = query };
@@ -91,6 +91,18 @@ test "appendRouteCandidates adds one web result for non-empty ? query" {
     try std.testing.expectEqualStrings("dota 2", out.items[0].action);
 }
 
+test "appendRouteCandidates preserves executable selector payload but renders parsed query" {
+    var out = search.CandidateList.empty;
+    defer out.deinit(std.testing.allocator);
+
+    try appendRouteCandidates(std.testing.allocator, search.parseQuery("?G  dota 2"), &out);
+    try std.testing.expectEqual(@as(usize, 1), out.items.len);
+    try std.testing.expectEqual(search.CandidateKind.web, out.items[0].kind);
+    try std.testing.expectEqualStrings("Search Google", out.items[0].title);
+    try std.testing.expectEqualStrings("dota 2", out.items[0].subtitle);
+    try std.testing.expectEqualStrings("G  dota 2", out.items[0].action);
+}
+
 test "appendRouteCandidates ignores non-web and empty web terms" {
     var out = search.CandidateList.empty;
     defer out.deinit(std.testing.allocator);
@@ -112,6 +124,18 @@ test "parseWebQuery supports engine selectors and defaults" {
     const wiki = parseWebQuery("w zig language") orelse unreachable;
     try std.testing.expectEqual(WebEngine.wikipedia, wiki.engine);
     try std.testing.expectEqualStrings("zig language", wiki.query);
+
+    const google_upper = parseWebQuery("G dota 2") orelse unreachable;
+    try std.testing.expectEqual(WebEngine.google, google_upper.engine);
+    try std.testing.expectEqualStrings("dota 2", google_upper.query);
+
+    const ddg_upper = parseWebQuery("DDG arch linux") orelse unreachable;
+    try std.testing.expectEqual(WebEngine.duckduckgo, ddg_upper.engine);
+    try std.testing.expectEqualStrings("arch linux", ddg_upper.query);
+
+    const wiki_upper = parseWebQuery("W zig language") orelse unreachable;
+    try std.testing.expectEqual(WebEngine.wikipedia, wiki_upper.engine);
+    try std.testing.expectEqualStrings("zig language", wiki_upper.query);
 
     const default_engine = parseWebQuery("best dota builds") orelse unreachable;
     try std.testing.expectEqual(WebEngine.duckduckgo, default_engine.engine);

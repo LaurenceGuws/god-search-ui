@@ -109,12 +109,14 @@ test "web route bypasses cached snapshot and still returns web result" {
     defer service.deinit(std.testing.allocator);
 
     try service.prewarmProviders(std.testing.allocator);
-    const ranked = try service.searchQuery(std.testing.allocator, "?g dota 2");
+    const ranked = try service.searchQuery(std.testing.allocator, "?G dota 2");
     defer std.testing.allocator.free(ranked);
 
     try std.testing.expectEqual(@as(usize, 1), ranked.len);
     try std.testing.expectEqual(search.CandidateKind.web, ranked[0].candidate.kind);
-    try std.testing.expect(std.mem.indexOf(u8, ranked[0].candidate.title, "dota 2") != null);
+    try std.testing.expectEqualStrings("Search Google", ranked[0].candidate.title);
+    try std.testing.expectEqualStrings("dota 2", ranked[0].candidate.subtitle);
+    try std.testing.expectEqualStrings("G dota 2", ranked[0].candidate.action);
     try std.testing.expectEqual(@as(usize, 1), Fake.collect_calls);
 }
 

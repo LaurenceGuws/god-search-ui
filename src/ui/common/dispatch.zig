@@ -223,3 +223,32 @@ test "web command supports google and wikipedia selectors" {
     );
     try std.testing.expectEqualStrings("Wikipedia", wiki_plan.telemetry_ok_detail);
 }
+
+test "web command selectors are case-insensitive" {
+    var google_plan = try planCommandKind(std.testing.allocator, .web, "G dota 2");
+    defer google_plan.deinit(std.testing.allocator);
+    try std.testing.expect(google_plan.command != null);
+    try std.testing.expectEqualStrings(
+        "xdg-open 'https://www.google.com/search?q=dota%202'",
+        google_plan.command.?,
+    );
+    try std.testing.expectEqualStrings("Google", google_plan.telemetry_ok_detail);
+
+    var ddg_plan = try planCommandKind(std.testing.allocator, .web, "DDG arch linux");
+    defer ddg_plan.deinit(std.testing.allocator);
+    try std.testing.expect(ddg_plan.command != null);
+    try std.testing.expectEqualStrings(
+        "xdg-open 'https://duckduckgo.com/?q=arch%20linux'",
+        ddg_plan.command.?,
+    );
+    try std.testing.expectEqualStrings("DuckDuckGo", ddg_plan.telemetry_ok_detail);
+
+    var wiki_plan = try planCommandKind(std.testing.allocator, .web, "W zig language");
+    defer wiki_plan.deinit(std.testing.allocator);
+    try std.testing.expect(wiki_plan.command != null);
+    try std.testing.expectEqualStrings(
+        "xdg-open 'https://en.wikipedia.org/w/index.php?search=zig%20language'",
+        wiki_plan.command.?,
+    );
+    try std.testing.expectEqualStrings("Wikipedia", wiki_plan.telemetry_ok_detail);
+}
