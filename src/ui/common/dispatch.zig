@@ -134,11 +134,8 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
             };
         },
         .web => {
-            const term = std.mem.trim(u8, action, " \t\r\n");
-            if (term.len == 0) return .{};
-            const encoded = try percentEncodeQuery(allocator, term);
-            defer allocator.free(encoded);
-            const url = try std.fmt.allocPrint(allocator, "https://duckduckgo.com/?q={s}", .{encoded});
+            const parsed_web = providers_mod.parseWebQuery(action) orelse return .{};
+            const url = try providers_mod.buildWebSearchUrl(allocator, parsed_web);
             defer allocator.free(url);
             const url_q = try shellSingleQuote(allocator, url);
             defer allocator.free(url_q);
@@ -147,7 +144,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 .command = cmd,
                 .owned_command = cmd,
                 .telemetry_kind = "web",
-                .telemetry_ok_detail = "duckduckgo",
+                .telemetry_ok_detail = providers_mod.engineLabelForWeb(parsed_web.engine),
                 .error_message = "Web search failed to launch",
                 .close_on_success = true,
             };
@@ -172,29 +169,6 @@ fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
     return out.toOwnedSlice(allocator);
 }
 
-fn percentEncodeQuery(allocator: std.mem.Allocator, term: []const u8) ![]u8 {
-    var out = std.ArrayList(u8).empty;
-    defer out.deinit(allocator);
-
-    for (term) |ch| {
-        if (std.ascii.isAlphanumeric(ch) or ch == '-' or ch == '.' or ch == '_' or ch == '~') {
-            try out.append(allocator, ch);
-            continue;
-        }
-        const hex = [_]u8{
-            '%',
-            toUpperHex(ch >> 4),
-            toUpperHex(ch & 0x0f),
-        };
-        try out.appendSlice(allocator, &hex);
-    }
-    return out.toOwnedSlice(allocator);
-}
-
-fn toUpperHex(nibble: u8) u8 {
-    return if (nibble < 10) ('0' + nibble) else ('A' + (nibble - 10));
-}
-
 test "window focus command shell-quotes metacharacters in address" {
     var plan = try planCommandKind(std.testing.allocator, .window, "0xabc;touch /tmp/pwn $(id)");
     defer plan.deinit(std.testing.allocator);
@@ -217,7 +191,7 @@ test "window focus command escapes apostrophes in address" {
     );
 }
 
-test "web command percent-encodes query and quotes url" {
+test "web command defaults to duckduckgo and percent-encodes query" {
     var plan = try planCommandKind(std.testing.allocator, .web, "dota 2 + mmr");
     defer plan.deinit(std.testing.allocator);
 
@@ -227,4 +201,25 @@ test "web command percent-encodes query and quotes url" {
         plan.command.?,
     );
     try std.testing.expectEqualStrings("web", plan.telemetry_kind);
+    try std.testing.expectEqualStrings("DuckDuckGo", plan.telemetry_ok_detail);
+}
+
+test "web command supports google and wikipedia selectors" {
+    var google_plan = try planCommandKind(std.testing.allocator, .web, "g dota 2");
+    defer google_plan.deinit(std.testing.allocator);
+    try std.testing.expect(google_plan.command != null);
+    try std.testing.expectEqualStrings(
+        "xdg-open 'https://www.google.com/search?q=dota%202'",
+        google_plan.command.?,
+    );
+    try std.testing.expectEqualStrings("Google", google_plan.telemetry_ok_detail);
+
+    var wiki_plan = try planCommandKind(std.testing.allocator, .web, "w zig language");
+    defer wiki_plan.deinit(std.testing.allocator);
+    try std.testing.expect(wiki_plan.command != null);
+    try std.testing.expectEqualStrings(
+        "xdg-open 'https://en.wikipedia.org/w/index.php?search=zig%20language'",
+        wiki_plan.command.?,
+    );
+    try std.testing.expectEqualStrings("Wikipedia", wiki_plan.telemetry_ok_detail);
 }
