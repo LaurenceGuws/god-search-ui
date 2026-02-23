@@ -1,13 +1,12 @@
 const std = @import("std");
 const search = @import("../search/mod.zig");
-const tool_check = @import("tool_check.zig");
+const wm_mod = @import("../wm/mod.zig");
 
 pub const WindowsProvider = struct {
     owned_strings_current: std.ArrayListUnmanaged([]u8) = .{},
     owned_strings_previous: std.ArrayListUnmanaged([]u8) = .{},
-    had_runtime_failure: bool = false,
-    list_windows_fn: *const fn (allocator: std.mem.Allocator) anyerror![]u8 = listWindowsWithSystemTools,
-    has_tools_fn: *const fn () bool = hasSystemTools,
+    hyprland_backend: wm_mod.HyprlandBackend = .{},
+    backend_override: ?wm_mod.Backend = null,
 
     pub fn deinit(self: *WindowsProvider, allocator: std.mem.Allocator) void {
         self.freeOwnedStrings(allocator, &self.owned_strings_current);
@@ -29,80 +28,38 @@ pub const WindowsProvider = struct {
 
     fn collect(context: *anyopaque, allocator: std.mem.Allocator, out: *search.CandidateList) !void {
         const self: *WindowsProvider = @ptrCast(@alignCast(context));
-        if (!self.has_tools_fn()) {
+        const wm_backend = self.backend();
+        if (!wm_backend.capabilities().windows) {
             return;
         }
+        if (wm_backend.health() == .unavailable) return;
 
-        const rows = self.list_windows_fn(allocator) catch |err| {
-            self.had_runtime_failure = true;
+        var snapshot = wm_backend.listWindows(allocator) catch |err| {
             std.log.warn("windows provider query failed: {s}", .{@errorName(err)});
             return;
         };
-        self.had_runtime_failure = false;
-        defer allocator.free(rows);
+        defer snapshot.deinit(allocator);
         self.rotateOwnedStringsForCollect(allocator);
 
-        var lines = std.mem.splitScalar(u8, rows, '\n');
-        while (lines.next()) |line| {
-            if (line.len == 0) continue;
-            var fields = std.mem.splitScalar(u8, line, '\t');
-            const title = fields.next() orelse continue;
-            const class = fields.next() orelse "Window";
-            const address = fields.next() orelse continue;
-
-            const kept_title = try self.keepJqTsvField(allocator, title);
-            const kept_class = try self.keepJqTsvField(allocator, class);
-            const kept_address = try self.keepJqTsvField(allocator, address);
+        for (snapshot.items) |row| {
+            const kept_title = try self.keepString(allocator, row.title);
+            const kept_class = try self.keepString(allocator, row.class_name);
+            const kept_address = try self.keepString(allocator, row.id);
             try out.append(allocator, search.Candidate.init(.window, kept_title, kept_class, kept_address));
         }
     }
 
     fn health(context: *anyopaque) search.ProviderHealth {
         const self: *WindowsProvider = @ptrCast(@alignCast(context));
-        if (!self.has_tools_fn()) return .unavailable;
-        if (self.had_runtime_failure) return .degraded;
-        return .ready;
+        return switch (self.backend().health()) {
+            .ready => .ready,
+            .degraded => .degraded,
+            .unavailable => .unavailable,
+        };
     }
 
     fn keepString(self: *WindowsProvider, allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
         const copy = try allocator.dupe(u8, value);
-        try self.owned_strings_current.append(allocator, copy);
-        return copy;
-    }
-
-    fn keepJqTsvField(self: *WindowsProvider, allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
-        if (std.mem.indexOfScalar(u8, value, '\\') == null) {
-            return self.keepString(allocator, value);
-        }
-
-        var decoded = std.ArrayList(u8).empty;
-        defer decoded.deinit(allocator);
-
-        var i: usize = 0;
-        while (i < value.len) : (i += 1) {
-            if (value[i] != '\\') {
-                try decoded.append(allocator, value[i]);
-                continue;
-            }
-            if (i + 1 >= value.len) {
-                try decoded.append(allocator, '\\');
-                continue;
-            }
-
-            i += 1;
-            switch (value[i]) {
-                'n' => try decoded.append(allocator, '\n'),
-                'r' => try decoded.append(allocator, '\r'),
-                't' => try decoded.append(allocator, '\t'),
-                '\\' => try decoded.append(allocator, '\\'),
-                else => {
-                    try decoded.append(allocator, '\\');
-                    try decoded.append(allocator, value[i]);
-                },
-            }
-        }
-
-        const copy = try decoded.toOwnedSlice(allocator);
         try self.owned_strings_current.append(allocator, copy);
         return copy;
     }
@@ -122,46 +79,51 @@ pub const WindowsProvider = struct {
         for (strings.items) |item| allocator.free(item);
         strings.clearRetainingCapacity();
     }
-};
 
-fn hasSystemTools() bool {
-    return tool_check.commandExistsCached("hyprctl") and tool_check.commandExistsCached("jq");
-}
-
-fn listWindowsWithSystemTools(allocator: std.mem.Allocator) ![]u8 {
-    const query =
-        "hyprctl clients -j | jq -r '.[] | select(.mapped == true and (.workspace.id // -1) >= 0) | [((.title // \"\") | if length > 0 then . else (.class // \"Window\") end), (.class // \"Window\"), (.address // \"\")] | @tsv'";
-    const result = try std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &.{ "sh", "-lc", query },
-    });
-    if (result.term != .Exited or result.term.Exited != 0) {
-        allocator.free(result.stdout);
-        defer allocator.free(result.stderr);
-        return error.WindowQueryFailed;
+    fn backend(self: *WindowsProvider) wm_mod.Backend {
+        return self.backend_override orelse self.hyprland_backend.backend();
     }
-    allocator.free(result.stderr);
-    return result.stdout;
-}
+};
 
 test "windows provider parses command rows into candidates" {
     const Fake = struct {
-        fn hasTools() bool {
-            return true;
+        var health_state: wm_mod.Health = .ready;
+        fn listWindows(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WindowSnapshot {
+            var items = try allocator.alloc(wm_mod.WindowInfo, 2);
+            items[0] = .{
+                .title = try allocator.dupe(u8, "Terminal"),
+                .class_name = try allocator.dupe(u8, "kitty"),
+                .id = try allocator.dupe(u8, "0xabc"),
+            };
+            items[1] = .{
+                .title = try allocator.dupe(u8, "Browser"),
+                .class_name = try allocator.dupe(u8, "zen"),
+                .id = try allocator.dupe(u8, "0xdef"),
+            };
+            return .{ .items = items };
         }
 
-        fn listWindows(allocator: std.mem.Allocator) ![]u8 {
-            return allocator.dupe(u8,
-                \\Terminal\tkitty\t0xabc
-                \\Browser\tzen\t0xdef
-                \\
-            );
+        fn health(_: *anyopaque) wm_mod.Health {
+            return health_state;
         }
+
+        fn capabilities(_: *anyopaque) wm_mod.Capability {
+            return .{ .windows = true };
+        }
+    };
+    var fake_ctx: u8 = 0;
+    const fake_backend = wm_mod.Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = Fake.listWindows,
+            .health = Fake.health,
+            .capabilities = Fake.capabilities,
+        },
     };
 
     var provider_impl = WindowsProvider{
-        .list_windows_fn = Fake.listWindows,
-        .has_tools_fn = Fake.hasTools,
+        .backend_override = fake_backend,
     };
     defer provider_impl.deinit(std.testing.allocator);
 
@@ -181,18 +143,32 @@ test "windows provider parses command rows into candidates" {
 
 test "windows provider reports unavailable when tools are unavailable" {
     const Fake = struct {
-        fn hasTools() bool {
-            return false;
+        fn listWindows(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WindowSnapshot {
+            _ = allocator;
+            return .{ .items = &.{} };
         }
 
-        fn listWindows(allocator: std.mem.Allocator) ![]u8 {
-            return allocator.dupe(u8, "");
+        fn health(_: *anyopaque) wm_mod.Health {
+            return .unavailable;
         }
+
+        fn capabilities(_: *anyopaque) wm_mod.Capability {
+            return .{ .windows = true };
+        }
+    };
+    var fake_ctx: u8 = 0;
+    const fake_backend = wm_mod.Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = Fake.listWindows,
+            .health = Fake.health,
+            .capabilities = Fake.capabilities,
+        },
     };
 
     var provider_impl = WindowsProvider{
-        .list_windows_fn = Fake.listWindows,
-        .has_tools_fn = Fake.hasTools,
+        .backend_override = fake_backend,
     };
     defer provider_impl.deinit(std.testing.allocator);
 
@@ -208,18 +184,34 @@ test "windows provider reports unavailable when tools are unavailable" {
 
 test "windows provider runtime query failure degrades health while keeping UX graceful" {
     const Fake = struct {
-        fn hasTools() bool {
-            return true;
-        }
-
-        fn listWindows(_: std.mem.Allocator) ![]u8 {
+        var health_state: wm_mod.Health = .ready;
+        fn listWindows(_: *anyopaque, _: std.mem.Allocator) !wm_mod.WindowSnapshot {
+            health_state = .degraded;
             return error.WindowQueryFailed;
         }
+
+        fn health(_: *anyopaque) wm_mod.Health {
+            return health_state;
+        }
+
+        fn capabilities(_: *anyopaque) wm_mod.Capability {
+            return .{ .windows = true };
+        }
+    };
+    Fake.health_state = .ready;
+    var fake_ctx: u8 = 0;
+    const fake_backend = wm_mod.Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = Fake.listWindows,
+            .health = Fake.health,
+            .capabilities = Fake.capabilities,
+        },
     };
 
     var provider_impl = WindowsProvider{
-        .list_windows_fn = Fake.listWindows,
-        .has_tools_fn = Fake.hasTools,
+        .backend_override = fake_backend,
     };
     defer provider_impl.deinit(std.testing.allocator);
 
@@ -235,26 +227,53 @@ test "windows provider runtime query failure degrades health while keeping UX gr
 
 test "windows provider keeps prior generations alive on transient failure" {
     const Fake = struct {
-        fn hasTools() bool {
-            return true;
+        var mode: u8 = 0;
+        var health_state: wm_mod.Health = .ready;
+
+        fn oneWindowSnapshot(allocator: std.mem.Allocator, title: []const u8, class_name: []const u8, id: []const u8) !wm_mod.WindowSnapshot {
+            var items = try allocator.alloc(wm_mod.WindowInfo, 1);
+            items[0] = .{
+                .title = try allocator.dupe(u8, title),
+                .class_name = try allocator.dupe(u8, class_name),
+                .id = try allocator.dupe(u8, id),
+            };
+            return .{ .items = items };
         }
 
-        fn listWindowsA(allocator: std.mem.Allocator) ![]u8 {
-            return allocator.dupe(u8, "Terminal\tkitty\t0xaaa\n");
+        fn listWindows(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WindowSnapshot {
+            return switch (mode) {
+                0 => oneWindowSnapshot(allocator, "Terminal", "kitty", "0xaaa"),
+                1 => oneWindowSnapshot(allocator, "Browser", "zen", "0xbbb"),
+                else => blk: {
+                    health_state = .degraded;
+                    break :blk error.WindowQueryFailed;
+                },
+            };
         }
 
-        fn listWindowsB(allocator: std.mem.Allocator) ![]u8 {
-            return allocator.dupe(u8, "Browser\tzen\t0xbbb\n");
+        fn health(_: *anyopaque) wm_mod.Health {
+            return health_state;
         }
 
-        fn listWindowsFail(_: std.mem.Allocator) ![]u8 {
-            return error.WindowQueryFailed;
+        fn capabilities(_: *anyopaque) wm_mod.Capability {
+            return .{ .windows = true };
         }
+    };
+    Fake.mode = 0;
+    Fake.health_state = .ready;
+    var fake_ctx: u8 = 0;
+    const fake_backend = wm_mod.Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = Fake.listWindows,
+            .health = Fake.health,
+            .capabilities = Fake.capabilities,
+        },
     };
 
     var provider_impl = WindowsProvider{
-        .list_windows_fn = Fake.listWindowsA,
-        .has_tools_fn = Fake.hasTools,
+        .backend_override = fake_backend,
     };
     defer provider_impl.deinit(std.testing.allocator);
 
@@ -267,7 +286,7 @@ test "windows provider keeps prior generations alive on transient failure" {
     const first_action = list.items[0].action;
 
     list.clearRetainingCapacity();
-    provider_impl.list_windows_fn = Fake.listWindowsB;
+    Fake.mode = 1;
     try provider.collect(std.testing.allocator, &list);
     const second_title = list.items[0].title;
     const second_action = list.items[0].action;
@@ -276,7 +295,7 @@ test "windows provider keeps prior generations alive on transient failure" {
     try std.testing.expectEqual(@as(usize, 6), total_before_failure);
 
     list.clearRetainingCapacity();
-    provider_impl.list_windows_fn = Fake.listWindowsFail;
+    Fake.mode = 2;
     try provider.collect(std.testing.allocator, &list);
 
     const total_after_failure = provider_impl.owned_strings_current.items.len + provider_impl.owned_strings_previous.items.len;
@@ -289,20 +308,26 @@ test "windows provider keeps prior generations alive on transient failure" {
     try std.testing.expectEqualStrings("0xbbb", second_action);
 }
 
-test "windows provider decodes jq tsv escaped tabs and newlines" {
-    const Fake = struct {
+test "windows provider maps hyprland backend runtime parse without jq escapes dependency" {
+    const FakeHypr = struct {
         fn hasTools() bool {
             return true;
         }
 
-        fn listWindows(allocator: std.mem.Allocator) ![]u8 {
-            return allocator.dupe(u8, "Title\\\\Thing\\tTabbed\\nName\tclass\\\\name\t0xabc\n");
+        fn listJson(allocator: std.mem.Allocator) ![]u8 {
+            return allocator.dupe(u8,
+                \\[
+                \\ {"mapped":true,"workspace":{"id":1},"title":"Title\\tTabbed\\nName","class":"zen","address":"0xabc"}
+                \\]
+            );
         }
     };
 
     var provider_impl = WindowsProvider{
-        .list_windows_fn = Fake.listWindows,
-        .has_tools_fn = Fake.hasTools,
+        .hyprland_backend = .{
+            .list_windows_json_fn = FakeHypr.listJson,
+            .has_tools_fn = FakeHypr.hasTools,
+        },
     };
     defer provider_impl.deinit(std.testing.allocator);
 
@@ -313,8 +338,8 @@ test "windows provider decodes jq tsv escaped tabs and newlines" {
     try provider.collect(std.testing.allocator, &list);
 
     try std.testing.expectEqual(@as(usize, 1), list.items.len);
-    try std.testing.expectEqualStrings("Title\\Thing\tTabbed\nName", list.items[0].title);
-    try std.testing.expectEqualStrings("class\\name", list.items[0].subtitle);
+    try std.testing.expectEqualStrings("Title\tTabbed\nName", list.items[0].title);
+    try std.testing.expectEqualStrings("zen", list.items[0].subtitle);
     try std.testing.expectEqualStrings("0xabc", list.items[0].action);
 }
 

@@ -4,6 +4,7 @@ pub const app = @import("app/mod.zig");
 pub const providers = @import("providers/mod.zig");
 pub const search = @import("search/mod.zig");
 pub const ui = @import("ui/mod.zig");
+pub const wm = @import("wm/mod.zig");
 
 pub fn bufferedPrint() !void {
     // Stdout is for the actual output of your application, for example if you
