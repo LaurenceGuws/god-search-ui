@@ -8,6 +8,13 @@ const ScoredCandidate = @import("../../search/mod.zig").ScoredCandidate;
 
 pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget {
     if (kind == .app) {
+        if (resolveAppIconFilePath(allocator, icon)) |icon_path_z| {
+            defer allocator.free(icon_path_z);
+            const image = c.gtk_image_new_from_file(icon_path_z.ptr);
+            c.gtk_image_set_pixel_size(@ptrCast(image), 30);
+            c.gtk_widget_add_css_class(image, "gs-kind-icon");
+            return @ptrCast(image);
+        }
         if (resolveAppIconName(allocator, icon, action)) |icon_name_z| {
             defer allocator.free(icon_name_z);
             const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
@@ -44,6 +51,10 @@ fn resolveAppIconName(allocator: std.mem.Allocator, icon: []const u8, action: []
     if (explicit.len > 0) {
         if (resolveIconVariant(allocator, explicit)) |name| return name;
     }
+    if (steamGameIconNameFromAction(allocator, action)) |steam_icon_name| {
+        defer allocator.free(steam_icon_name);
+        if (resolveIconVariant(allocator, steam_icon_name)) |name| return name;
+    }
     if (appIconNameFromAction(allocator, action)) |token_name| {
         defer allocator.free(token_name);
         if (resolveIconVariant(allocator, token_name)) |name| return name;
@@ -51,11 +62,20 @@ fn resolveAppIconName(allocator: std.mem.Allocator, icon: []const u8, action: []
     return null;
 }
 
+fn resolveAppIconFilePath(allocator: std.mem.Allocator, icon: []const u8) ?[:0]u8 {
+    const raw = std.mem.trim(u8, icon, " \t\r\n\"'");
+    if (raw.len == 0) return null;
+    const path = expandHomePath(allocator, raw) catch return null;
+    defer allocator.free(path);
+    if (!fileExistsAnyPath(path)) return null;
+    return allocator.dupeZ(u8, path) catch null;
+}
+
 fn resolveIconVariant(allocator: std.mem.Allocator, raw_name: []const u8) ?[:0]u8 {
     var name = std.mem.trim(u8, raw_name, " \t\r\n\"'");
     if (name.len == 0) return null;
 
-    var candidates: [6][]const u8 = undefined;
+    var candidates: [12][]const u8 = undefined;
     var count: usize = 0;
     candidates[count] = name;
     count += 1;
@@ -82,17 +102,36 @@ fn resolveIconVariant(allocator: std.mem.Allocator, raw_name: []const u8) ?[:0]u
         candidates[count] = candidates[count - 1][0 .. candidates[count - 1].len - ".desktop".len];
         count += 1;
     }
+    if (std.mem.endsWith(u8, name, ".png") and name.len > ".png".len) {
+        candidates[count] = name[0 .. name.len - ".png".len];
+        count += 1;
+    }
+    if (std.mem.endsWith(u8, name, ".svg") and name.len > ".svg".len) {
+        candidates[count] = name[0 .. name.len - ".svg".len];
+        count += 1;
+    }
+    if (std.mem.endsWith(u8, name, ".xpm") and name.len > ".xpm".len) {
+        candidates[count] = name[0 .. name.len - ".xpm".len];
+        count += 1;
+    }
 
     var idx: usize = 0;
     while (idx < count) : (idx += 1) {
         const candidate = candidates[idx];
         if (candidate.len == 0) continue;
+        if (std.mem.indexOfScalar(u8, candidate, ' ') != null) {
+            var dashed_buf: [256]u8 = undefined;
+            const dashed = replaceSpacesWith(candidate, '-', &dashed_buf) orelse candidate;
+            if (iconExists(dashed)) {
+                return allocator.dupeZ(u8, dashed) catch null;
+            }
+        }
         if (iconExists(candidate)) {
             return allocator.dupeZ(u8, candidate) catch null;
         }
     }
 
-    return allocator.dupeZ(u8, candidates[0]) catch null;
+    return null;
 }
 
 fn iconExists(name: []const u8) bool {
@@ -103,6 +142,41 @@ fn iconExists(name: []const u8) bool {
     const name_z = std.heap.page_allocator.dupeZ(u8, name) catch return false;
     defer std.heap.page_allocator.free(name_z);
     return c.gtk_icon_theme_has_icon(theme, name_z.ptr) != 0;
+}
+
+fn steamGameIconNameFromAction(allocator: std.mem.Allocator, action: []const u8) ?[:0]u8 {
+    const marker = "steam://rungameid/";
+    const idx = std.mem.indexOf(u8, action, marker) orelse return null;
+    const rest = action[idx + marker.len ..];
+    var end: usize = 0;
+    while (end < rest.len and std.ascii.isDigit(rest[end])) : (end += 1) {}
+    if (end == 0) return null;
+    return std.fmt.allocPrintZ(allocator, "steam_icon_{s}", .{rest[0..end]}) catch null;
+}
+
+fn expandHomePath(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    if (!std.mem.startsWith(u8, path, "~/")) return allocator.dupe(u8, path);
+    const home = std.process.getEnvVarOwned(allocator, "HOME") catch return allocator.dupe(u8, path);
+    defer allocator.free(home);
+    return std.fmt.allocPrint(allocator, "{s}/{s}", .{ home, path[2..] });
+}
+
+fn fileExistsAnyPath(path: []const u8) bool {
+    if (std.fs.path.isAbsolute(path)) {
+        std.fs.accessAbsolute(path, .{}) catch return false;
+        return true;
+    }
+    std.fs.cwd().access(path, .{}) catch return false;
+    return true;
+}
+
+fn replaceSpacesWith(input: []const u8, replacement: u8, buf: []u8) ?[]const u8 {
+    if (input.len > buf.len) return null;
+    @memcpy(buf[0..input.len], input);
+    for (buf[0..input.len]) |*ch| {
+        if (ch.* == ' ') ch.* = replacement;
+    }
+    return buf[0..input.len];
 }
 
 fn actionCommandToken(action: []const u8) []const u8 {
@@ -144,6 +218,16 @@ test "appIconNameFromAction follows token parsing heuristics" {
     };
     defer allocator.free(name);
     try std.testing.expectEqualStrings("wezterm", name);
+}
+
+test "steamGameIconNameFromAction extracts rungameid icon name" {
+    var allocator = std.testing.allocator;
+    const icon_name = steamGameIconNameFromAction(allocator, "steam steam://rungameid/570") orelse {
+        return std.testing.expect(false);
+    };
+    defer allocator.free(icon_name);
+    try std.testing.expectEqualStrings("steam_icon_570", icon_name);
+    try std.testing.expect(steamGameIconNameFromAction(allocator, "steam steam://open/friends") == null);
 }
 
 test "hasAppGlyphFallback only triggers for app rows without icon and token" {
