@@ -19,9 +19,11 @@ pub fn appendRouteCandidates(
 ) !void {
     if (parsed.route != .web) return;
     const parsed_web = parseWebQuery(parsed.term) orelse return;
-
-    const title = try std.fmt.allocPrint(allocator, "Search Web: {s}", .{parsed_web.query});
-    defer allocator.free(title);
+    const title = switch (parsed_web.engine) {
+        .duckduckgo => "Search Web",
+        .google => "Search Google",
+        .wikipedia => "Search Wikipedia",
+    };
 
     try out.append(allocator, .{
         .kind = .web,
@@ -83,7 +85,7 @@ test "appendRouteCandidates adds one web result for non-empty ? query" {
     try appendRouteCandidates(std.testing.allocator, search.parseQuery("? dota 2"), &out);
     try std.testing.expectEqual(@as(usize, 1), out.items.len);
     try std.testing.expectEqual(search.CandidateKind.web, out.items[0].kind);
-    try std.testing.expectEqualStrings("Search Web: dota 2", out.items[0].title);
+    try std.testing.expectEqualStrings("Search Web", out.items[0].title);
     try std.testing.expectEqualStrings("DuckDuckGo", out.items[0].subtitle);
     try std.testing.expectEqualStrings("dota 2", out.items[0].action);
 }
