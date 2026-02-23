@@ -134,20 +134,46 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
             };
         },
         .web => {
-            const parsed_web = providers_mod.parseWebQuery(action) orelse return .{};
-            const url = try providers_mod.buildWebSearchUrl(allocator, parsed_web);
-            defer allocator.free(url);
-            const url_q = try shellSingleQuote(allocator, url);
-            defer allocator.free(url_q);
-            const cmd = try std.fmt.allocPrint(allocator, "xdg-open {s}", .{url_q});
-            return .{
-                .command = cmd,
-                .owned_command = cmd,
-                .telemetry_kind = "web",
-                .telemetry_ok_detail = providers_mod.engineLabelForWeb(parsed_web.engine),
-                .error_message = "Web search failed to launch",
-                .close_on_success = true,
-            };
+            const parsed_cmd = providers_mod.parseWebCommand(action) orelse return .{};
+            switch (parsed_cmd) {
+                .search => |parsed_web| {
+                    const url = try providers_mod.buildWebSearchUrl(allocator, parsed_web);
+                    defer allocator.free(url);
+                    const url_q = try shellSingleQuote(allocator, url);
+                    defer allocator.free(url_q);
+                    const cmd = try std.fmt.allocPrint(allocator, "xdg-open {s}", .{url_q});
+                    return .{
+                        .command = cmd,
+                        .owned_command = cmd,
+                        .telemetry_kind = "web",
+                        .telemetry_ok_detail = providers_mod.engineLabelForWeb(parsed_web.engine),
+                        .error_message = "Web search failed to launch",
+                        .close_on_success = true,
+                    };
+                },
+                .bookmark => |b| {
+                    const url = (try providers_mod.resolveBookmarkUrl(allocator, b.alias)) orelse {
+                        return .{
+                            .telemetry_kind = "web",
+                            .telemetry_ok_detail = "bookmark-miss",
+                            .error_message = "Bookmark not found",
+                            .unknown_action = true,
+                        };
+                    };
+                    defer allocator.free(url);
+                    const url_q = try shellSingleQuote(allocator, url);
+                    defer allocator.free(url_q);
+                    const cmd = try std.fmt.allocPrint(allocator, "xdg-open {s}", .{url_q});
+                    return .{
+                        .command = cmd,
+                        .owned_command = cmd,
+                        .telemetry_kind = "web",
+                        .telemetry_ok_detail = "Bookmark",
+                        .error_message = "Bookmark failed to launch",
+                        .close_on_success = true,
+                    };
+                },
+            }
         },
         else => {},
     }
@@ -251,4 +277,12 @@ test "web command selectors are case-insensitive" {
         wiki_plan.command.?,
     );
     try std.testing.expectEqualStrings("Wikipedia", wiki_plan.telemetry_ok_detail);
+}
+
+test "web bookmark command returns unknown_action when bookmark is missing" {
+    var plan = try planCommandKind(std.testing.allocator, .web, "b definitely-missing-bookmark-alias");
+    defer plan.deinit(std.testing.allocator);
+    try std.testing.expect(plan.command == null);
+    try std.testing.expect(plan.unknown_action);
+    try std.testing.expectEqualStrings("Bookmark not found", plan.error_message);
 }

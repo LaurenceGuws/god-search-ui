@@ -48,7 +48,7 @@ pub fn routeHintForQuery(query_trimmed: []const u8) ?[]const u8 {
         '&' => "Grep route active: type text to search after &",
         '>' => "Run route active: type command after >",
         '=' => "Calc route active: type expression after =",
-        '?' => "Web route active: ? <term> (DDG), ?g <term>, ?ddg <term>, ?w <term>",
+        '?' => "Web route: ? <term>, ?g/?ddg/?w <term>, ?b <alias> (bookmarks TSV)",
         else => null,
     };
 }
