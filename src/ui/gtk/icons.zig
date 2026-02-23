@@ -151,7 +151,9 @@ fn steamGameIconNameFromAction(allocator: std.mem.Allocator, action: []const u8)
     var end: usize = 0;
     while (end < rest.len and std.ascii.isDigit(rest[end])) : (end += 1) {}
     if (end == 0) return null;
-    return std.fmt.allocPrintZ(allocator, "steam_icon_{s}", .{rest[0..end]}) catch null;
+    const name = std.fmt.allocPrint(allocator, "steam_icon_{s}", .{rest[0..end]}) catch return null;
+    defer allocator.free(name);
+    return allocator.dupeZ(u8, name) catch null;
 }
 
 fn expandHomePath(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
