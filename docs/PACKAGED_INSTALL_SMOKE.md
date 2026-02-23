@@ -16,6 +16,7 @@ scripts/arch_package_smoke.sh --install --uninstall
 ## Prerequisites
 - Arch-based system with `makepkg`
 - Build deps installed (`zig`, `git`)
+- `desktop-file-validate` available (`desktop-file-utils`) for install-path checks
 
 ## 1. Build Package
 ```bash
@@ -60,4 +61,6 @@ sudo pacman -R god-search-ui-git
 Confirm cleanup:
 ```bash
 ! command -v god-search-ui
+test ! -f /usr/share/applications/god-search-ui.desktop
+test ! -f /usr/share/icons/hicolor/scalable/apps/god-search-ui.svg
 ```

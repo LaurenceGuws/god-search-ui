@@ -15,7 +15,7 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-separator { margin-top: 4px; margin-bottom: 4px; opacity: 0.3; }\n" ++
         ".gs-results-scroll, .gs-results-scroll > viewport { background: transparent; border: none; box-shadow: none; }\n" ++
         ".gs-results-scroll junction { background: transparent; border: none; box-shadow: none; }\n" ++
-        ".gs-results-scroll undershoot.left, .gs-results-scroll undershoot.right { background-image: none; background: transparent; }\n" ++
+        ".gs-results-scroll undershoot { background-image: none; background: transparent; }\n" ++
         ".gs-results-scroll scrollbar { min-width: 4px; border: none; box-shadow: none; background: transparent; margin: 0; padding: 0; }\n" ++
         ".gs-results-scroll scrollbar separator { min-width: 0; min-height: 0; background: transparent; }\n" ++
         ".gs-results-scroll scrollbar trough { background: transparent; border: none; box-shadow: none; border-radius: 0; margin: 0; padding: 0; }\n" ++
@@ -23,12 +23,10 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-results > row { background: transparent; background-color: transparent; background-image: none; border: none; padding: 4px 8px; border-radius: 8px; }\n" ++
         ".gs-results > row:selected,\n" ++
         ".gs-results > row:selected:focus,\n" ++
-        ".gs-results > row:selected:focus-visible,\n" ++
         ".gs-results > row:selected:backdrop,\n" ++
         ".gs-results > row:hover,\n" ++
         ".gs-results > row:focus,\n" ++
-        ".gs-results > row:focus-visible,\n" ++
-        ".gs-results > row:focus-within { background: transparent; background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; }\n" ++
+        ".gs-results > row:active { background: transparent; background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; }\n" ++
         ".gs-results > row > box { border-radius: 8px; }\n" ++
         ".gs-results.gs-scroll-active > row > box { margin-right: 4px; }\n" ++
         ".gs-results.gs-scroll-active .gs-kind-icon { margin-left: -2px; }\n" ++
@@ -37,10 +35,8 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-results > row.gs-actionable-row:hover > box,\n" ++
         ".gs-results > row.gs-actionable-row:selected > box,\n" ++
         ".gs-results > row.gs-actionable-row:selected:focus > box,\n" ++
-        ".gs-results > row.gs-actionable-row:selected:focus-visible > box,\n" ++
         ".gs-results > row.gs-actionable-row:focus > box,\n" ++
-        ".gs-results > row.gs-actionable-row:focus-visible > box,\n" ++
-        ".gs-results > row.gs-actionable-row:focus-within > box {\n" ++
+        ".gs-results > row.gs-actionable-row:active > box {\n" ++
         "  background: rgba(140, 170, 235, 0.20);\n" ++
         "  border: 1px solid rgba(164, 192, 255, 0.55);\n" ++
         "  border-radius: 8px;\n" ++

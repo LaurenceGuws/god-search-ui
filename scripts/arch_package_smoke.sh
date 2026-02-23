@@ -63,6 +63,11 @@ if ! command -v bsdtar >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ $DO_INSTALL -eq 1 ]] && ! command -v desktop-file-validate >/dev/null 2>&1; then
+  echo "error: desktop-file-validate not found; install desktop-file-utils for --install checks" >&2
+  exit 1
+fi
+
 echo "[2/4] verify package archive contents"
 bsdtar -tf "$PKG_PATH" | grep -q '^usr/bin/god-search-ui$'
 bsdtar -tf "$PKG_PATH" | grep -q '^usr/share/applications/god-search-ui.desktop$'
@@ -81,6 +86,9 @@ if [[ $DO_INSTALL -eq 1 ]]; then
   test -f /usr/share/applications/god-search-ui.desktop
   test -f /usr/share/icons/hicolor/scalable/apps/god-search-ui.svg
   test -f /usr/lib/systemd/user/god-search-ui.service
+  desktop-file-validate /usr/share/applications/god-search-ui.desktop
+  grep -q '^Exec=god-search-ui --ui$' /usr/share/applications/god-search-ui.desktop
+  grep -q '^Icon=god-search-ui$' /usr/share/applications/god-search-ui.desktop
 else
   echo "[3/4] install path skipped (use --install to enable)"
 fi
@@ -88,6 +96,10 @@ fi
 if [[ $DO_UNINSTALL -eq 1 ]]; then
   echo "[4/4] uninstall package"
   sudo pacman -R --noconfirm god-search-ui-git
+  ! command -v god-search-ui >/dev/null 2>&1
+  test ! -f /usr/share/applications/god-search-ui.desktop
+  test ! -f /usr/share/icons/hicolor/scalable/apps/god-search-ui.svg
+  test ! -f /usr/lib/systemd/user/god-search-ui.service
 else
   echo "[4/4] uninstall path skipped (use --uninstall with --install)"
 fi
