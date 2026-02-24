@@ -34,7 +34,9 @@ fn commandExistsUncached(name: []const u8) bool {
         std.heap.page_allocator.free(result.stdout);
         std.heap.page_allocator.free(result.stderr);
     }
-    return result.term == .Exited and result.term.Exited == 0;
+    // Some CLIs (including `hyprctl`) return non-zero for `--help` while still being present.
+    // Existence check only needs a successful spawn/exec, not a zero help exit code.
+    return true;
 }
 
 fn clearCacheForTests() void {
