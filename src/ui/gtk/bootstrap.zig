@@ -68,10 +68,28 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_label_set_selectable(@ptrCast(preview_label), GTRUE);
     c.gtk_widget_add_css_class(preview_label, "gs-preview-body");
 
+    const preview_text = c.gtk_text_view_new();
+    c.gtk_text_view_set_editable(@ptrCast(preview_text), gtk_types.GFALSE);
+    c.gtk_text_view_set_cursor_visible(@ptrCast(preview_text), gtk_types.GFALSE);
+    c.gtk_text_view_set_wrap_mode(@ptrCast(preview_text), c.PANGO_WRAP_NONE);
+    c.gtk_text_view_set_monospace(@ptrCast(preview_text), GTRUE);
+    c.gtk_widget_set_hexpand(preview_text, GTRUE);
+    c.gtk_widget_set_vexpand(preview_text, GTRUE);
+    c.gtk_widget_add_css_class(preview_text, "gs-preview-text");
+
+    const preview_text_scroller = c.gtk_scrolled_window_new();
+    c.gtk_scrolled_window_set_policy(@ptrCast(preview_text_scroller), c.GTK_POLICY_AUTOMATIC, c.GTK_POLICY_AUTOMATIC);
+    c.gtk_scrolled_window_set_min_content_height(@ptrCast(preview_text_scroller), 180);
+    c.gtk_widget_set_vexpand(preview_text_scroller, GTRUE);
+    c.gtk_widget_add_css_class(preview_text_scroller, "gs-preview-text-scroll");
+    c.gtk_scrolled_window_set_child(@ptrCast(preview_text_scroller), preview_text);
+    c.gtk_widget_set_visible(preview_text_scroller, gtk_types.GFALSE);
+
     const preview_inner = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 8);
     c.gtk_widget_add_css_class(preview_inner, "gs-preview-inner");
     c.gtk_box_append(@ptrCast(preview_inner), preview_title);
     c.gtk_box_append(@ptrCast(preview_inner), preview_label);
+    c.gtk_box_append(@ptrCast(preview_inner), preview_text_scroller);
 
     const preview_scroller = c.gtk_scrolled_window_new();
     c.gtk_scrolled_window_set_policy(@ptrCast(preview_scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
@@ -104,6 +122,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.scroller = @ptrCast(scroller);
     ctx.preview_panel = @ptrCast(preview_panel);
     ctx.preview_label = @ptrCast(preview_label);
+    ctx.preview_text_scroller = @ptrCast(preview_text_scroller);
+    ctx.preview_text_view = @ptrCast(preview_text);
     ctx.allocator = @ptrCast(allocator_box);
     ctx.service = launch.service;
     ctx.telemetry = launch.telemetry;

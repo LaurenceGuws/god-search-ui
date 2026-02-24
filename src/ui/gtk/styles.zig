@@ -13,6 +13,10 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-preview-inner { padding: 12px; }\n" ++
         ".gs-preview-title { color: #8fa6d8; font-weight: 700; }\n" ++
         ".gs-preview-body { color: #d5ddf1; line-height: 1.25; }\n" ++
+        ".gs-preview-text-scroll, .gs-preview-text-scroll > viewport { background: rgba(7, 10, 16, 0.68); border: 1px solid rgba(164, 192, 255, 0.12); border-radius: 8px; box-shadow: none; }\n" ++
+        ".gs-preview-text-scroll scrollbar slider { min-width: 4px; min-height: 20px; }\n" ++
+        ".gs-preview-text { background: transparent; color: #dce6ff; padding: 8px; font-family: monospace; font-size: 12px; }\n" ++
+        ".gs-preview-text text { background: transparent; color: #dce6ff; }\n" ++
         ".gs-header { color: #8b93a8; }\n" ++
         ".gs-info { color: #9aa1b5; }\n" ++
         ".gs-async-search { color: #aeb8cc; }\n" ++

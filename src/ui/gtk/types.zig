@@ -17,6 +17,8 @@ pub const UiContext = extern struct {
     scroller: *c.GtkScrolledWindow,
     preview_panel: *c.GtkWidget,
     preview_label: *c.GtkLabel,
+    preview_text_scroller: *c.GtkWidget,
+    preview_text_view: *c.GtkTextView,
     allocator: *anyopaque,
     service: *app_mod.SearchService,
     telemetry: *app_mod.TelemetrySink,

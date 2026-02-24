@@ -29,7 +29,7 @@ pub fn setEnabled(ctx: *UiContext, enabled: bool) void {
 
 pub fn clear(ctx: *UiContext) void {
     if (ctx.preview_enabled == GFALSE) return;
-    setMarkupIfChanged(ctx, "<span foreground=\"#7c8498\">No selection</span>");
+    setPreviewIfChanged(ctx, "<span foreground=\"#7c8498\">No selection</span>", null);
 }
 
 pub fn refreshFromSelection(ctx: *UiContext) void {
@@ -51,17 +51,38 @@ pub fn updateForRow(ctx: *UiContext, row: *c.GtkListBoxRow) void {
 
     const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
     const allocator = allocator_ptr.*;
+    if (kind == .file or kind == .grep) {
+        if (buildFilePreviewParts(allocator, kind, title, subtitle, action) catch null) |parts| {
+            defer parts.deinit(allocator);
+            setPreviewIfChanged(ctx, parts.markup, parts.text);
+            return;
+        }
+    }
     const markup = buildPreviewMarkup(ctx, allocator, kind, title, subtitle, action) catch return;
     defer allocator.free(markup);
-    setMarkupIfChanged(ctx, markup);
+    setPreviewIfChanged(ctx, markup, null);
 }
 
-fn setMarkupIfChanged(ctx: *UiContext, markup: []const u8) void {
-    const h = std.hash.Wyhash.hash(0, markup);
+fn setPreviewIfChanged(ctx: *UiContext, markup: []const u8, text_opt: ?[]const u8) void {
+    var hasher = std.hash.Wyhash.init(0);
+    hasher.update(markup);
+    if (text_opt) |text| {
+        hasher.update("\n---text---\n");
+        hasher.update(text);
+    }
+    const h = hasher.final();
     if (ctx.last_preview_hash == h) return;
     const z = std.heap.page_allocator.dupeZ(u8, markup) catch return;
     defer std.heap.page_allocator.free(z);
     c.gtk_label_set_markup(ctx.preview_label, z.ptr);
+    const text_buffer = c.gtk_text_view_get_buffer(ctx.preview_text_view);
+    if (text_opt) |text| {
+        if (text_buffer != null) c.gtk_text_buffer_set_text(text_buffer, text.ptr, @intCast(text.len));
+        c.gtk_widget_set_visible(ctx.preview_text_scroller, GTRUE);
+    } else {
+        if (text_buffer != null) c.gtk_text_buffer_set_text(text_buffer, "", 0);
+        c.gtk_widget_set_visible(ctx.preview_text_scroller, GFALSE);
+    }
     ctx.last_preview_hash = h;
 }
 
@@ -265,6 +286,68 @@ fn buildFilePreviewMarkup(
         .{ if (kind == .grep) "match" else "file", path_esc, path_esc, snippet_esc, subtitle_esc },
     );
     return markup;
+}
+
+const FilePreviewParts = struct {
+    markup: []u8,
+    text: ?[]u8 = null,
+
+    fn deinit(self: *const FilePreviewParts, allocator: std.mem.Allocator) void {
+        allocator.free(self.markup);
+        if (self.text) |buf| allocator.free(buf);
+    }
+};
+
+fn buildFilePreviewParts(
+    allocator: std.mem.Allocator,
+    kind: UiKind,
+    title: []const u8,
+    subtitle: []const u8,
+    action: []const u8,
+) !?FilePreviewParts {
+    const parsed = gtk_actions.parseFileAction(action);
+    const path = if (kind == .grep) parsed.path else action;
+    const line_num = if (kind == .grep) parsed.line else null;
+
+    const data = readFileAnyPath(allocator, path, 256 * 1024) catch return null;
+    defer allocator.free(data);
+    if (std.mem.indexOfScalar(u8, data, 0) != null) {
+        if (try buildFilePreviewMarkup(allocator, kind, title, subtitle, action)) |markup| {
+            return .{ .markup = markup };
+        }
+        return null;
+    }
+
+    const snippet = try buildFileSnippetAlloc(allocator, data, line_num);
+    errdefer allocator.free(snippet);
+    const path_esc = try gtk_query.escapeMarkupAlloc(allocator, path);
+    defer allocator.free(path_esc);
+    const subtitle_trim = std.mem.trim(u8, subtitle, " \t\r\n");
+    const subtitle_esc = if (subtitle_trim.len > 0) try gtk_query.escapeMarkupAlloc(allocator, subtitle_trim) else null;
+    defer if (subtitle_esc) |s| allocator.free(s);
+
+    var body = std.ArrayList(u8).empty;
+    defer body.deinit(allocator);
+    const w = body.writer(allocator);
+    try w.print("<span foreground=\"#7c8498\" weight=\"700\">{s}</span>\n", .{if (kind == .grep) "match" else "file"});
+    try w.print("<span foreground=\"#f1f5ff\" weight=\"700\">{s}</span>\n\n", .{path_esc});
+    try w.print("<span foreground=\"#9aa1b5\" weight=\"700\">Path</span>\n<span foreground=\"#b6c2df\" font_family=\"monospace\">{s}</span>", .{path_esc});
+    if (kind == .grep) {
+        if (line_num) |line| {
+            const line_esc = try gtk_query.escapeMarkupAlloc(allocator, line);
+            defer allocator.free(line_esc);
+            try w.print("\n\n<span foreground=\"#9aa1b5\" weight=\"700\">Match line</span>\n<span foreground=\"#e4b87c\" font_family=\"monospace\">{s}</span>", .{line_esc});
+        }
+    }
+    if (subtitle_esc) |sub| {
+        try w.print("\n\n<span foreground=\"#9aa1b5\" weight=\"700\">Summary</span>\n<span foreground=\"#cdd5e8\">{s}</span>", .{sub});
+    }
+    try w.print("\n\n<span foreground=\"#7fb0ff\">Text preview</span>", .{});
+
+    return .{
+        .markup = try body.toOwnedSlice(allocator),
+        .text = snippet,
+    };
 }
 
 fn buildFileSnippetAlloc(allocator: std.mem.Allocator, data: []const u8, target_line_opt: ?[]const u8) ![]u8 {
