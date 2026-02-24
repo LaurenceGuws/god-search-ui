@@ -65,12 +65,8 @@ pub const Shell = struct {
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
         disconnectSignalsByData(@ptrCast(ctx.window), ctx);
-        disconnectSignalsByData(@ptrCast(ctx.entry), ctx);
-        disconnectSignalsByData(@ptrCast(ctx.list), ctx);
-        const vadj = c.gtk_scrolled_window_get_vadjustment(ctx.scroller);
-        if (vadj != null) {
-            disconnectSignalsByData(@ptrCast(vadj), ctx);
-        }
+        // Child widgets may already be finalized by the time window destroy runs.
+        // Let GTK tear down child signal handlers naturally to avoid invalid-instance warnings.
         if (ctx.search_debounce_id != 0) {
             _ = c.g_source_remove(ctx.search_debounce_id);
             ctx.search_debounce_id = 0;
