@@ -70,9 +70,44 @@ pub const HyprlandBackend = struct {
         };
         defer parsed.deinit();
 
-        const snapshot = parseWorkspacesJson(allocator, parsed.value) catch |err| {
+        var snapshot = parseWorkspacesJson(allocator, parsed.value) catch |err| {
             self.had_runtime_failure = true;
             return err;
+        };
+        errdefer snapshot.deinit(allocator);
+
+        // Best-effort enrichment: annotate each workspace with a short list of window titles.
+        const clients_json_bytes = self.list_windows_json_fn(allocator) catch |err| {
+            if (err != error.OutOfMemory) {
+                std.log.warn("hyprland wm workspace title preview skipped: {s}", .{@errorName(err)});
+            } else {
+                self.had_runtime_failure = true;
+                return err;
+            }
+            self.had_runtime_failure = false;
+            return snapshot;
+        };
+        defer allocator.free(clients_json_bytes);
+
+        var clients_parsed = std.json.parseFromSlice(std.json.Value, allocator, clients_json_bytes, .{}) catch |err| {
+            if (err == error.OutOfMemory) {
+                self.had_runtime_failure = true;
+                return err;
+            }
+            std.log.warn("hyprland wm workspace title preview parse skipped: {s}", .{@errorName(err)});
+            self.had_runtime_failure = false;
+            return snapshot;
+        };
+        defer clients_parsed.deinit();
+
+        annotateWorkspaceWindowTitlePreviews(allocator, &snapshot, clients_parsed.value) catch |err| {
+            if (err == error.OutOfMemory) {
+                self.had_runtime_failure = true;
+                return err;
+            }
+            std.log.warn("hyprland wm workspace title preview annotate skipped: {s}", .{@errorName(err)});
+            self.had_runtime_failure = false;
+            return snapshot;
         };
         self.had_runtime_failure = false;
         return snapshot;
@@ -167,6 +202,53 @@ fn parseWorkspacesJson(allocator: std.mem.Allocator, root: std.json.Value) !wm.W
 
     std.mem.sort(wm.WorkspaceInfo, out.items, {}, lessWorkspaceById);
     return .{ .items = try out.toOwnedSlice(allocator) };
+}
+
+fn annotateWorkspaceWindowTitlePreviews(
+    allocator: std.mem.Allocator,
+    snapshot: *wm.WorkspaceSnapshot,
+    clients_root: std.json.Value,
+) !void {
+    if (clients_root != .array) return error.InvalidJson;
+
+    for (snapshot.items) |*workspace| {
+        if (workspace.window_titles_preview != null) continue;
+        const preview = try buildWorkspaceWindowTitlePreview(allocator, workspace.id, clients_root.array.items);
+        if (preview) |owned| workspace.window_titles_preview = owned;
+    }
+}
+
+fn buildWorkspaceWindowTitlePreview(
+    allocator: std.mem.Allocator,
+    workspace_id: i32,
+    clients: []const std.json.Value,
+) !?[]u8 {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+
+    var shown: usize = 0;
+    var total: usize = 0;
+
+    for (clients) |client| {
+        const parsed = parseClientObject(client) orelse continue;
+        if (!parsed.mapped) continue;
+        if (parsed.workspace_id != workspace_id) continue;
+
+        const title_fallback = if (parsed.title.len > 0) parsed.title else parsed.class_name;
+        const title = if (title_fallback.len > 0) title_fallback else "Window";
+        total += 1;
+
+        if (shown < 3) {
+            if (shown > 0) try out.appendSlice(allocator, ", ");
+            try out.appendSlice(allocator, title);
+            shown += 1;
+        }
+    }
+
+    if (total == 0) return null;
+    if (total > shown) try std.fmt.format(out.writer(allocator), " (+{d})", .{total - shown});
+    const owned = try out.toOwnedSlice(allocator);
+    return owned;
 }
 
 fn lessWorkspaceById(_: void, a: wm.WorkspaceInfo, b: wm.WorkspaceInfo) bool {
@@ -356,4 +438,33 @@ test "parseWorkspacesJson applies default name" {
 
     try std.testing.expectEqual(@as(usize, 1), snapshot.items.len);
     try std.testing.expectEqualStrings("Workspace", snapshot.items[0].name);
+}
+
+test "annotateWorkspaceWindowTitlePreviews groups client titles by workspace" {
+    const workspaces_json =
+        \\[
+        \\  {"id":1,"name":"dev","monitor":"eDP-1","windows":4},
+        \\  {"id":2,"name":"www","monitor":"HDMI-A-1","windows":1}
+        \\]
+    ;
+    const clients_json =
+        \\[
+        \\  {"mapped":true,"workspace":{"id":1},"title":"Terminal","class":"kitty","address":"0x1"},
+        \\  {"mapped":true,"workspace":{"id":1},"title":"Editor","class":"code","address":"0x2"},
+        \\  {"mapped":true,"workspace":{"id":1},"title":"Docs","class":"zen","address":"0x3"},
+        \\  {"mapped":true,"workspace":{"id":1},"title":"Music","class":"spotify","address":"0x4"},
+        \\  {"mapped":true,"workspace":{"id":2},"title":"Browser","class":"zen","address":"0x5"}
+        \\]
+    ;
+    var ws_parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, workspaces_json, .{});
+    defer ws_parsed.deinit();
+    var clients_parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, clients_json, .{});
+    defer clients_parsed.deinit();
+
+    var snapshot = try parseWorkspacesJson(std.testing.allocator, ws_parsed.value);
+    defer snapshot.deinit(std.testing.allocator);
+    try annotateWorkspaceWindowTitlePreviews(std.testing.allocator, &snapshot, clients_parsed.value);
+
+    try std.testing.expectEqualStrings("Terminal, Editor, Docs (+1)", snapshot.items[0].window_titles_preview.?);
+    try std.testing.expectEqualStrings("Browser", snapshot.items[1].window_titles_preview.?);
 }

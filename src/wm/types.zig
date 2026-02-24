@@ -41,10 +41,12 @@ pub const WorkspaceInfo = struct {
     name: []u8,
     monitor_name: []u8,
     window_count: u32,
+    window_titles_preview: ?[]u8 = null,
 
     pub fn deinit(self: *WorkspaceInfo, allocator: std.mem.Allocator) void {
         allocator.free(self.name);
         allocator.free(self.monitor_name);
+        if (self.window_titles_preview) |preview| allocator.free(preview);
         self.* = undefined;
     }
 };

@@ -84,10 +84,19 @@ pub const WorkspacesProvider = struct {
 };
 
 fn formatWorkspaceSubtitle(allocator: std.mem.Allocator, row: wm_mod.WorkspaceInfo) ![]u8 {
+    const count_label = if (row.window_count == 1) "window" else "windows";
+    const preview = if (row.window_titles_preview) |s| std.mem.trim(u8, s, " \t\r\n") else "";
+
     if (row.monitor_name.len == 0) {
-        return std.fmt.allocPrint(allocator, "{d} window{s}", .{ row.window_count, if (row.window_count == 1) "" else "s" });
+        if (preview.len > 0) {
+            return std.fmt.allocPrint(allocator, "{d} {s} | {s}", .{ row.window_count, count_label, preview });
+        }
+        return std.fmt.allocPrint(allocator, "{d} {s}", .{ row.window_count, count_label });
     }
-    return std.fmt.allocPrint(allocator, "{s} | {d} window{s}", .{ row.monitor_name, row.window_count, if (row.window_count == 1) "" else "s" });
+    if (preview.len > 0) {
+        return std.fmt.allocPrint(allocator, "{s} | {d} {s} | {s}", .{ row.monitor_name, row.window_count, count_label, preview });
+    }
+    return std.fmt.allocPrint(allocator, "{s} | {d} {s}", .{ row.monitor_name, row.window_count, count_label });
 }
 
 fn testStubListWindows(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WindowSnapshot {
@@ -105,12 +114,14 @@ test "workspaces provider maps workspace snapshot into candidates" {
                 .name = try allocator.dupe(u8, "dev"),
                 .monitor_name = try allocator.dupe(u8, "eDP-1"),
                 .window_count = 4,
+                .window_titles_preview = try allocator.dupe(u8, "Terminal, Editor, Docs (+1)"),
             };
             items[1] = .{
                 .id = 2,
                 .name = try allocator.dupe(u8, "www"),
                 .monitor_name = try allocator.dupe(u8, "HDMI-A-1"),
                 .window_count = 1,
+                .window_titles_preview = try allocator.dupe(u8, "Browser"),
             };
             return .{ .items = items };
         }
@@ -144,9 +155,9 @@ test "workspaces provider maps workspace snapshot into candidates" {
     try std.testing.expectEqual(@as(usize, 2), list.items.len);
     try std.testing.expectEqual(search.CandidateKind.workspace, list.items[0].kind);
     try std.testing.expectEqualStrings("dev", list.items[0].title);
-    try std.testing.expectEqualStrings("eDP-1 | 4 windows", list.items[0].subtitle);
+    try std.testing.expectEqualStrings("eDP-1 | 4 windows | Terminal, Editor, Docs (+1)", list.items[0].subtitle);
     try std.testing.expectEqualStrings("1", list.items[0].action);
-    try std.testing.expectEqualStrings("HDMI-A-1 | 1 window", list.items[1].subtitle);
+    try std.testing.expectEqualStrings("HDMI-A-1 | 1 window | Browser", list.items[1].subtitle);
 }
 
 test "workspaces provider reports unavailable when backend tools are unavailable" {
