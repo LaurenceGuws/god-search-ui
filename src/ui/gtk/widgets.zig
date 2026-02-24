@@ -11,7 +11,7 @@ const CandidateKind = gtk_types.CandidateKind;
 pub fn appendModuleFilterMenu(list: *c.GtkListBox, allocator: std.mem.Allocator) void {
     appendHeaderRow(list, "Quick Modules");
     appendInfoRow(list, "Pick a module (Enter) or type directly for blended search.");
-    appendLegendRow(list, "Hotkeys: Enter select | Ctrl+L focus | PgUp/PgDn move | Home/End jump | Ctrl+R refresh | Esc close");
+    appendLegendRow(list, "Hotkeys: Enter select | Ctrl+L focus | Ctrl+P preview | PgUp/PgDn move | Home/End jump | Ctrl+R refresh | Esc close");
 
     appendModuleFilterRow(list, allocator, "Apps", "Launch installed applications", "@", "@", .app);
     appendModuleFilterRow(list, allocator, "Windows", "Focus open windows", "#", "#", .window);
@@ -91,6 +91,7 @@ fn appendModuleFilterRow(
         common_dispatch.kinds.UiKind.module,
         route,
         title,
+        subtitle,
     );
     c.gtk_list_box_append(@ptrCast(list), row);
 }

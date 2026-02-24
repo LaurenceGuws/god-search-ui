@@ -8,6 +8,11 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-status-success { color: #87c97f; }\n" ++
         ".gs-status-failure { color: #e58a8a; }\n" ++
         ".gs-status-searching { color: #c6e0ff; font-size: 1.02em; font-weight: 700; }\n" ++
+        ".gs-preview-panel { background: rgba(14, 18, 28, 0.75); border: 1px solid rgba(164, 192, 255, 0.18); border-radius: 10px; }\n" ++
+        ".gs-preview-scroll, .gs-preview-scroll > viewport { background: transparent; border: none; box-shadow: none; }\n" ++
+        ".gs-preview-inner { padding: 12px; }\n" ++
+        ".gs-preview-title { color: #8fa6d8; font-weight: 700; }\n" ++
+        ".gs-preview-body { color: #d5ddf1; line-height: 1.25; }\n" ++
         ".gs-header { color: #8b93a8; }\n" ++
         ".gs-info { color: #9aa1b5; }\n" ++
         ".gs-async-search { color: #aeb8cc; }\n" ++

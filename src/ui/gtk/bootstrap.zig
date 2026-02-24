@@ -56,6 +56,41 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_scrolled_window_set_overlay_scrolling(@ptrCast(scroller), GTRUE);
     c.gtk_scrolled_window_set_child(@ptrCast(scroller), list);
 
+    const preview_title = c.gtk_label_new("Preview");
+    c.gtk_label_set_xalign(@ptrCast(preview_title), 0.0);
+    c.gtk_widget_add_css_class(preview_title, "gs-preview-title");
+
+    const preview_label = c.gtk_label_new("No selection");
+    c.gtk_label_set_xalign(@ptrCast(preview_label), 0.0);
+    c.gtk_label_set_yalign(@ptrCast(preview_label), 0.0);
+    c.gtk_label_set_wrap(@ptrCast(preview_label), GTRUE);
+    c.gtk_label_set_wrap_mode(@ptrCast(preview_label), c.PANGO_WRAP_WORD_CHAR);
+    c.gtk_label_set_selectable(@ptrCast(preview_label), GTRUE);
+    c.gtk_widget_add_css_class(preview_label, "gs-preview-body");
+
+    const preview_inner = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 8);
+    c.gtk_widget_add_css_class(preview_inner, "gs-preview-inner");
+    c.gtk_box_append(@ptrCast(preview_inner), preview_title);
+    c.gtk_box_append(@ptrCast(preview_inner), preview_label);
+
+    const preview_scroller = c.gtk_scrolled_window_new();
+    c.gtk_scrolled_window_set_policy(@ptrCast(preview_scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
+    c.gtk_widget_set_vexpand(preview_scroller, GTRUE);
+    c.gtk_widget_add_css_class(preview_scroller, "gs-preview-scroll");
+    c.gtk_scrolled_window_set_child(@ptrCast(preview_scroller), preview_inner);
+
+    const preview_panel = c.gtk_frame_new(null);
+    c.gtk_widget_add_css_class(preview_panel, "gs-preview-panel");
+    c.gtk_widget_set_size_request(preview_panel, 300, -1);
+    c.gtk_frame_set_child(@ptrCast(preview_panel), preview_scroller);
+    c.gtk_widget_set_visible(preview_panel, gtk_types.GFALSE);
+
+    const content_pane = c.gtk_paned_new(c.GTK_ORIENTATION_HORIZONTAL);
+    c.gtk_widget_set_vexpand(content_pane, GTRUE);
+    c.gtk_paned_set_position(@ptrCast(content_pane), 620);
+    c.gtk_paned_set_start_child(@ptrCast(content_pane), scroller);
+    c.gtk_paned_set_end_child(@ptrCast(content_pane), preview_panel);
+
     const ctx: *UiContext = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(UiContext))));
     const allocator_box = launch.allocator.create(std.mem.Allocator) catch {
         c.g_free(ctx);
@@ -67,6 +102,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.status = @ptrCast(status);
     ctx.list = @ptrCast(list);
     ctx.scroller = @ptrCast(scroller);
+    ctx.preview_panel = @ptrCast(preview_panel);
+    ctx.preview_label = @ptrCast(preview_label);
     ctx.allocator = @ptrCast(allocator_box);
     ctx.service = launch.service;
     ctx.telemetry = launch.telemetry;
@@ -76,6 +113,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.last_status_hash = 0;
     ctx.last_status_tone = 0;
     ctx.last_render_hash = 0;
+    ctx.last_preview_hash = 0;
+    ctx.preview_enabled = gtk_types.GFALSE;
     ctx.async_search_generation = 0;
     ctx.async_spinner_id = 0;
     ctx.async_ready_id = 0;
@@ -105,7 +144,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
 
     c.gtk_box_append(@ptrCast(root_box), entry);
     c.gtk_box_append(@ptrCast(root_box), status);
-    c.gtk_box_append(@ptrCast(root_box), scroller);
+    c.gtk_box_append(@ptrCast(root_box), content_pane);
     c.gtk_window_set_child(@ptrCast(window), root_box);
     c.gtk_window_present(@ptrCast(window));
 

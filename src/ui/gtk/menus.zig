@@ -167,6 +167,7 @@ fn appendOptionRow(
         row_kind,
         command,
         title,
+        subtitle,
     );
     c.gtk_list_box_append(@ptrCast(list), row);
 }

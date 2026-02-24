@@ -109,7 +109,7 @@ pub fn renderRankedRows(
     } else if (empty_query and has_app_glyph_fallback) {
         gtk_status.setStatus(ctx, "App icon fallback active (headless :icondiag for breakdown)");
     } else if (empty_query) {
-        gtk_status.setStatus(ctx, "Esc close | Ctrl+R refresh | @ apps # windows ! workspaces ~ dirs % files & grep > run = calc ? web");
+        gtk_status.setStatus(ctx, "Esc close | Ctrl+P preview | Ctrl+R refresh | @ apps # windows ! workspaces ~ dirs % files & grep > run = calc ? web");
     } else {
         gtk_status.setStatus(ctx, "");
     }

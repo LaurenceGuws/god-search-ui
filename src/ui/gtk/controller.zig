@@ -4,6 +4,7 @@ const gtk_types = @import("types.zig");
 const gtk_nav = @import("navigation.zig");
 const gtk_query = @import("query_helpers.zig");
 const gtk_row_data = @import("row_data.zig");
+const gtk_preview = @import("preview.zig");
 
 const c = gtk_types.c;
 const UiContext = gtk_types.UiContext;
@@ -12,6 +13,8 @@ const GFALSE = gtk_types.GFALSE;
 
 pub const InputHooks = struct {
     refresh_snapshot: *const fn (*UiContext) void,
+    toggle_preview: *const fn (*UiContext) void,
+    set_status: *const fn (*UiContext, []const u8) void,
 };
 
 pub const StatusHooks = struct {
@@ -34,6 +37,14 @@ pub fn handleKeyPressed(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierTy
         c.GDK_KEY_r, c.GDK_KEY_R => {
             if ((state & c.GDK_CONTROL_MASK) != 0) {
                 hooks.refresh_snapshot(ctx);
+                return GTRUE;
+            }
+            return GFALSE;
+        },
+        c.GDK_KEY_p, c.GDK_KEY_P => {
+            if ((state & c.GDK_CONTROL_MASK) != 0) {
+                hooks.toggle_preview(ctx);
+                hooks.set_status(ctx, if (ctx.preview_enabled == GTRUE) "Preview panel enabled" else "Preview panel hidden");
                 return GTRUE;
             }
             return GFALSE;
@@ -93,6 +104,7 @@ pub fn updateEntryRouteIcon(ctx: *UiContext, query: []const u8) void {
 }
 
 pub fn handleRowSelected(ctx: *UiContext, row: *c.GtkListBoxRow, hooks: StatusHooks) void {
+    gtk_preview.updateForRow(ctx, row);
     if (ctx.pending_power_confirm == GTRUE) return;
     const query_flags = ctx.service.queryFlagsSnapshot();
     if (query_flags.last_query_had_provider_runtime_failure or

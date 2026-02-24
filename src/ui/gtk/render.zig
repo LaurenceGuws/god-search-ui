@@ -149,7 +149,14 @@ fn appendCandidateRow(
     c.gtk_list_box_row_set_child(@ptrCast(list_row), content);
 
     const ui_kind = common_dispatch.kinds.fromCandidateKind(row.candidate.kind);
-    gtk_row_data.setActionableData(@ptrCast(@alignCast(list_row)), allocator, ui_kind, row.candidate.action, row.candidate.title);
+    gtk_row_data.setActionableData(
+        @ptrCast(@alignCast(list_row)),
+        allocator,
+        ui_kind,
+        row.candidate.action,
+        row.candidate.title,
+        row.candidate.subtitle,
+    );
     const title_tip = allocator.dupeZ(u8, row.candidate.title) catch null;
     if (title_tip) |tip| {
         defer allocator.free(tip);

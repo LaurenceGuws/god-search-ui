@@ -11,6 +11,7 @@ const gtk_menus = @import("gtk/menus.zig");
 const gtk_status = @import("gtk/status.zig");
 const gtk_icons = @import("gtk/icons.zig");
 const gtk_row_data = @import("gtk/row_data.zig");
+const gtk_preview = @import("gtk/preview.zig");
 const gtk_selection = @import("gtk/selection.zig");
 const gtk_controller = @import("gtk/controller.zig");
 const gtk_results_flow = @import("gtk/results_flow.zig");
@@ -120,6 +121,8 @@ pub const Shell = struct {
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
         return gtk_controller.handleKeyPressed(ctx, keyval, state, .{
             .refresh_snapshot = refreshSnapshot,
+            .toggle_preview = togglePreview,
+            .set_status = setStatus,
         });
     }
 
@@ -195,8 +198,12 @@ pub const Shell = struct {
     }
 
     fn onRowSelected(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {
-        if (row == null or user_data == null) return;
+        if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        if (row == null) {
+            gtk_preview.clear(ctx);
+            return;
+        }
         gtk_controller.handleRowSelected(ctx, row.?, .{
             .set_status = setStatus,
         });
@@ -207,6 +214,7 @@ pub const Shell = struct {
             .start_async_route_search = startAsyncRouteSearch,
             .cancel_async_route_search = cancelAsyncRouteSearch,
         });
+        gtk_preview.refreshFromSelection(ctx);
     }
 
     fn startAsyncRouteSearch(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) void {
@@ -298,6 +306,10 @@ pub const Shell = struct {
 
     fn setStatus(ctx: *UiContext, message: []const u8) void {
         gtk_status.setStatus(ctx, message);
+    }
+
+    fn togglePreview(ctx: *UiContext) void {
+        gtk_preview.toggle(ctx);
     }
 
     fn installCss(window: *c.GtkWidget) void {
