@@ -75,7 +75,7 @@ pub fn buildDirCopyPathCommand(allocator: std.mem.Allocator, dir_path: []const u
     defer allocator.free(quoted);
     return std.fmt.allocPrint(
         allocator,
-        "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard' _ {s}",
+        "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
         .{quoted},
     );
 }
@@ -110,7 +110,7 @@ pub fn buildFileCopyPathCommand(allocator: std.mem.Allocator, file_path: []const
     defer allocator.free(quoted);
     return std.fmt.allocPrint(
         allocator,
-        "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard' _ {s}",
+        "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
         .{quoted},
     );
 }

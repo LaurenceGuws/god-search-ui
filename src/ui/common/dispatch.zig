@@ -208,7 +208,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 defer allocator.free(value_q);
                 const cmd = try std.fmt.allocPrint(
                     allocator,
-                    "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard' _ {s}",
+                    "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
                     .{value_q},
                 );
                 return .{
@@ -280,6 +280,7 @@ test "calculator hint copy command builds clipboard shell command" {
 
     try std.testing.expect(plan.command != null);
     try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "wl-copy") != null);
+    try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "copyq add") != null);
     try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "3.14") != null);
     try std.testing.expectEqualStrings("calc", plan.telemetry_kind);
 }
