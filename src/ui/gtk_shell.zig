@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_mod = @import("../app/mod.zig");
+const search_mod = @import("../search/mod.zig");
 const gtk_types = @import("gtk/types.zig");
 const gtk_styles = @import("gtk/styles.zig");
 const gtk_bootstrap = @import("gtk/bootstrap.zig");
@@ -15,6 +16,7 @@ const gtk_preview = @import("gtk/preview.zig");
 const gtk_selection = @import("gtk/selection.zig");
 const gtk_controller = @import("gtk/controller.zig");
 const gtk_results_flow = @import("gtk/results_flow.zig");
+const gtk_widgets = @import("gtk/widgets.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -268,16 +270,49 @@ pub const Shell = struct {
     fn refreshSnapshot(ctx: *UiContext) void {
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const allocator = allocator_ptr.*;
-        ctx.service.invalidateSnapshot();
-        ctx.service.prewarmProviders(allocator) catch return;
-
         const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-        if (text_ptr == null) {
-            populateResults(ctx, "");
+        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        if (refreshUnsupportedMessageForQuery(query)) |msg| {
+            setStatus(ctx, msg);
             return;
         }
-        const query = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
+
+        showRefreshSpinnerFeedback(ctx);
+        // Give GTK a chance to paint the refresh indicator before synchronous prewarm starts.
+        while (c.g_main_context_pending(null) != 0) {
+            _ = c.g_main_context_iteration(null, GFALSE);
+        }
+
+        ctx.service.invalidateSnapshot();
+        ctx.service.prewarmProviders(allocator) catch {
+            gtk_widgets.clearAsyncRows(ctx.list);
+            setStatus(ctx, "Refresh failed");
+            return;
+        };
+
+        gtk_widgets.clearAsyncRows(ctx.list);
         populateResults(ctx, query);
+    }
+
+    fn showRefreshSpinnerFeedback(ctx: *UiContext) void {
+        gtk_widgets.clearAsyncRows(ctx.list);
+        gtk_widgets.appendAsyncRow(ctx.list, "⟳", "Refreshing cached modules...");
+        ctx.last_render_hash = 0;
+        if (ctx.pending_power_confirm == GFALSE) {
+            setStatus(ctx, "⟳ Refreshing cache...");
+        }
+    }
+
+    fn refreshUnsupportedMessageForQuery(query: []const u8) ?[]const u8 {
+        const parsed = search_mod.parseQuery(query);
+        return switch (parsed.route) {
+            .calc => "Calculator updates as you type (no cache refresh needed)",
+            .grep => "Grep runs live with rg (no cache refresh needed)",
+            .files => "File search runs live with fd (no cache refresh needed)",
+            .run => "Run command executes live (no cache refresh needed)",
+            .web => "Web results build from your query (no cache refresh needed)",
+            else => null,
+        };
     }
 
     fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path: []const u8) void {
