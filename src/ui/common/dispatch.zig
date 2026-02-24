@@ -24,7 +24,7 @@ pub fn shouldRecordSelection(kind: []const u8) bool {
 
 pub fn shouldRecordSelectionKind(kind: kinds.UiKind) bool {
     return switch (kind) {
-        .dir_option, .file_option, .module => false,
+        .dir_option, .file_option, .module, .hint => false,
         else => true,
     };
 }
@@ -201,6 +201,26 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 },
             }
         },
+        .hint => {
+            if (std.mem.startsWith(u8, action, "calc-copy:")) {
+                const value = action["calc-copy:".len..];
+                const value_q = try shellSingleQuote(allocator, value);
+                defer allocator.free(value_q);
+                const cmd = try std.fmt.allocPrint(
+                    allocator,
+                    "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard' _ {s}",
+                    .{value_q},
+                );
+                return .{
+                    .command = cmd,
+                    .owned_command = cmd,
+                    .telemetry_kind = "calc",
+                    .telemetry_ok_detail = "copy-result",
+                    .error_message = "Calculator copy failed",
+                    .close_on_success = true,
+                };
+            }
+        },
         else => {},
     }
     return .{};
@@ -252,6 +272,16 @@ test "workspace switch command shell-quotes workspace token" {
         "hyprctl dispatch workspace 'name with '\\''quote'\\'''",
         plan.command.?,
     );
+}
+
+test "calculator hint copy command builds clipboard shell command" {
+    var plan = try planCommandKind(std.testing.allocator, .hint, "calc-copy:3.14");
+    defer plan.deinit(std.testing.allocator);
+
+    try std.testing.expect(plan.command != null);
+    try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "wl-copy") != null);
+    try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "3.14") != null);
+    try std.testing.expectEqualStrings("calc", plan.telemetry_kind);
 }
 
 test "web command defaults to duckduckgo and percent-encodes query" {

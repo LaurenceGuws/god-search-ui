@@ -1,4 +1,5 @@
 const std = @import("std");
+const providers = @import("../../providers/mod.zig");
 const search = @import("../../search/mod.zig");
 
 pub const ToolState = struct {
@@ -19,6 +20,7 @@ pub fn collectForRoute(
     switch (query.route) {
         .files => try collectFdCandidates(tool_state, dynamic_owned, allocator, term, out),
         .grep => try collectRgCandidates(tool_state, dynamic_owned, allocator, term, out),
+        .calc => try collectCalcCandidates(dynamic_owned, allocator, term, out),
         else => {},
     }
 }
@@ -206,6 +208,46 @@ fn appendRgCandidate(
     try out.append(allocator, search.Candidate.init(.grep, kept_title, kept_subtitle, kept_action));
 }
 
+fn collectCalcCandidates(
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    term: []const u8,
+    out: *search.CandidateList,
+) !void {
+    const value = providers.calc.evaluateExpression(term) catch |err| {
+        const subtitle = try std.fmt.allocPrint(allocator, "Error: {s}", .{@errorName(err)});
+        defer allocator.free(subtitle);
+        const kept_title = try keepDynamicString(dynamic_owned, allocator, "Calculator");
+        const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, subtitle);
+        try out.append(allocator, .{
+            .kind = .hint,
+            .title = kept_title,
+            .subtitle = kept_subtitle,
+            .action = "",
+            .icon = "accessories-calculator-symbolic",
+        });
+        return;
+    };
+
+    const result = try providers.calc.formatNumberAlloc(allocator, value);
+    defer allocator.free(result);
+    const subtitle = try std.fmt.allocPrint(allocator, "{s}  (Enter copies)", .{term});
+    defer allocator.free(subtitle);
+    const action = try std.fmt.allocPrint(allocator, "calc-copy:{s}", .{result});
+    defer allocator.free(action);
+
+    const kept_title = try keepDynamicString(dynamic_owned, allocator, result);
+    const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, subtitle);
+    const kept_action = try keepDynamicString(dynamic_owned, allocator, action);
+    try out.append(allocator, .{
+        .kind = .hint,
+        .title = kept_title,
+        .subtitle = kept_subtitle,
+        .action = kept_action,
+        .icon = "accessories-calculator-symbolic",
+    });
+}
+
 fn freeParsedRgRow(allocator: std.mem.Allocator, row: ParsedRgRow) void {
     allocator.free(row.path);
     allocator.free(row.line_num);
@@ -353,6 +395,41 @@ test "parseRgJsonRow keeps empty snippets" {
     try std.testing.expectEqualStrings("/tmp/file.txt", parsed.path);
     try std.testing.expectEqualStrings("7", parsed.line_num);
     try std.testing.expectEqualStrings("", parsed.snippet);
+}
+
+test "collectCalcCandidates emits result and copy action" {
+    const allocator = std.testing.allocator;
+    var owned = std.ArrayListUnmanaged([]u8){};
+    defer {
+        clearOwned(&owned, allocator);
+        owned.deinit(allocator);
+    }
+    var out = search.CandidateList.empty;
+    defer out.deinit(allocator);
+
+    try collectCalcCandidates(&owned, allocator, "1 + 2*3", &out);
+    try std.testing.expectEqual(@as(usize, 1), out.items.len);
+    try std.testing.expectEqual(search.CandidateKind.hint, out.items[0].kind);
+    try std.testing.expectEqualStrings("7", out.items[0].title);
+    try std.testing.expectEqualStrings("1 + 2*3  (Enter copies)", out.items[0].subtitle);
+    try std.testing.expectEqualStrings("calc-copy:7", out.items[0].action);
+}
+
+test "collectCalcCandidates emits error hint on invalid expression" {
+    const allocator = std.testing.allocator;
+    var owned = std.ArrayListUnmanaged([]u8){};
+    defer {
+        clearOwned(&owned, allocator);
+        owned.deinit(allocator);
+    }
+    var out = search.CandidateList.empty;
+    defer out.deinit(allocator);
+
+    try collectCalcCandidates(&owned, allocator, "(1+", &out);
+    try std.testing.expectEqual(@as(usize, 1), out.items.len);
+    try std.testing.expectEqualStrings("Calculator", out.items[0].title);
+    try std.testing.expect(std.mem.startsWith(u8, out.items[0].subtitle, "Error: "));
+    try std.testing.expectEqualStrings("", out.items[0].action);
 }
 
 test "appendFdCandidate copies dynamic strings" {
