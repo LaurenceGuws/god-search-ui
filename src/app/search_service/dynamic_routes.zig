@@ -115,9 +115,8 @@ fn collectRgCandidates(
 
     const cmd = try std.fmt.allocPrint(
         allocator,
-        // Bound output at the source. `--max-count` is per-file, so using 200 there can
-        // explode JSON output on broad queries and overflow our capture buffer.
-        "rg --json --line-number --color never --smart-case --hidden --max-count 1 --max-files 400 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null || true",
+        // Bound output at the source: one match per file, then cap emitted JSON lines.
+        "rg --json --line-number --color never --smart-case --hidden --max-count 1 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null | head -n 5000 || true",
         .{ term_q, home_q },
     );
     defer allocator.free(cmd);
