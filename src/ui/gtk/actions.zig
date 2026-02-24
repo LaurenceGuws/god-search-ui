@@ -27,7 +27,7 @@ pub fn runShellCommand(command: []const u8) !void {
     }
 }
 
-fn runDetachedShellCommand(command: []const u8) !void {
+pub fn runDetachedShellCommand(command: []const u8) !void {
     // `xdg-open` may stay attached to the launched app/browser. Use nohup+background
     // and return once the shell has queued the launch.
     const detach_script = "nohup sh -lc \"$1\" >/dev/null 2>&1 </dev/null &";

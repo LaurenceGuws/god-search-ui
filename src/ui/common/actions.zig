@@ -19,6 +19,7 @@ pub fn executePlan(
     kind: UiKind,
     plan: *const dispatch.CommandPlan,
     run_command: *const fn ([]const u8) anyerror!void,
+    run_detached_command: *const fn ([]const u8) anyerror!void,
 ) ExecuteOutcome {
     const kind_tag = dispatch.kinds.tag(kind);
     if (plan.unknown_action and plan.command == null) {
@@ -30,7 +31,8 @@ pub fn executePlan(
         };
     }
     const cmd = plan.command orelse return .{};
-    run_command(cmd) catch {
+    const runner = if (plan.detach_command) run_detached_command else run_command;
+    runner(cmd) catch {
         return .{
             .status = .failed,
             .telemetry_kind = if (plan.telemetry_kind.len > 0) plan.telemetry_kind else kind_tag,

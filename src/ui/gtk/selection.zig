@@ -58,7 +58,12 @@ pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks:
         },
         .run_plan => {
             if (decision.plan) |*plan| {
-                const outcome = common_actions.executePlan(kind, plan, gtk_actions.runShellCommand);
+                const outcome = common_actions.executePlan(
+                    kind,
+                    plan,
+                    gtk_actions.runShellCommand,
+                    gtk_actions.runDetachedShellCommand,
+                );
                 switch (outcome.status) {
                     .failed => {
                         hooks.emit_telemetry(ctx, outcome.telemetry_kind, action, "error", outcome.telemetry_detail);

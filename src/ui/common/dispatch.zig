@@ -10,6 +10,7 @@ pub const CommandPlan = struct {
     telemetry_ok_detail: []const u8 = "",
     error_message: []const u8 = "",
     close_on_success: bool = false,
+    detach_command: bool = false,
     unknown_action: bool = false,
 
     pub fn deinit(self: *CommandPlan, allocator: std.mem.Allocator) void {
@@ -116,6 +117,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 .telemetry_ok_detail = action,
                 .error_message = "App failed to launch",
                 .close_on_success = true,
+                .detach_command = true,
             };
         },
         .window => {
@@ -158,6 +160,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                     .telemetry_ok_detail = "Bookmark",
                     .error_message = "Bookmark failed to launch",
                     .close_on_success = true,
+                    .detach_command = true,
                 };
             }
             const parsed_cmd = providers_mod.parseWebCommand(action) orelse return .{};
@@ -175,6 +178,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                         .telemetry_ok_detail = providers_mod.engineLabelForWeb(parsed_web.engine),
                         .error_message = "Web search failed to launch",
                         .close_on_success = true,
+                        .detach_command = true,
                     };
                 },
                 .bookmark => |b| {
@@ -197,6 +201,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                         .telemetry_ok_detail = "Bookmark",
                         .error_message = "Bookmark failed to launch",
                         .close_on_success = true,
+                        .detach_command = true,
                     };
                 },
             }
