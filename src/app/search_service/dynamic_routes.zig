@@ -116,7 +116,8 @@ fn collectRgCandidates(
     const cmd = try std.fmt.allocPrint(
         allocator,
         // Bound output at the source: one match per file, then cap emitted JSON lines.
-        "rg --json --line-number --color never --smart-case --hidden --max-count 1 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null | head -n 5000 || true",
+        // 5000 lines can still exceed our capture buffer on verbose JSON events in large homes.
+        "rg --json --line-number --color never --smart-case --hidden --max-count 1 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null | head -n 1000 || true",
         .{ term_q, home_q },
     );
     defer allocator.free(cmd);
