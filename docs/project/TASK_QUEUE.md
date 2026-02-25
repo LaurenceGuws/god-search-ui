@@ -23,7 +23,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-P13: Placement schema validator for config.lua (strict key/type checks)
+- [ ] DE-P14: Placement schema validator integration into placement contracts checker
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -35,6 +35,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P10: Placement env override coverage expansion (margins + size fields)
 - [x] DE-P11: Placement env/lua precedence regression checks
 - [x] DE-P12: Placement CLI helper for writing/patching config from command line
+- [x] DE-P13: Placement schema validator for config.lua (strict key/type checks)
 
 ## Blocked
 - [ ] (empty)

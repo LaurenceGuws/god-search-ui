@@ -154,3 +154,9 @@ Placement precedence checker (`Lua -> env -> CLI`):
 ```bash
 scripts/check_placement_precedence.sh
 ```
+
+Strict schema validator:
+
+```bash
+scripts/validate_lua_config.sh
+```

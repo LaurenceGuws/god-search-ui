@@ -275,6 +275,10 @@ Placement precedence regression check:
 ```bash
 scripts/check_placement_precedence.sh
 ```
+Lua config schema validator:
+```bash
+scripts/validate_lua_config.sh
+```
 Release-validate help/docs contract check:
 ```bash
 scripts/check_release_validate_contract.sh
