@@ -25,6 +25,7 @@ pub fn main() !void {
     if (hasArg(args, "--print-config")) {
         var cfg = god_search_ui.config.load(allocator);
         defer cfg.deinit(allocator);
+        try applyEnvPlacementOverrides(allocator, &cfg);
         const surface_mode = resolveSurfaceMode(args, cfg);
         try printResolvedConfig(cfg, surface_mode);
         return;
@@ -39,6 +40,7 @@ pub fn main() !void {
     if (ui_mode) {
         var cfg = god_search_ui.config.load(allocator);
         defer cfg.deinit(allocator);
+        try applyEnvPlacementOverrides(allocator, &cfg);
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
         const surface_mode = resolveSurfaceMode(args, cfg);
@@ -288,4 +290,76 @@ fn printResolvedConfig(cfg: god_search_ui.config.Settings, surface_mode: god_sea
     });
 
     try out.flush();
+}
+
+fn applyEnvPlacementOverrides(allocator: std.mem.Allocator, cfg: *god_search_ui.config.Settings) !void {
+    if (envVarTrimmed("GOD_SEARCH_LAUNCHER_MONITOR")) |name| {
+        defer std.heap.page_allocator.free(name);
+        if (cfg.launcher_monitor_name) |old| allocator.free(old);
+        cfg.launcher_monitor_name = try allocator.dupe(u8, name);
+        cfg.placement_policy.launcher.window.monitor = .{
+            .policy = .by_name,
+            .output_name = cfg.launcher_monitor_name.?,
+        };
+    }
+    if (envVarTrimmed("GOD_SEARCH_NOTIFICATIONS_MONITOR")) |name| {
+        defer std.heap.page_allocator.free(name);
+        if (cfg.notifications_monitor_name) |old| allocator.free(old);
+        cfg.notifications_monitor_name = try allocator.dupe(u8, name);
+        cfg.placement_policy.notifications.window.monitor = .{
+            .policy = .by_name,
+            .output_name = cfg.notifications_monitor_name.?,
+        };
+    }
+    if (envVarTrimmed("GOD_SEARCH_LAUNCHER_ANCHOR")) |raw| {
+        defer std.heap.page_allocator.free(raw);
+        if (parseAnchor(raw)) |anchor| cfg.placement_policy.launcher.window.anchor = anchor;
+    }
+    if (envVarTrimmed("GOD_SEARCH_NOTIFICATIONS_ANCHOR")) |raw| {
+        defer std.heap.page_allocator.free(raw);
+        if (parseAnchor(raw)) |anchor| cfg.placement_policy.notifications.window.anchor = anchor;
+    }
+    if (envVarTrimmed("GOD_SEARCH_LAUNCHER_MONITOR_POLICY")) |raw| {
+        defer std.heap.page_allocator.free(raw);
+        if (parseMonitorPolicy(raw)) |policy| cfg.placement_policy.launcher.window.monitor.policy = policy;
+    }
+    if (envVarTrimmed("GOD_SEARCH_NOTIFICATIONS_MONITOR_POLICY")) |raw| {
+        defer std.heap.page_allocator.free(raw);
+        if (parseMonitorPolicy(raw)) |policy| cfg.placement_policy.notifications.window.monitor.policy = policy;
+    }
+}
+
+fn envVarTrimmed(name: []const u8) ?[]u8 {
+    const value = std.process.getEnvVarOwned(std.heap.page_allocator, name) catch return null;
+    errdefer std.heap.page_allocator.free(value);
+    const trimmed = std.mem.trim(u8, value, " \t\r\n");
+    if (trimmed.len == 0) {
+        std.heap.page_allocator.free(value);
+        return null;
+    }
+    if (trimmed.ptr == value.ptr and trimmed.len == value.len) return value;
+    const out = std.heap.page_allocator.dupe(u8, trimmed) catch {
+        std.heap.page_allocator.free(value);
+        return null;
+    };
+    std.heap.page_allocator.free(value);
+    return out;
+}
+
+fn parseAnchor(raw: []const u8) ?god_search_ui.ui.placement.Anchor {
+    if (std.ascii.eqlIgnoreCase(raw, "center")) return .center;
+    if (std.ascii.eqlIgnoreCase(raw, "top_left") or std.ascii.eqlIgnoreCase(raw, "top-left")) return .top_left;
+    if (std.ascii.eqlIgnoreCase(raw, "top_center") or std.ascii.eqlIgnoreCase(raw, "top-center")) return .top_center;
+    if (std.ascii.eqlIgnoreCase(raw, "top_right") or std.ascii.eqlIgnoreCase(raw, "top-right")) return .top_right;
+    if (std.ascii.eqlIgnoreCase(raw, "bottom_left") or std.ascii.eqlIgnoreCase(raw, "bottom-left")) return .bottom_left;
+    if (std.ascii.eqlIgnoreCase(raw, "bottom_center") or std.ascii.eqlIgnoreCase(raw, "bottom-center")) return .bottom_center;
+    if (std.ascii.eqlIgnoreCase(raw, "bottom_right") or std.ascii.eqlIgnoreCase(raw, "bottom-right")) return .bottom_right;
+    return null;
+}
+
+fn parseMonitorPolicy(raw: []const u8) ?god_search_ui.wm.adapter.MonitorPolicy {
+    if (std.ascii.eqlIgnoreCase(raw, "focused")) return .focused;
+    if (std.ascii.eqlIgnoreCase(raw, "primary")) return .primary;
+    if (std.ascii.eqlIgnoreCase(raw, "by_name") or std.ascii.eqlIgnoreCase(raw, "by-name")) return .by_name;
+    return null;
 }

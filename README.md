@@ -90,6 +90,15 @@ return {
 ```
 Precedence: `--surface-mode` > `GOD_SEARCH_SURFACE_MODE` > Lua config > default.
 Reference: `docs/operations/LUA_CONFIG.md`
+Core placement env overrides:
+```bash
+GOD_SEARCH_LAUNCHER_MONITOR=DP-1
+GOD_SEARCH_NOTIFICATIONS_MONITOR=DP-1
+GOD_SEARCH_LAUNCHER_ANCHOR=top_center
+GOD_SEARCH_NOTIFICATIONS_ANCHOR=top_right
+GOD_SEARCH_LAUNCHER_MONITOR_POLICY=by_name   # by_name | primary | focused
+GOD_SEARCH_NOTIFICATIONS_MONITOR_POLICY=by_name
+```
 
 Resident GTK modes (recommended for zero-drop fast summon):
 ```bash

@@ -84,6 +84,17 @@ For `surface_mode`:
 Placement policy currently comes from Lua/default policy.
 If `monitor_name` is provided for launcher/notifications, that surface targets the named output directly.
 
+Core env overrides (applied after Lua/default policy):
+
+```bash
+GOD_SEARCH_LAUNCHER_MONITOR=DP-1
+GOD_SEARCH_NOTIFICATIONS_MONITOR=DP-1
+GOD_SEARCH_LAUNCHER_ANCHOR=top_center
+GOD_SEARCH_NOTIFICATIONS_ANCHOR=top_right
+GOD_SEARCH_LAUNCHER_MONITOR_POLICY=by_name
+GOD_SEARCH_NOTIFICATIONS_MONITOR_POLICY=by_name
+```
+
 Inspect resolved runtime config:
 
 ```bash
