@@ -24,6 +24,8 @@ scripts=(
   "scripts/check_release_contracts_contract.sh"
   "scripts/check_release_contracts_doc.sh"
   "scripts/check_control_plane_docs_contract.sh"
+  "scripts/check_shell_health_contract.sh"
+  "scripts/control_plane_smoke.sh"
   "scripts/check_release_smoke_contract.sh"
   "scripts/check_apps_cache_format.sh"
   "scripts/check_icon_theme_env.sh"

@@ -22,6 +22,8 @@ Quick reference for release automation scripts.
 | `scripts/check_release_contracts_contract.sh` | Contract checks for release-contracts alias CLI/docs sync | `scripts/check_release_contracts_contract.sh` | (same command) |
 | `scripts/check_release_contracts_doc.sh` | Consistency checks for `docs/RELEASE_CONTRACTS.md` | `scripts/check_release_contracts_doc.sh` | (same command) |
 | `scripts/check_control_plane_docs_contract.sh` | Control-plane docs parity checks (README/CONTROL_PLANE/RUNBOOK) | `scripts/check_control_plane_docs_contract.sh` | (same command) |
+| `scripts/check_shell_health_contract.sh` | Shell health fallback/live runtime contract checks | `scripts/check_shell_health_contract.sh` | (same command) |
+| `scripts/control_plane_smoke.sh` | Control-plane command-matrix runtime smoke | `scripts/control_plane_smoke.sh` | (same command) |
 | `scripts/check_release_smoke_contract.sh` | Release-smoke help/docs contract checks | `scripts/check_release_smoke_contract.sh` | (same command) |
 | `scripts/check_release_validate_contract.sh` | Release-validate help/docs contract checks | `scripts/check_release_validate_contract.sh` | (same command) |
 | `scripts/check_apps_cache_format.sh` | Apps cache format compatibility guard | `scripts/check_apps_cache_format.sh` | (same command) |
