@@ -18,8 +18,10 @@ const gtk_controller = @import("gtk/controller.zig");
 const gtk_results_flow = @import("gtk/results_flow.zig");
 const gtk_widgets = @import("gtk/widgets.zig");
 const ipc_control = @import("../ipc/control.zig");
+const notifications_mod = @import("../notifications/mod.zig");
 const gtk_shell_control = @import("gtk/shell_control.zig");
 const gtk_shell_lifecycle = @import("gtk/shell_lifecycle.zig");
+const gtk_shell_notifications = @import("gtk/shell_notifications.zig");
 const gtk_shell_startup = @import("gtk/shell_startup.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -54,6 +56,11 @@ pub const Shell = struct {
         var control_server: ?ipc_control.Server = null;
         defer if (control_server) |*srv| srv.deinit();
         control_server = try gtk_shell_control.maybeStart(allocator, options.resident_mode, &launch);
+
+        var notifications_daemon: ?notifications_mod.Daemon = null;
+        defer if (notifications_daemon) |*daemon| daemon.deinit();
+        notifications_daemon = try gtk_shell_notifications.maybeStart(allocator, options.resident_mode);
+
         _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), &launch, null, 0);
         _ = c.g_application_run(@ptrCast(gtk_app), 0, null);
     }
@@ -78,7 +85,6 @@ pub const Shell = struct {
     fn afterActivate(ctx: *UiContext) void {
         gtk_shell_startup.afterActivate(ctx);
     }
-
 
     fn onKeyPressed(
         _: ?*c.GtkEventControllerKey,

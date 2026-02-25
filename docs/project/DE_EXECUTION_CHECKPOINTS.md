@@ -81,3 +81,28 @@ Verification:
 ```bash
 rg -n "Notify\\(|CloseNotification\\(|GetCapabilities\\(|GetServerInformation\\(|NotificationClosed\\(|ActionInvoked\\(|ActivationToken\\(" docs/vendor/notifications/notification-protocol.txt
 ```
+
+## CP-3 Notifications Daemon MVP (D-Bus)
+
+Scope:
+- register `org.freedesktop.Notifications` on session bus in resident shell mode
+- implement methods: `GetCapabilities`, `Notify`, `CloseNotification`, `GetServerInformation`
+- in-memory notification ID lifecycle with `replaces_id` support
+- emit `NotificationClosed(id, 3)` on `CloseNotification` of existing notifications
+
+Done criteria:
+1. Resident mode owns `org.freedesktop.Notifications` on session bus.
+2. `GetCapabilities` returns declared MVP subset.
+3. `Notify` returns stable IDs and honors `replaces_id` when present.
+4. `CloseNotification` returns success and emits `NotificationClosed` reason `3` for existing IDs.
+5. Build/tests pass with GTK enabled.
+
+Verification:
+```bash
+zig build -Denable_gtk=true
+zig build test -Denable_gtk=true
+./zig-out/bin/god_search_ui --ui-daemon
+gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.GetServerInformation
+gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.GetCapabilities
+notify-send "god-search-ui" "dbus smoke"
+```

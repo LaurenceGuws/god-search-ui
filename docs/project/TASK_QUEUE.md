@@ -13,10 +13,11 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-A2: Split GTK lifecycle/runtime orchestration from launcher module behavior.
 - [x] DE-A2.1: Extract shell control-plane lifecycle from `gtk_shell.zig` into dedicated modules.
 - [x] DE-A2.2: Extract startup/activation lifecycle orchestration into a dedicated runtime module.
-- [ ] DE-B1: Add notifications daemon MVP (`org.freedesktop.Notifications`: `Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`).
+- [x] DE-B1: Add notifications daemon MVP (`org.freedesktop.Notifications`: `Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`).
+- [ ] DE-B2: Add notification popup renderer + timeout/replaces_id close interactions + `NotificationClosed` reason coverage.
 
 ## In Progress
-- [ ] DE-B1: notifications daemon MVP implementation (`Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`)
+- [ ] DE-B2: notifications popup/interaction slice (`NotificationClosed` reason 1/2 handling + stack behavior)
 
 ## Blocked
 - [ ] (empty)
