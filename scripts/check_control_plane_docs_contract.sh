@@ -6,8 +6,10 @@ cd "$ROOT_DIR"
 
 README="README.md"
 DOC="docs/operations/CONTROL_PLANE.md"
+RUNBOOK="docs/operations/TROUBLESHOOTING_RUNBOOK.md"
 test -f "$README"
 test -f "$DOC"
+test -f "$RUNBOOK"
 
 require() {
   local file="$1"
@@ -38,5 +40,7 @@ require "$README" 'docs/operations/CONTROL_PLANE_SMOKE.md' 'README control-plane
 require "$DOC" '## Exit Codes' 'CONTROL_PLANE exit codes section'
 require "$DOC" '--print-shell-health' 'CONTROL_PLANE health flow reference'
 require "$DOC" 'docs/operations/CONTROL_PLANE_SMOKE.md' 'CONTROL_PLANE smoke reference'
+require "$RUNBOOK" 'scripts/control_plane_smoke.sh' 'RUNBOOK control-plane smoke reference'
+require "$RUNBOOK" 'god-search-ui --ctl ping' 'RUNBOOK ctl ping reference'
 
 echo "control-plane docs contract checks passed"

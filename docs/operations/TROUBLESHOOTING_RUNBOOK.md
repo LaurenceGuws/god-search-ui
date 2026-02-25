@@ -148,6 +148,28 @@ Actions:
    scripts/check_shell_health_contract.sh
    ```
 
+### H. Control-plane commands fail (`--ctl ping` exits 10)
+
+Symptoms:
+- `god-search-ui --ctl ping` exits `10`
+- summon/hide/toggle commands do nothing
+
+Actions:
+1. Check current control-plane socket namespace:
+   ```bash
+   echo "${XDG_RUNTIME_DIR:-<unset>}"
+   ```
+2. Start a daemon in the same shell/session:
+   ```bash
+   god-search-ui --ui-daemon
+   god-search-ui --ctl ping
+   ```
+3. If failure persists, run isolated smoke:
+   ```bash
+   scripts/control_plane_smoke.sh
+   ```
+4. If smoke passes but your normal shell fails, you likely have a runtime-dir mismatch between shells/sessions.
+
 ## 3) Recovery / Rollback
 
 If launcher is unstable in GTK mode:
