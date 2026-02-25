@@ -91,3 +91,5 @@ MVP behavior:
 Before notifications implementation starts:
 1. Method/signal signatures above must match code exactly.
 2. Every deferred feature must be documented in PR notes.
+3. Run lock check:
+   - `scripts/check_notifications_protocol_lock.sh`

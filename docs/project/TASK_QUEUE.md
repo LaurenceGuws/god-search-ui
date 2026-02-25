@@ -6,7 +6,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R0: Implement WA-1.1 socket server MVP from `docs/WA1_CONTROL_PLANE_SPEC.md`.
 - [ ] DE-R1: Break down `docs/DE_WEAK_AREAS_ROADMAP.md` WA-4.1 into implementation PR slice.
 - [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
-- [ ] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
+- [x] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
 - [x] DE-A1.1: Add strict response parsing + client timeout handling per `docs/WA1_CONTROL_PLANE_SPEC.md`.
 - [x] DE-A1.2: Enforce socket permissions (`0600`) and add stale-socket startup test coverage.
@@ -16,7 +16,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [ ] DE-B1: Add notifications daemon MVP (`org.freedesktop.Notifications`: `Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`).
 
 ## In Progress
-- [ ] DE-B0.1: validate notifications protocol lock against fetched vendor artifacts and freeze MVP defer list
+- [ ] DE-B1: notifications daemon MVP implementation (`Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`)
 
 ## Blocked
 - [ ] (empty)
