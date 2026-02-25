@@ -55,6 +55,12 @@ god-search-ui --ctl shell_health
 god-search-ui --print-shell-health
 ```
 
+Scripted equivalent:
+
+```bash
+scripts/control_plane_smoke.sh
+```
+
 ## Notes
 
 - Control-plane commands are intended for daemon/resident mode.
