@@ -23,7 +23,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-P11: Placement env/lua precedence regression checks
+- [ ] DE-P12: Placement CLI helper for writing/patching config from command line
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -33,6 +33,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P8: Placement env overrides for non-Lua builds (selected core fields)
 - [x] DE-P9: Placement policy file contracts checker script (docs/template parity)
 - [x] DE-P10: Placement env override coverage expansion (margins + size fields)
+- [x] DE-P11: Placement env/lua precedence regression checks
 
 ## Blocked
 - [ ] (empty)

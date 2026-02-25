@@ -140,3 +140,9 @@ Placement contract checker:
 ```bash
 scripts/check_placement_contracts.sh
 ```
+
+Placement precedence checker (`Lua -> env -> CLI`):
+
+```bash
+scripts/check_placement_precedence.sh
+```

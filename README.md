@@ -266,6 +266,10 @@ Placement config/template/docs contract check:
 ```bash
 scripts/check_placement_contracts.sh
 ```
+Placement precedence regression check:
+```bash
+scripts/check_placement_precedence.sh
+```
 Release-validate help/docs contract check:
 ```bash
 scripts/check_release_validate_contract.sh

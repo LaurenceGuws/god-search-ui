@@ -82,7 +82,6 @@ fn parseSettingsFromTop(lua: *c.lua_State, allocator: std.mem.Allocator, initial
     var out = initial;
 
     _ = c.lua_getfield(lua, -1, "surface_mode");
-    defer c.lua_settop(lua, -2);
     if (c.lua_type(lua, -1) == c.LUA_TSTRING) {
         if (readLuaString(lua, -1)) |raw| {
             if (SurfaceMode.parse(raw)) |mode| {
@@ -92,11 +91,13 @@ fn parseSettingsFromTop(lua: *c.lua_State, allocator: std.mem.Allocator, initial
             }
         }
     }
+    c.lua_pop(lua, 1);
+
     _ = c.lua_getfield(lua, -1, "placement");
-    defer c.lua_settop(lua, -2);
     if (c.lua_istable(lua, -1)) {
         out.placement_policy = parsePlacementTable(lua, allocator, -1, out.placement_policy, &out.launcher_monitor_name, &out.notifications_monitor_name);
     }
+    c.lua_pop(lua, 1);
 
     return out;
 }
@@ -112,16 +113,16 @@ fn parsePlacementTable(
     var out = initial;
 
     _ = c.lua_getfield(lua, idx, "launcher");
-    defer c.lua_settop(lua, -2);
     if (c.lua_istable(lua, -1)) {
         out.launcher = parseLauncherPolicy(lua, allocator, -1, out.launcher, launcher_monitor_name);
     }
+    c.lua_pop(lua, 1);
 
     _ = c.lua_getfield(lua, idx, "notifications");
-    defer c.lua_settop(lua, -2);
     if (c.lua_istable(lua, -1)) {
         out.notifications = parseNotificationPolicy(lua, allocator, -1, out.notifications, notifications_monitor_name);
     }
+    c.lua_pop(lua, 1);
 
     return out;
 }
@@ -172,7 +173,6 @@ fn parseWindowPolicy(
     monitor_name_out: *?[]u8,
 ) void {
     _ = c.lua_getfield(lua, idx, "anchor");
-    defer c.lua_settop(lua, -2);
     if (c.lua_type(lua, -1) == c.LUA_TSTRING) {
         if (readLuaString(lua, -1)) |raw| {
             if (parseAnchor(raw)) |anchor| {
@@ -182,9 +182,9 @@ fn parseWindowPolicy(
             }
         }
     }
+    c.lua_pop(lua, 1);
 
     _ = c.lua_getfield(lua, idx, "monitor_policy");
-    defer c.lua_settop(lua, -2);
     if (c.lua_type(lua, -1) == c.LUA_TSTRING) {
         if (readLuaString(lua, -1)) |raw| {
             if (parseMonitorPolicy(raw)) |policy| {
@@ -194,9 +194,9 @@ fn parseWindowPolicy(
             }
         }
     }
+    c.lua_pop(lua, 1);
 
     _ = c.lua_getfield(lua, idx, "monitor_name");
-    defer c.lua_settop(lua, -2);
     if (c.lua_type(lua, -1) == c.LUA_TSTRING) {
         if (readLuaString(lua, -1)) |raw| {
             const trimmed = std.mem.trim(u8, raw, " \t\r\n");
@@ -206,15 +206,16 @@ fn parseWindowPolicy(
             }
         }
     }
+    c.lua_pop(lua, 1);
 
     _ = c.lua_getfield(lua, idx, "margins");
-    defer c.lua_settop(lua, -2);
     if (c.lua_istable(lua, -1)) {
         maybeIntField(lua, -1, "left", &out.margins.left);
         maybeIntField(lua, -1, "right", &out.margins.right);
         maybeIntField(lua, -1, "top", &out.margins.top);
         maybeIntField(lua, -1, "bottom", &out.margins.bottom);
     }
+    c.lua_pop(lua, 1);
 }
 
 fn maybeIntField(lua: *c.lua_State, idx: c_int, field: [*:0]const u8, out: *i32) void {
