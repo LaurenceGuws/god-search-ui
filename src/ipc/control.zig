@@ -20,6 +20,15 @@ const Request = struct {
     cmd: []const u8 = "",
 };
 
+const Response = struct {
+    ok: bool = false,
+    code: []const u8 = "",
+    message: []const u8 = "",
+};
+
+const connect_timeout_ms: u64 = 250;
+const response_timeout_ms: i32 = 500;
+
 pub const Server = struct {
     allocator: std.mem.Allocator,
     socket_path: []u8,
@@ -72,26 +81,33 @@ pub fn trySendCommand(allocator: std.mem.Allocator, cmd: Command) !bool {
     defer std.posix.close(fd);
 
     const addr = try std.net.Address.initUnix(socket_path);
-    std.posix.connect(fd, &addr.any, addr.getOsSockLen()) catch |err| {
-        return switch (err) {
-            error.FileNotFound,
-            error.ConnectionRefused,
-            error.ConnectionResetByPeer,
-            error.NetworkUnreachable,
-            error.AddressNotAvailable => false,
-            else => err,
-        };
-    };
+    const connected = try connectWithRetryTimeout(fd, &addr.any, addr.getOsSockLen(), connect_timeout_ms);
+    if (!connected) return false;
 
     const request = try std.fmt.allocPrint(allocator, "{{\"v\":1,\"cmd\":\"{s}\"}}", .{@tagName(cmd)});
     defer allocator.free(request);
     _ = try std.posix.write(fd, request);
     std.posix.shutdown(fd, .send) catch {};
 
-    var response_buf: [512]u8 = undefined;
+    var poll_fds = [_]std.posix.pollfd{
+        .{
+            .fd = fd,
+            .events = std.posix.POLL.IN,
+            .revents = 0,
+        },
+    };
+    const poll_count = std.posix.poll(&poll_fds, response_timeout_ms) catch return false;
+    if (poll_count <= 0) return false;
+    if ((poll_fds[0].revents & std.posix.POLL.IN) == 0) return false;
+
+    var response_buf: [1024]u8 = undefined;
     const n = std.posix.read(fd, &response_buf) catch return false;
     if (n == 0) return false;
-    return std.mem.indexOf(u8, response_buf[0..n], "\"ok\":true") != null;
+
+    var parsed = std.json.parseFromSlice(Response, allocator, response_buf[0..n], .{}) catch return false;
+    defer parsed.deinit();
+    if (!parsed.value.ok) return false;
+    return std.mem.eql(u8, parsed.value.code, "ok");
 }
 
 pub fn defaultSocketPathAlloc(allocator: std.mem.Allocator) ![]u8 {
@@ -209,4 +225,26 @@ fn writeResponse(fd: std.posix.socket_t, ok: bool, code: []const u8, message: []
         .{ if (ok) "true" else "false", code, message },
     ) catch return;
     _ = std.posix.write(fd, json) catch {};
+}
+
+fn connectWithRetryTimeout(fd: std.posix.socket_t, sockaddr: *const std.posix.sockaddr, socklen: std.posix.socklen_t, timeout_ms: u64) !bool {
+    const start_ns = std.time.nanoTimestamp();
+    const timeout_ns = timeout_ms * std.time.ns_per_ms;
+
+    while (true) {
+        std.posix.connect(fd, sockaddr, socklen) catch |err| switch (err) {
+            error.FileNotFound,
+            error.ConnectionRefused,
+            error.ConnectionResetByPeer,
+            error.NetworkUnreachable,
+            error.AddressNotAvailable => {
+                const now_ns = std.time.nanoTimestamp();
+                if (now_ns - start_ns >= @as(i128, @intCast(timeout_ns))) return false;
+                std.Thread.sleep(5 * std.time.ns_per_ms);
+                continue;
+            },
+            else => return err,
+        };
+        return true;
+    }
 }
