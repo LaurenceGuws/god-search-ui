@@ -11,6 +11,12 @@ Usage: scripts/check_release_contracts.sh [options]
 Options:
   --docs-only   Run docs/help/matrix contract checks only
   --help        Show this help
+
+Notes:
+  Full mode runs GUI-dependent runtime checks:
+    - scripts/check_shell_health_contract.sh
+    - scripts/control_plane_smoke.sh
+  These checks may self-skip when no usable display session is available.
 EOF
 }
 
@@ -29,6 +35,7 @@ done
 
 scripts/check_release_docs_contracts.sh
 if [[ $DOCS_ONLY -eq 0 ]]; then
+  echo "runtime-check note: GUI-dependent checks may self-skip when WAYLAND_DISPLAY/DISPLAY are unavailable"
   scripts/check_release_validate_ci.sh
   scripts/check_shell_health_contract.sh
   scripts/control_plane_smoke.sh
