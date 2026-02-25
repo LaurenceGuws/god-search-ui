@@ -11,7 +11,15 @@ pub fn main() !void {
     const logger = god_search_ui.app.Logger.init(.info);
     logger.info("god-search-ui starting (mode={s})", .{@tagName(state.mode)});
 
-    if (argValueAfterFlag(args, "--ctl")) |raw_cmd| {
+    if (hasArg(args, "--ctl")) {
+        const raw_cmd = argValueAfterFlag(args, "--ctl") orelse {
+            try printCtlUsage();
+            return;
+        };
+        if (std.mem.eql(u8, raw_cmd, "--help")) {
+            try printCtlUsage();
+            return;
+        }
         const cmd = parseControlCommand(raw_cmd) orelse {
             std.process.exit(13);
         };
@@ -95,6 +103,18 @@ pub fn main() !void {
 
     logger.info("startup ready in {d:.2} ms", .{startup_sw.elapsedMs()});
     try god_search_ui.bufferedPrint();
+}
+
+fn printCtlUsage() !void {
+    var stdout_buffer: [512]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+    const out = &stdout_writer.interface;
+    try out.print(
+        \\Usage: god-search-ui --ctl <command>
+        \\Commands: ping, summon, hide, toggle, version, shell_health
+        \\
+    , .{});
+    try out.flush();
 }
 
 const Runtime = struct {

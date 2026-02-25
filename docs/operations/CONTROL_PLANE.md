@@ -16,6 +16,7 @@ Socket path resolution:
 ## Commands
 
 ```bash
+god-search-ui --ctl --help
 god-search-ui --ctl ping
 god-search-ui --ctl summon
 god-search-ui --ctl hide

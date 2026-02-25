@@ -75,6 +75,7 @@ With `--ui-daemon`, bind your launcher key to `god-search-ui --ui` so each press
 
 Control-plane commands (for resident/daemon mode):
 ```bash
+god-search-ui --ctl --help
 god-search-ui --ctl ping
 god-search-ui --ctl summon
 god-search-ui --ctl hide
