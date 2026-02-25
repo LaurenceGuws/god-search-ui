@@ -246,6 +246,10 @@ Release-contracts doc consistency check:
 ```bash
 scripts/check_release_contracts_doc.sh
 ```
+Placement config/template/docs contract check:
+```bash
+scripts/check_placement_contracts.sh
+```
 Release-validate help/docs contract check:
 ```bash
 scripts/check_release_validate_contract.sh

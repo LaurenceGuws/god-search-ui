@@ -112,3 +112,9 @@ Smoke helper:
 ```bash
 scripts/placement_smoke.sh
 ```
+
+Placement contract checker:
+
+```bash
+scripts/check_placement_contracts.sh
+```
