@@ -40,5 +40,13 @@ require_pattern README.md 'scripts/placement_smoke.sh' "README placement smoke c
 require_pattern docs/operations/LUA_CONFIG.md 'god-search-ui --print-config' "LUA_CONFIG print-config command"
 require_pattern docs/operations/LUA_CONFIG.md 'god-search-ui --print-outputs' "LUA_CONFIG print-outputs command"
 require_pattern docs/operations/LUA_CONFIG.md 'scripts/placement_smoke.sh' "LUA_CONFIG smoke command"
+require_pattern docs/operations/LUA_CONFIG.md 'scripts/validate_lua_config.sh' "LUA_CONFIG schema validator command"
+
+# Validate generated default config against strict schema.
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+tmp_cfg="$tmp_dir/config.lua"
+scripts/init_lua_config.sh "$tmp_cfg" >/dev/null
+scripts/validate_lua_config.sh "$tmp_cfg" >/dev/null
 
 echo "placement contract checks passed"
