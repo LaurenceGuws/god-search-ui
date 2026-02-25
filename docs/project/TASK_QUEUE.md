@@ -27,7 +27,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-M2: WA-4.1 Slice C - route notifications daemon ownership via module adapter.
+- [ ] DE-M3: WA-4.1 Slice D - add minimal typed event bus + module health snapshot.
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -46,6 +46,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R1: WA-4.1 PR-slice breakdown doc added (`docs/project/WA4_1_MODULE_TRAIT_PR_SLICES.md`)
 - [x] DE-M0: WA-4.1 Slice A module trait + registry primitives (`src/shell/module.zig`, `src/shell/registry.zig`)
 - [x] DE-M1: WA-4.1 Slice B launcher startup routed through module registry adapter
+- [x] DE-M2: WA-4.1 Slice C notifications daemon ownership routed through module adapter
 
 ## Blocked
 - [ ] (empty)

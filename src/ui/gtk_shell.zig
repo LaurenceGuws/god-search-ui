@@ -27,6 +27,7 @@ const gtk_shell_notifications_popup = @import("gtk/shell_notifications_popup.zig
 const gtk_shell_startup = @import("gtk/shell_startup.zig");
 const SurfaceMode = @import("surfaces/mod.zig").SurfaceMode;
 const PlacementPolicy = @import("placement/mod.zig").RuntimePolicy;
+const NotificationPolicy = @import("placement/mod.zig").NotificationPolicy;
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -69,39 +70,20 @@ pub const Shell = struct {
         defer if (control_server) |*srv| srv.deinit();
         control_server = try gtk_shell_control.maybeStart(allocator, options.resident_mode, &launch);
 
-        var notifications_daemon: ?*notifications_mod.Daemon = null;
-        defer if (notifications_daemon) |daemon| {
-            notifications_mod.runtime.clearCloser(daemon);
-            daemon.deinit();
-            allocator.destroy(daemon);
-        };
-        notifications_daemon = try gtk_shell_notifications.maybeStart(allocator, options.resident_mode);
-
-        var notifications_popup: ?*gtk_shell_notifications_popup.PopupManager = null;
-        defer if (notifications_popup) |popup| {
-            popup.deinit();
-            allocator.destroy(popup);
-        };
-        if (notifications_daemon) |daemon| {
-            notifications_mod.runtime.registerCloser(daemon, closeNotificationViaDaemon);
-            const popup = try allocator.create(gtk_shell_notifications_popup.PopupManager);
-            popup.* = try gtk_shell_notifications_popup.PopupManager.init(
-                allocator,
-                gtk_app,
-                daemon,
-                options.surface_mode,
-                options.placement_policy.notifications,
-            );
-            popup.attach();
-            notifications_popup = popup;
-        }
-
         var module_registry = shell_mod.Registry.init(allocator);
         defer module_registry.deinit();
+        var notifications_ctx = NotificationsModule.Context{
+            .allocator = allocator,
+            .gtk_app = gtk_app,
+            .resident_mode = options.resident_mode,
+            .surface_mode = options.surface_mode,
+            .placement_policy = options.placement_policy.notifications,
+        };
         var launcher_ctx = LauncherModule.Context{
             .gtk_app = gtk_app,
             .launch = &launch,
         };
+        try module_registry.register(NotificationsModule.factory(&notifications_ctx));
         try module_registry.register(LauncherModule.factory(&launcher_ctx));
         try module_registry.startAll();
     }
@@ -408,6 +390,99 @@ pub const Shell = struct {
         const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
         std.log.info("{s}={d:.2}", .{ metric_name, elapsed_ms });
     }
+
+    const NotificationsModule = struct {
+        const Context = struct {
+            allocator: std.mem.Allocator,
+            gtk_app: *c.GtkApplication,
+            resident_mode: bool,
+            surface_mode: SurfaceMode,
+            placement_policy: NotificationPolicy,
+        };
+
+        const State = struct {
+            ctx: *Context,
+            daemon: ?*notifications_mod.Daemon = null,
+            popup: ?*gtk_shell_notifications_popup.PopupManager = null,
+            started: bool = false,
+        };
+
+        fn factory(ctx: *Context) shell_mod.module.ModuleFactory {
+            return .{
+                .name = "notifications",
+                .context = ctx,
+                .init = init,
+            };
+        }
+
+        fn init(allocator: std.mem.Allocator, ctx_ptr: *anyopaque) !shell_mod.module.ModuleInstance {
+            const ctx: *Context = @ptrCast(@alignCast(ctx_ptr));
+            const state = try allocator.create(State);
+            state.* = .{ .ctx = ctx };
+            return .{
+                .name = "notifications",
+                .state = state,
+                .vtable = &.{
+                    .start = start,
+                    .stop = stop,
+                    .handle_event = handleEvent,
+                    .health = health,
+                    .deinit = deinit,
+                },
+            };
+        }
+
+        fn start(state_ptr: *anyopaque) !void {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            state.daemon = try gtk_shell_notifications.maybeStart(state.ctx.allocator, state.ctx.resident_mode);
+            if (state.daemon) |daemon| {
+                notifications_mod.runtime.registerCloser(daemon, closeNotificationViaDaemon);
+                const popup = try state.ctx.allocator.create(gtk_shell_notifications_popup.PopupManager);
+                popup.* = try gtk_shell_notifications_popup.PopupManager.init(
+                    state.ctx.allocator,
+                    state.ctx.gtk_app,
+                    daemon,
+                    state.ctx.surface_mode,
+                    state.ctx.placement_policy,
+                );
+                popup.attach();
+                state.popup = popup;
+            }
+            state.started = true;
+        }
+
+        fn stop(state_ptr: *anyopaque) void {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            if (state.popup) |popup| {
+                popup.deinit();
+                state.ctx.allocator.destroy(popup);
+                state.popup = null;
+            }
+            if (state.daemon) |daemon| {
+                notifications_mod.runtime.clearCloser(daemon);
+                daemon.deinit();
+                state.ctx.allocator.destroy(daemon);
+                state.daemon = null;
+            }
+            state.started = false;
+        }
+
+        fn handleEvent(_: *anyopaque, _: shell_mod.module.Event) void {}
+
+        fn health(state_ptr: *anyopaque) shell_mod.module.ModuleHealth {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            if (!state.started) return .{ .status = .unknown, .detail = "not started" };
+            return if (state.daemon != null)
+                .{ .status = .ready, .detail = "daemon active" }
+            else
+                .{ .status = .degraded, .detail = "daemon disabled or unavailable" };
+        }
+
+        fn deinit(allocator: std.mem.Allocator, state_ptr: *anyopaque) void {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            allocator.destroy(state);
+        }
+    };
 
     const LauncherModule = struct {
         const Context = struct {
