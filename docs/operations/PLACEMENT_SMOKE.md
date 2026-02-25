@@ -3,9 +3,10 @@
 Status: active  
 Owner: shell  
 Last-Reviewed: 2026-02-25  
-Canonical: yes
+Canonical: no
 
 Quick validation for placement diagnostics and monitor pinning.
+For full placement setup/verification order, use `docs/operations/PLACEMENT_OPERATOR_FLOW.md`.
 
 ## Run
 

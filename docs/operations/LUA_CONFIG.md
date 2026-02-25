@@ -5,6 +5,8 @@ Owner: shell
 Last-Reviewed: 2026-02-25  
 Canonical: yes
 
+Operator flow reference: `docs/operations/PLACEMENT_OPERATOR_FLOW.md` is the single step-by-step runbook for placement setup/verification.
+
 ## Build Flag
 
 Enable Lua config support at build time:

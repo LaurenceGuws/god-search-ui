@@ -59,67 +59,9 @@ Patch common Lua config keys quickly:
 scripts/set_lua_config.sh surface_mode layer-shell
 scripts/set_lua_config.sh launcher.monitor_name DP-1
 ```
-File contract:
-```lua
-return {
-  surface_mode = "layer-shell", -- auto | toplevel | layer-shell
-  placement = {
-    launcher = {
-      anchor = "center",        -- center | top_left | top_center | top_right | bottom_left | bottom_center | bottom_right
-      monitor_policy = "primary", -- primary | focused
-      -- monitor_name = "DP-1", -- optional: implies by-name monitor targeting
-      margins = { top = 12, right = 12, bottom = 12, left = 12 },
-      width_percent = 48,
-      height_percent = 56,
-      min_width_percent = 32,
-      min_height_percent = 36,
-      min_width_px = 560,
-      min_height_px = 360,
-      max_width_px = 1100,
-      max_height_px = 760,
-    },
-    notifications = {
-      anchor = "top_right",
-      monitor_policy = "primary",
-      -- monitor_name = "DP-1", -- optional: implies by-name monitor targeting
-      margins = { top = 24, right = 24, bottom = 24, left = 24 },
-      width_percent = 26,
-      height_percent = 46,
-      min_width_px = 300,
-      min_height_px = 280,
-      max_width_px = 460,
-      max_height_px = 620,
-    },
-  },
-}
-```
-Precedence: `--surface-mode` > `GOD_SEARCH_SURFACE_MODE` > Lua config > default.
-Reference: `docs/operations/LUA_CONFIG.md`
-Core placement env overrides:
-```bash
-GOD_SEARCH_LAUNCHER_MONITOR=DP-1
-GOD_SEARCH_NOTIFICATIONS_MONITOR=DP-1
-GOD_SEARCH_LAUNCHER_ANCHOR=top_center
-GOD_SEARCH_NOTIFICATIONS_ANCHOR=top_right
-GOD_SEARCH_LAUNCHER_MONITOR_POLICY=by_name   # by_name | primary | focused
-GOD_SEARCH_NOTIFICATIONS_MONITOR_POLICY=by_name
-GOD_SEARCH_LAUNCHER_MARGIN_TOP=12
-GOD_SEARCH_LAUNCHER_MARGIN_RIGHT=12
-GOD_SEARCH_LAUNCHER_MARGIN_BOTTOM=12
-GOD_SEARCH_LAUNCHER_MARGIN_LEFT=12
-GOD_SEARCH_NOTIFICATIONS_MARGIN_TOP=24
-GOD_SEARCH_NOTIFICATIONS_MARGIN_RIGHT=24
-GOD_SEARCH_NOTIFICATIONS_MARGIN_BOTTOM=24
-GOD_SEARCH_NOTIFICATIONS_MARGIN_LEFT=24
-GOD_SEARCH_LAUNCHER_WIDTH_PERCENT=48
-GOD_SEARCH_LAUNCHER_HEIGHT_PERCENT=56
-GOD_SEARCH_LAUNCHER_MIN_WIDTH_PX=560
-GOD_SEARCH_LAUNCHER_MAX_WIDTH_PX=1100
-GOD_SEARCH_NOTIFICATIONS_WIDTH_PERCENT=26
-GOD_SEARCH_NOTIFICATIONS_HEIGHT_PERCENT=46
-GOD_SEARCH_NOTIFICATIONS_MIN_WIDTH_PX=300
-GOD_SEARCH_NOTIFICATIONS_MAX_WIDTH_PX=460
-```
+Placement docs:
+- canonical operator flow: `docs/operations/PLACEMENT_OPERATOR_FLOW.md`
+- full Lua contract + env matrix: `docs/operations/LUA_CONFIG.md`
 
 Resident GTK modes (recommended for zero-drop fast summon):
 ```bash

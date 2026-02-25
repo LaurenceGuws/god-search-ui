@@ -37,10 +37,17 @@ done
 require_pattern README.md 'god-search-ui --print-config' "README print-config command"
 require_pattern README.md 'god-search-ui --print-outputs' "README print-outputs command"
 require_pattern README.md 'scripts/placement_smoke.sh' "README placement smoke command"
+require_pattern README.md 'docs/operations/PLACEMENT_OPERATOR_FLOW.md' "README operator flow reference"
 require_pattern docs/operations/LUA_CONFIG.md 'god-search-ui --print-config' "LUA_CONFIG print-config command"
 require_pattern docs/operations/LUA_CONFIG.md 'god-search-ui --print-outputs' "LUA_CONFIG print-outputs command"
 require_pattern docs/operations/LUA_CONFIG.md 'scripts/placement_smoke.sh' "LUA_CONFIG smoke command"
 require_pattern docs/operations/LUA_CONFIG.md 'scripts/validate_lua_config.sh' "LUA_CONFIG schema validator command"
+require_pattern docs/operations/LUA_CONFIG.md 'docs/operations/PLACEMENT_OPERATOR_FLOW.md' "LUA_CONFIG operator flow reference"
+require_pattern docs/operations/PLACEMENT_OPERATOR_FLOW.md 'scripts/set_lua_config.sh' "operator flow set_lua_config command"
+require_pattern docs/operations/PLACEMENT_OPERATOR_FLOW.md 'god-search-ui --print-outputs' "operator flow print-outputs command"
+require_pattern docs/operations/PLACEMENT_OPERATOR_FLOW.md 'god-search-ui --print-config' "operator flow print-config command"
+require_pattern docs/operations/PLACEMENT_OPERATOR_FLOW.md 'scripts/placement_smoke.sh' "operator flow smoke command"
+require_pattern docs/operations/PLACEMENT_OPERATOR_FLOW.md 'scripts/check_placement_contracts.sh' "operator flow contract checker command"
 
 # Validate generated default config against strict schema.
 tmp_dir="$(mktemp -d)"
