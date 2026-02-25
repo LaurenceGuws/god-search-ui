@@ -222,7 +222,7 @@ fn writeResponse(fd: std.posix.socket_t, ok: bool, code: []const u8, message: []
     var buf: [512]u8 = undefined;
     const json = std.fmt.bufPrint(
         &buf,
-        "{{\"ok\":{s},\"code\":\"{s}\",\"message\":\"{s}\",\"data\":{{}}}}",
+        "{{\"ok\":{s},\"code\":\"{s}\",\"message\":\"{s}\"}}",
         .{ if (ok) "true" else "false", code, message },
     ) catch return;
     _ = std.posix.write(fd, json) catch {};
@@ -234,11 +234,7 @@ fn connectWithRetryTimeout(fd: std.posix.socket_t, sockaddr: *const std.posix.so
 
     while (true) {
         std.posix.connect(fd, sockaddr, socklen) catch |err| switch (err) {
-            error.FileNotFound,
-            error.ConnectionRefused,
-            error.ConnectionResetByPeer,
-            error.NetworkUnreachable,
-            error.AddressNotAvailable => {
+            error.FileNotFound, error.ConnectionRefused, error.ConnectionResetByPeer, error.NetworkUnreachable, error.AddressNotAvailable => {
                 const now_ns = std.time.nanoTimestamp();
                 if (now_ns - start_ns >= @as(i128, @intCast(timeout_ns))) return false;
                 std.Thread.sleep(5 * std.time.ns_per_ms);

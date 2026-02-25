@@ -42,6 +42,10 @@ pub const Shell = struct {
     pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink, options: RunOptions) !void {
         const gtk_app = c.gtk_application_new("io.god.search.ui", c.G_APPLICATION_DEFAULT_FLAGS);
         defer c.g_object_unref(gtk_app);
+        if (options.resident_mode) {
+            c.g_application_hold(@ptrCast(gtk_app));
+            defer c.g_application_release(@ptrCast(gtk_app));
+        }
 
         var launch = LaunchContext{
             .allocator = allocator,
@@ -57,8 +61,11 @@ pub const Shell = struct {
         defer if (control_server) |*srv| srv.deinit();
         control_server = try gtk_shell_control.maybeStart(allocator, options.resident_mode, &launch);
 
-        var notifications_daemon: ?notifications_mod.Daemon = null;
-        defer if (notifications_daemon) |*daemon| daemon.deinit();
+        var notifications_daemon: ?*notifications_mod.Daemon = null;
+        defer if (notifications_daemon) |daemon| {
+            daemon.deinit();
+            allocator.destroy(daemon);
+        };
         notifications_daemon = try gtk_shell_notifications.maybeStart(allocator, options.resident_mode);
 
         _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), &launch, null, 0);

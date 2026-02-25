@@ -26,6 +26,15 @@ pub fn main() !void {
     if (ui_mode) {
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
+        if (resident_mode) {
+            const already_running = god_search_ui.ipc.control.trySendCommand(allocator, .ping) catch false;
+            if (already_running) {
+                if (!start_hidden) {
+                    _ = god_search_ui.ipc.control.trySendCommand(allocator, .summon) catch false;
+                }
+                return;
+            }
+        }
         if (!resident_mode and hasArg(args, "--ui")) {
             const summoned = god_search_ui.ipc.control.trySendCommand(allocator, .summon) catch false;
             if (summoned) return;
