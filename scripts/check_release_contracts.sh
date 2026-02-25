@@ -30,6 +30,7 @@ done
 scripts/check_release_docs_contracts.sh
 if [[ $DOCS_ONLY -eq 0 ]]; then
   scripts/check_release_validate_ci.sh
+  scripts/check_shell_health_contract.sh
 fi
 
 echo "release contract checks passed"

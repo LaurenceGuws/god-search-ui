@@ -120,6 +120,7 @@ scripts/dev.sh build
 scripts/dev.sh test
 scripts/dev_notifications_takeover.sh takeover
 scripts/dev_notifications_takeover.sh smoke
+scripts/check_shell_health_contract.sh
 ```
 `smoke` also sends an action-capable notification; click its action button while running `dbus-monitor` to observe `ActionInvoked`.
 

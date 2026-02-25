@@ -12,7 +12,11 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R2: Route shell control-plane commands through typed shell event bus.
 - [x] DE-R3: Add shell module-health diagnostics output path (`--print-shell-health`).
 - [x] DE-R4: Upgrade shell-health diagnostics from static snapshot to live daemon query.
-- [ ] DE-R5: Add shell-health contract check script (daemon query path + fallback path).
+- [x] DE-R5: Add shell-health contract check script (daemon query path + fallback path).
+- [x] DE-R6: Wire shell-health contract check into release-contracts docs guard set.
+- [x] DE-R7: Run shell-health contract in full `check_release_contracts.sh` path.
+- [x] DE-R8: Add operator troubleshooting note for shell-health live query fallback behavior.
+- [ ] DE-R9: Add control-plane docs page for all `--ctl` commands and response semantics.
 - [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
 - [x] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
@@ -31,7 +35,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-R5: Add shell-health contract check script (daemon query path + fallback path).
+- [ ] DE-R9: Add control-plane docs page for all `--ctl` commands and response semantics.
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -55,6 +59,10 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R2: Shell control-plane command routing moved onto typed shell event bus
 - [x] DE-R3: Added `--print-shell-health` diagnostics command path
 - [x] DE-R4: `--print-shell-health` now queries live daemon health over control socket
+- [x] DE-R5: Added `scripts/check_shell_health_contract.sh` for fallback/live contract coverage
+- [x] DE-R6: Added release-contracts docs guard for `scripts/check_shell_health_contract.sh`
+- [x] DE-R7: Full release-contract checks now run shell-health contract script
+- [x] DE-R8: Added shell-health live/fallback troubleshooting section in runbook
 
 ## Blocked
 - [ ] (empty)

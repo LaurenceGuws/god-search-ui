@@ -22,6 +22,7 @@ rg -q --fixed-strings "## Local Dirty-Worktree Quick Smoke" "$DOC"
 
 rg -q --fixed-strings "scripts/check_release_contracts.sh" "$DOC"
 rg -q --fixed-strings "scripts/check_release_docs_contracts.sh" "$DOC"
+rg -q --fixed-strings "scripts/check_shell_health_contract.sh" "$DOC"
 rg -q --fixed-strings "scripts/check_release_validate_ci.sh" "$DOC"
 rg -q --fixed-strings "scripts/check_release_contracts_contract.sh" "$DOC"
 rg -q --fixed-strings "Release-validate contract summary:" "$DOC"

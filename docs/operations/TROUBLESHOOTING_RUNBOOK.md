@@ -125,6 +125,29 @@ Actions:
 6. If local workspace is intentionally dirty during iteration, explicitly allow it:
    - `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/release_validate.sh --ci --require-clean`
 
+### G. `--print-shell-health` shows offline snapshot while daemon is running
+
+Symptoms:
+- `god-search-ui --print-shell-health` prints `diagnostic snapshot (offline)` lines
+- expected live `status=ready` module lines are missing
+
+Actions:
+1. Confirm daemon control socket responds:
+   ```bash
+   god-search-ui --ctl ping
+   ```
+2. If ping fails, start daemon and retry:
+   ```bash
+   god-search-ui --ui-daemon
+   god-search-ui --print-shell-health
+   ```
+3. If ping succeeds but output stays offline, verify you are using the same runtime socket namespace:
+   - check `XDG_RUNTIME_DIR` in both shells
+4. Run contract smoke to validate fallback + live path end-to-end:
+   ```bash
+   scripts/check_shell_health_contract.sh
+   ```
+
 ## 3) Recovery / Rollback
 
 If launcher is unstable in GTK mode:
