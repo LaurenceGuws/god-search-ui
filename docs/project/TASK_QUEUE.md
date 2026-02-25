@@ -33,7 +33,8 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R23: Add release-contracts script output hint when runtime checks are skipped.
 - [x] DE-R24: Add release-contracts help text note for GUI-dependent runtime checks.
 - [x] DE-R25: Add release-contracts contract check for new help-text runtime notes.
-- [ ] DE-R26: Add release-contract docs row for control-plane docs parity checker in script matrix.
+- [x] DE-R26: Add release-contract docs row for control-plane docs parity checker in script matrix.
+- [ ] DE-R27: Add release-contracts docs row for shell/control runtime smoke helpers in script matrix.
 - [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
 - [x] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
@@ -52,7 +53,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-R26: Add release-contract docs row for control-plane docs parity checker in script matrix.
+- [ ] DE-R27: Add release-contracts docs row for shell/control runtime smoke helpers in script matrix.
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -97,6 +98,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R23: Added explicit runtime-check skip hint output in `check_release_contracts.sh`
 - [x] DE-R24: Added runtime-check GUI dependency note to `check_release_contracts.sh --help`
 - [x] DE-R25: Enforced release-contract help runtime notes in alias contract checker
+- [x] DE-R26: Added control-plane docs contract checker row to release script matrix + matrix guard
 
 ## Blocked
 - [ ] (empty)
