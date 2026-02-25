@@ -27,7 +27,8 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R17: Add compact control-plane quickstart block to README.
 - [x] DE-R18: Add `--ctl shell_health` manual smoke snippet to CONTROL_PLANE doc.
 - [x] DE-R19: Add `control_plane_smoke.sh` reference to CONTROL_PLANE manual smoke section.
-- [ ] DE-R20: Add control-plane quickstart/ manual-smoke parity check between README and CONTROL_PLANE doc.
+- [x] DE-R20: Add control-plane quickstart/ manual-smoke parity check between README and CONTROL_PLANE doc.
+- [ ] DE-R21: Add release-contract docs mention for control-plane docs contract checker.
 - [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
 - [x] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
@@ -46,7 +47,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-R20: Add control-plane quickstart/ manual-smoke parity check between README and CONTROL_PLANE doc.
+- [ ] DE-R21: Add release-contract docs mention for control-plane docs contract checker.
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -85,6 +86,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R17: Added compact control-plane quickstart block to README
 - [x] DE-R18: Added control-plane manual smoke snippet including `--ctl shell_health`
 - [x] DE-R19: Added `scripts/control_plane_smoke.sh` in CONTROL_PLANE manual smoke section
+- [x] DE-R20: Enforced README quickstart and CONTROL_PLANE manual-smoke command parity via docs checker
 
 ## Blocked
 - [ ] (empty)
