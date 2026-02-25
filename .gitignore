@@ -1,3 +1,6 @@
 .zig-cache/
 .zig-global-cache/
 zig-out/
+reference_repo/*
+!reference_repo/.gitignore
+!reference_repo/README.md

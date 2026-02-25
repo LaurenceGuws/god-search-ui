@@ -17,6 +17,7 @@ const gtk_selection = @import("gtk/selection.zig");
 const gtk_controller = @import("gtk/controller.zig");
 const gtk_results_flow = @import("gtk/results_flow.zig");
 const gtk_widgets = @import("gtk/widgets.zig");
+const ipc_control = @import("../ipc/control.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -44,9 +45,53 @@ pub const Shell = struct {
             .resident_mode = options.resident_mode,
             .start_hidden = options.start_hidden,
             .ctx = null,
+            .gtk_app = gtk_app,
         };
+
+        var control_server: ?ipc_control.Server = null;
+        defer if (control_server) |*srv| srv.deinit();
+        if (options.resident_mode) {
+            control_server = try ipc_control.Server.init(allocator, onControlCommand, &launch);
+            try control_server.?.start();
+        }
         _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), &launch, null, 0);
         _ = c.g_application_run(@ptrCast(gtk_app), 0, null);
+    }
+
+    const ControlInvokePayload = struct {
+        launch: *LaunchContext,
+        command: ipc_control.Command,
+    };
+
+    fn onControlCommand(command: ipc_control.Command, user_data: *anyopaque) ipc_control.HandlerResult {
+        const launch: *LaunchContext = @ptrCast(@alignCast(user_data));
+        const payload: *ControlInvokePayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(ControlInvokePayload))));
+        payload.* = .{ .launch = launch, .command = command };
+        if (c.g_idle_add(onControlInvokeIdle, payload) == 0) {
+            c.g_free(payload);
+            return .rejected;
+        }
+        return .ok;
+    }
+
+    fn onControlInvokeIdle(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const payload: *ControlInvokePayload = @ptrCast(@alignCast(user_data.?));
+        defer c.g_free(payload);
+
+        switch (payload.command) {
+            .summon => c.g_application_activate(@ptrCast(payload.launch.gtk_app)),
+            .hide => if (payload.launch.ctx) |ctx| c.gtk_widget_set_visible(ctx.window, GFALSE),
+            .toggle => if (payload.launch.ctx) |ctx| {
+                if (c.gtk_widget_get_visible(ctx.window) == GTRUE) {
+                    c.gtk_widget_set_visible(ctx.window, GFALSE);
+                } else {
+                    c.g_application_activate(@ptrCast(payload.launch.gtk_app));
+                }
+            } else c.g_application_activate(@ptrCast(payload.launch.gtk_app)),
+            else => {},
+        }
+        return GFALSE;
     }
 
     fn onActivate(app_ptr: ?*anyopaque, user_data: ?*anyopaque) callconv(.c) void {

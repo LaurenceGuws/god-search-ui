@@ -1,0 +1,276 @@
+# Task Queue
+
+Use this as the authoritative queue for autonomous agent cycles.
+
+## Ready
+- [x] DE-R0: Implement WA-1.1 socket server MVP from `docs/WA1_CONTROL_PLANE_SPEC.md`.
+- [ ] DE-R1: Break down `docs/DE_WEAK_AREAS_ROADMAP.md` WA-4.1 into implementation PR slice.
+- [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
+- [ ] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
+- [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
+- [ ] DE-A1.1: Add strict response parsing + client timeout handling per `docs/WA1_CONTROL_PLANE_SPEC.md`.
+- [ ] DE-A1.2: Enforce socket permissions (`0600`) and add stale-socket startup test coverage.
+- [ ] DE-A2: Split GTK lifecycle/runtime orchestration from launcher module behavior.
+- [ ] DE-B1: Add notifications daemon MVP (`org.freedesktop.Notifications`: `Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`).
+
+## In Progress
+- [ ] DE-A1.1: strict response parsing + timeout handling (checkpoint: `docs/project/DE_EXECUTION_CHECKPOINTS.md` CP-1.1)
+
+## Blocked
+- [ ] (empty)
+
+## Done
+- [x] M0: baseline dev loop + CI + deterministic starter
+- [x] M0: Add `src/app/` module boundary and wire minimal app state bootstrap.
+- [x] M0: Add structured logger with levels (`debug/info/warn/error`).
+- [x] M1: Define `Candidate` model and `Provider` interface in `src/search/`.
+- [x] M1: Implement actions provider with static candidates and executor mapping.
+- [x] M1: Implement apps provider from `.desktop` cache/source with graceful fallback.
+- [x] M1: Implement windows provider with optional `hyprctl`/`jq` diagnostics.
+- [x] M1: Implement dirs provider with optional `zoxide` diagnostics.
+- [x] M1: Add provider registry and health snapshot report.
+- [x] M2: Add query parser for prefix routing (`@ # ~ > = ?`).
+- [x] M2: Implement baseline blended ranking (exact/prefix/source weights).
+- [x] M2: Add recency boost from action history.
+- [x] M2: Wire query parser + ranking into a search service that consumes provider registry.
+- [x] M2: Add history persistence store (file-backed) for recency reuse across launches.
+- [x] M3: Add minimal GTK4 window shell (search entry + list placeholder).
+- [x] M3: Wire search service into UI update loop (query -> ranked rows).
+- [x] M3: Add fallback headless renderer mode for environments without GTK libs.
+- [x] M3: Add keyboard navigation behaviors (`Esc`, arrows, Enter) in GTK shell.
+- [x] M3: Render real ranked candidate rows in GTK list (instead of placeholder).
+- [x] M3: Connect GTK search entry changes to `SearchService.searchQuery`.
+- [x] M3: Add action execution hook for selected result (`Enter`).
+- [x] M3: Add row-level icon/chip styling in GTK list renderer.
+- [x] M3: Add grouped sections in GTK list (apps/windows/dirs/actions).
+- [x] M4: Add confirmation mode for sensitive actions (`power`).
+- [x] M4: Add telemetry event sink for action execution results.
+- [x] M5: Add startup/query timing instrumentation.
+- [x] M5: Add provider snapshot cache prewarm for faster first query.
+- [x] M5: Add cache invalidation strategy for provider snapshot refresh.
+- [x] M5: Add explicit refresh trigger command/path in UI layer.
+- [x] M5: Add stale-cache indicator in UI when snapshot is auto-refreshed.
+- [x] M5: Add background refresh strategy to avoid synchronous cache refresh on query path.
+- [x] M5: Add async thread-based refresh worker (optional advanced path).
+- [x] M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
+- [x] M6: Add install/service integration docs for Hypr/Waybar bindings.
+- [x] M6: Add rollout checklist for migrating from shell launcher to GTK launcher.
+- [x] M6: Add operator troubleshooting runbook for common failures.
+- [x] M6: Add systemd user unit example file under `packaging/systemd/`.
+- [x] M6: Add release-notes template for milestone cutovers.
+- [x] M6: Add changelog generation script for release notes draft.
+- [x] M6: Add desktop file + icon assets for launcher integration.
+- [x] M7: Add release smoke-test script for headless + GTK build verification.
+- [x] M7: Add release tagging/rollback runbook with exact command sequence.
+- [x] M7: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check).
+- [x] M7: Add optional Arch package smoke helper script.
+- [x] M7: Add release tag flow helper script (dry-run + apply modes).
+- [x] M7: Make release-tag dry-run mode side-effect free (no generated files).
+- [x] M7: Execute local RC tag cut (`v0.1.0-rc1`) with release preflight.
+- [x] M7: Add `--commit-notes` option so tags can include release-notes commit.
+- [x] M7: Execute local RC tag cut (`v0.1.0-rc2`) with notes included in tagged commit.
+- [x] M7: Add publish helper for existing local release tags (dry-run + push modes).
+- [x] M7: Allow publish-helper dry-run without configured `origin` remote.
+- [x] M7: Add `--remote` option to publish helper (default `origin`).
+- [x] M7: Publish `v0.1.0-rc2` tag to `origin`.
+- [x] M7: Promote stable `v0.1.0` tag from current main and publish to `origin`.
+- [x] M8: Add post-release patch plan for `v0.1.1` (top bugs/polish/risk fixes).
+- [x] M8: Fix publish-helper help text to reflect `--remote` behavior.
+- [x] M8: Add guard script for release-helper CLI docs/output consistency.
+- [x] M8: Add post-release patch checklist execution order to runbook docs.
+- [x] M8: Add GTK explicit empty/error state rows in result list.
+- [x] M8: Add GTK placeholder guidance for empty-query state.
+- [x] M8: Add post-release issue triage template for v0.1.1 planning.
+- [x] M8: Add first concrete triage entry from release publish session.
+- [x] M8: Add SSH key preflight check step to release publish runbook.
+- [x] M8: Add optional GTK runtime launch smoke mode to `scripts/release_smoke.sh`.
+- [x] M8: Add release-helper script usage matrix documentation.
+- [x] M8: Add lightweight script to validate release-matrix command references.
+- [x] M8: Add patch release notes draft for `v0.1.1`.
+- [x] M8: Fill concrete highlights/fixes in `docs/release-notes-v0.1.1.md`.
+- [x] M8: Add pre-cut readiness gate script for `v0.1.1`.
+- [x] M8: Run `v0.1.1` release cut dry-run and record outcome.
+- [x] M8: Execute `v0.1.1` apply cut and publish to `origin`.
+- [x] M8: Add `--reuse-notes` option to `cut_release_tag.sh` to preserve curated notes.
+- [x] M8: Add `--reuse-notes` workflow note in `v0.1.1` release notes.
+- [x] M8: Add release-notes curation checklist for patch cuts.
+- [x] M8: Add lint script to detect placeholder text in release notes.
+- [x] M8: Add post-`v0.1.1` maintenance checklist entry in docs.
+- [x] M8: Queue first `v0.1.2` candidate from triage findings.
+- [x] M8: Implement v0.1.2 candidate - default-safe notes mode in `cut_release_tag.sh`.
+- [x] M8: Add migration note for default-safe notes mode in curation checklist.
+- [x] M8: Add quick dry-run example for default-safe notes mode in release matrix.
+- [x] M8: Add automated dry-run assertion for default-safe notes branch.
+- [x] M8: Prevent recursive preflight in cut dry-run assertion checks.
+- [x] M8: Run `v0.1.2` release cut dry-run with default-safe notes mode.
+- [x] M8: Execute `v0.1.2` apply cut and publish to `origin`.
+- [x] M8: UX Phase 1 - add scrolled results container and actionable-row-only selection.
+- [x] M8: UX Phase 1 - switch GTK action execution to non-blocking spawn path.
+- [x] M8: UX Phase 1 - add debounce for GTK `search-changed` updates.
+- [x] M8: UX Phase 1 - add visible launch feedback row for async command dispatch.
+- [x] M8: UX Phase 2 - replace placeholder status text with dedicated status line.
+- [x] M8: UX Phase 2 - style and spacing polish for GTK status line.
+- [x] M8: UX Phase 2 - centralize GTK row/chip/status color tokens for theme extraction.
+- [x] M8: UX Phase 2 - move GTK row/status styling to a minimal CSS provider.
+- [x] M8: UX Phase 2 - replace single-line candidate markup with structured row layout.
+- [x] M8: UX Phase 2 - tighten candidate row spacing and subtitle truncation.
+- [x] M8: UX Phase 2 - add keyboard shortcut hint row for empty query state.
+- [x] M8: UX Phase 2 - bound launch feedback rows to avoid accumulation.
+- [x] M8: UX Phase 2 - add lightweight visual separator between populated sections.
+- [x] M8: UX Phase 2 - adaptive GTK window sizing and minimum constraints.
+- [x] M8: UX Phase 2 - remove empty-query startup "No results" flash.
+- [x] M8: UX Phase 3 - improve keyboard selection visibility in GTK results.
+- [x] M8: UX Phase 3 - add per-section result counts in GTK headers.
+- [x] M8: UX Phase 3 - tune blended short-query ranking to surface action intents earlier.
+- [x] M8: UX Phase 3 - add lightweight searching status during debounced updates.
+- [x] M8: UX Phase 3 - keep selected actionable row visible in scrolled viewport.
+- [x] M8: UX Phase 3 - tune per-kind chip contrast and title emphasis for faster scanning.
+- [x] M8: UX Phase 3 - show result-limit indicator when top 20 truncation applies.
+- [x] M8: UX Phase 3 - add quick provider-route hint row for one-character prefix queries.
+- [x] M8: UX Phase 3 - add explicit zero-results guidance with route suggestions.
+- [x] M8: UX Phase 3 - add explicit selected-row status summary in footer.
+- [x] M8: UX Phase 3 - adjust selected-row status copy to include source kind.
+- [x] M8: UX Phase 3 - add inline query-prefix cheat sheet to empty-query status.
+- [x] M8: UX Phase 3 - add concise post-launch status guidance for repeated Enter behavior.
+- [x] M8: UX Phase 3 - compact empty-query info row copy to reduce status-line duplication.
+- [x] M8: UX Phase 3 - add subtle status color emphasis for success vs error launch feedback.
+- [x] M8: UX Phase 3 - add transient timeout to clear status emphasis back to neutral hints.
+- [x] M8: UX Phase 3 - reduce status jitter by skipping redundant status updates.
+- [x] M8: UX Phase 3 - add adaptive query-length debounce for better responsiveness.
+- [x] M8: UX Phase 3 - add max-height guard for status text to prevent layout jump.
+- [x] M8: UX Phase 3 - add hotkeys legend row style differentiation from generic info rows.
+- [x] M8: UX Phase 4 - add status icon prefixes with info/success/failure tone routing.
+- [x] M8: UX Phase 4 - add app icon support in GTK candidate rows with glyph fallback.
+- [x] M8: UX Phase 4 - enrich apps cache/provider with explicit icon metadata for GTK rows.
+- [x] M8: UX Phase 4 - document apps-cache icon column format and migration notes.
+- [x] M8: UX Phase 4 - add release smoke assertion for legacy+extended apps-cache compatibility.
+- [x] M8: UX Phase 4 - extend optional GTK runtime smoke to exercise app icon render path.
+- [x] M8: UX Phase 4 - add icon-theme preflight diagnostics to release smoke checks.
+- [x] M8: UX Phase 4 - add startup status notice when app icon glyph fallback is active.
+- [x] M8: UX Phase 4 - add headless icon diagnostics command for metadata/fallback stats.
+- [x] M8: UX Phase 4 - add GTK fallback warning hint to use headless `:icondiag`.
+- [x] M8: UX Phase 4 - include `:icondiag` path in headless release smoke flow.
+- [x] M8: UX Phase 4 - document icon resolution order (metadata -> token -> glyph fallback).
+- [x] M8: UX Phase 4 - add icon metadata coverage ratio + fallback samples to `:icondiag`.
+- [x] M8: UX Phase 4 - add JSON mode for headless icon diagnostics (`:icondiag --json`).
+- [x] M8: UX Phase 4 - add icon diagnostics JSON schema doc and smoke validator script.
+- [x] M8: UX Phase 4 - add configurable glyph-fallback threshold guard script for CI gates.
+- [x] M8: UX Phase 4 - add release-smoke strict icon-threshold mode and CI workflow integration.
+- [x] M8: UX Phase 4 - add `release_smoke --ci` preset alias for stable CI flags.
+- [x] M8: UX Phase 4 - add release-smoke mode reference table and `--help` CLI output.
+- [x] M8: UX Phase 4 - add guard script ensuring release-smoke docs and CLI help stay in sync.
+- [x] M8: UX Phase 4 - update release matrix docs/checks for new icon diagnostics guard scripts.
+- [x] M8: UX Phase 4 - add meta release-docs contract guard and wire it into smoke.
+- [x] M8: UX Phase 4 - add one-pass `release_validate.sh` wrapper for operator preflight.
+- [x] M8: UX Phase 4 - add CI guard ensuring `release_validate.sh --ci` stays non-interactive.
+- [x] M8: UX Phase 4 - add runbook docs for `release_validate --ci` markers and failure triage.
+- [x] M8: UX Phase 4 - add explicit clean-worktree guard for `release_validate --require-clean`.
+- [x] M8: UX Phase 4 - add `release_validate --help` output and dedicated contract checker.
+- [x] M8: UX Phase 4 - add dedicated release-validate modes/options docs page.
+- [x] M8: UX Phase 4 - add related-doc references in release matrix and enforce via checks.
+- [x] M8: UX Phase 4 - add one-command `check_release_contracts.sh` alias for all release contracts.
+- [x] M8: UX Phase 4 - add `check_release_contracts.sh --docs-only` fast path for local iteration.
+- [x] M8: UX Phase 4 - add contract checker for release-contracts alias CLI/docs sync.
+- [x] M8: UX Phase 4 - add dedicated release-contracts docs page and matrix reference.
+- [x] M8: UX Phase 4 - add release-contracts doc consistency checker and meta-guard integration.
+- [x] M8: UX Phase 4 - add local dirty-worktree quick smoke guidance to release-contracts docs.
+- [x] M8: UX Phase 4 - add explicit warning banner for dirty-override non-CI usage.
+- [x] M8: UX Phase 4 - add operator quick-order release flow in release-contracts docs.
+- [x] M8: UX Phase 4 - add cross-links from release-contracts doc to runbook/smoke/validate refs.
+- [x] M8: UX Phase 4 - add concise "when to run which script" table to release-contracts docs.
+- [x] M8: UX Phase 4 - add release-contracts doc pointer in rollback runbook preflight.
+- [x] M8: UX Phase 4 - enforce rollback-runbook backlink presence in release-contracts doc checker.
+- [x] M8: UX Phase 4 - add release-contracts cheat sheet block to README release section.
+- [x] M8: UX Phase 4 - enforce README release-contracts cheat-sheet command presence in contract checks.
+- [x] M8: UX Phase 4 - add release-contracts link to top-level README docs list.
+- [x] M8: UX Phase 4 - enforce dual README release-contracts references in alias contract checker.
+- [x] M8: UX Phase 4 - add release-contracts onboarding note to README Next section.
+- [x] M8: UX Phase 4 - enforce README release onboarding phrase in contracts alias checker.
+- [x] M8: UX Phase 4 - add concise release-contract command order note to release matrix.
+- [x] M8: UX Phase 4 - enforce quick-order parity between release contracts doc and release matrix.
+- [x] M8: UX Phase 4 - add release-contract command block to rollback runbook preflight.
+- [x] M8: UX Phase 4 - enforce rollback runbook quick-command presence in release-validate checker.
+- [x] M8: UX Phase 4 - add release-validate contract check summary line to release-contracts docs.
+- [x] M8: UX Phase 4 - add local default `--docs-only` recommendation note to release-contracts docs.
+- [x] M8: UX Phase 5 - add GTK power-user keyboard navigation (`Ctrl+L`, `Home/End`, `PageUp/PageDown`).
+- [x] M8: UX Phase 5 - add query-term highlighting in GTK candidate title/subtitle rows.
+- [x] M8: UX Phase 5 - add GTK tooltips for full candidate title/subtitle text.
+- [x] M8: UX Phase 5 - use real GTK row allocation for selected-row scroll visibility.
+- [x] M8: UX Phase 5 - refactor GTK candidate rows to icon + title + right-aligned kind chip layout.
+- [x] M8: UX Phase 5 - move kind-chip visuals fully into GTK CSS classes (no inline markup colors).
+- [x] M8: UX Phase 5 - expand empty-query hotkey legend for advanced navigation shortcuts.
+- [x] M8: UX Phase 5 - add explicit actionable/meta row CSS classes for clearer UI intent.
+- [x] M8: UX Phase 5 - improve selected-row contrast and readability for actionable candidates.
+- [x] M8: UX Phase 5 - add directory action menu (terminal/explorer/editor/copy path) before execution.
+- [x] M8: UX Phase 5 - route directory option execution through close-on-success flow.
+- [x] M8: UX Phase 5 - fix GtkSearchEntry placeholder API usage to remove GTK critical.
+- [x] M8: UX Phase 5 - remove invalid GTK CSS `spacing` property from candidate content class.
+- [x] M8: UX Phase 5 - harden directory terminal action with runtime terminal discovery fallback list.
+- [x] M8: UX Phase 6 - add dynamic `fd` file-finder route (`%`) with file candidates.
+- [x] M8: UX Phase 6 - add dynamic `rg` text-search route (`&`) with grep candidates.
+- [x] M8: UX Phase 6 - add GTK file action menu for file/grep results (editor/open/reveal/copy path).
+- [x] M8: UX Phase 6 - extend query route hints, grouping, and chip theming for file/grep candidate kinds.
+- [x] M8: UX Phase 6 - fix `&` grep route shell quoting/pipeline robustness and dynamic string ownership.
+- [x] M8: UX Phase 6 - raise dynamic shell capture buffer to avoid silent `rg` result drops on large output.
+- [x] M8: UX Phase 6 - improve app icon token extraction for `env`-wrapped exec commands (e.g., Zide).
+- [x] M8: UX Phase 6 - add app icon variant fallback (`-desktop`/`.desktop` stripping) for icon-name lookup.
+- [x] M8: UX Phase 6 - increase GTK row icon size to ~2x heading text scale.
+- [x] M8: UX Phase 6 - show module filter list as default actionable suggestions on empty query.
+- [x] M8: UX Phase 6 - activate module filter rows by injecting route prefixes into search entry.
+- [x] M8: UX Phase 6 - preserve blended no-prefix behavior for typed queries.
+- [x] M8: UX Phase 6 - stabilize `rg` route for large-result terms using bounded output and parser-side caps.
+- [x] M8: UX Phase 6 - reduce `%`/`&` home-scan noise by excluding codex/cache/trash/opencode paths.
+- [x] M8: UX Phase 6 - add route-aware debounce throttling for `%`/`&` heavy queries.
+- [x] M8: UX Phase 6 - add render diff hash to skip redundant GTK list rebuilds.
+- [x] M8: UX Phase 6 - add CSS transitions for actionable row/state color changes.
+- [x] M8: UX Phase 7 - add async worker execution path for `%`/`&` queries with GTK idle-loop handoff.
+- [x] M8: UX Phase 7 - drop stale async route results using generation tokens to avoid UI flicker/races.
+- [x] M8: UX Phase 7 - serialize SearchService query entry points with mutex for thread-safe concurrent access.
+- [x] M8: UX Phase 7 - add explicit async in-flight spinner row for `%`/`&` searches.
+- [x] M8: UX Phase 7 - cancel async search generation when query clears or route switches away.
+- [x] M8: UX Phase 7 - add spinner timer lifecycle cleanup on window destroy.
+- [x] M8: UX Phase 7 - fix async dynamic-route string lifetime race causing `%`/`&` worker segfault.
+- [x] M8: UX Phase 7 - coalesce `%`/`&` async workers to single in-flight + latest pending query.
+- [x] M8: UX Phase 8 - modularize GTK shell into shared `gtk/` modules (`types`, `styles`, `widgets`, `actions`).
+- [x] M8: UX Phase 8 - extract navigation and query helper logic into `gtk/navigation.zig` and `gtk/query_helpers.zig`.
+- [x] M8: UX Phase 8 - extract async payload/pending-query lifecycle into `gtk/async_state.zig`.
+- [x] M8: UX Phase 8 - extract async worker orchestration into `gtk/async_search.zig`.
+- [x] M8: UX Phase 8 - extract grouped result rendering pipeline into `gtk/render.zig`.
+- [x] M8: UX Phase 8 - extract directory/file option menu presentation into `gtk/menus.zig`.
+- [x] M8: UX Phase 8 - extract status/feedback tone engine into `gtk/status.zig`.
+- [x] M8: UX Phase 8 - extract app icon resolution/fallback helpers into `gtk/icons.zig`.
+- [x] M8: UX Phase 8 - extract GTK activation/bootstrap assembly into `gtk/bootstrap.zig`.
+- [x] M8: UX Phase 8 - extract row activation dispatch + input controller logic into `gtk/selection.zig` and `gtk/controller.zig`.
+- [x] M8: UX Phase 8 - extract query/render orchestration into `gtk/results_flow.zig`.
+- [x] M8: UX Phase 8 - extract async route/spinner coordination into `gtk/async_coordinator.zig`.
+- [x] M8: UX Phase 9 - modularize `SearchService` internals into `search_service/{dynamic_routes,history_store,cache_refresh}.zig`.
+- [x] M8: UX Phase 9 - split headless shell into `ui/headless/{controller,render,icon_diag}.zig` with thin `stub_shell.zig`.
+- [x] M8: UX Phase 9 - add shared dispatch contract in `ui/common/dispatch.zig` and route GTK/headless through it.
+- [x] M8: UX Phase 9 - add shared command router in `ui/common/commands.zig` and wire headless command parsing through it.
+- [x] M8: UX Phase 9 - add shared selection execution adapter in `ui/common/execute.zig` and route GTK selection through it.
+- [x] M8: UX Phase 9 - add shared action runtime in `ui/common/actions.zig` and route GTK command execution through it.
+- [x] M8: UX Phase 9 - add shared kind codec in `ui/common/kinds.zig` and remove string-kind branching from dispatch primitives.
+- [x] M8: UX Phase 9 - parse row kind once in `ui/common/execute.zig` and use enum-based dispatch primitives.
+- [x] M8: UX Phase 9 - add typed GTK row kind metadata (`gs-kind-id`) and route selection/status paths through `UiKind`.
+- [x] M8: UX Phase 9 - remove `gs-kind` string fallback path and rely on typed `gs-kind-id` for actionable GTK rows.
+- [x] M8: UX Phase 9 - add centralized GTK row metadata helper (`gtk/row_data.zig`) for typed kind/action/title read/write.
+- [x] M8: Hygiene - narrow `SearchService` query lock scope, add cached dynamic-tool availability checks, and make history writes atomic.
+- [x] M8: Hygiene - add bounded dynamic-route string generations to cap `%`/`&` memory growth in long sessions.
+- [x] M8: Hygiene - reduce `cache_mu` hold time by ranking against owned cache snapshots outside the cache lock.
+- [x] M8: Hygiene - keep immutable cached ranking snapshots in retained generations to avoid per-query cache deep-copy churn.
+- [x] M8: Hygiene - extract cache snapshot generation lifecycle into `search_service/cache_snapshots.zig`.
+- [x] M8: Hygiene - extract `SearchService` tests into `src/app/search_service_test.zig`.
+- [x] M8: Hygiene - extract dynamic generation lifecycle into `search_service/dynamic_generations.zig`.
+- [x] M8: Hygiene - extract query metric/flag mutation helpers into `search_service/query_metrics.zig`.
+- [x] M8: Hygiene - extract async refresh worker state transitions into `search_service/refresh_worker.zig`.
+- [x] M8: Hygiene - extract cache refresh orchestration glue (`prewarm/invalidate/drain`) into `search_service/cache_coordinator.zig`.
+- [x] M8: Hygiene - extract non-dynamic query ranking orchestration into `search_service/query_engine.zig`.
+- [x] M8: Hygiene - extract history lock choreography into `search_service/history_access.zig`.
+- [x] M8: Hygiene - extract cache snapshot read view helper into `search_service/cache_read.zig`.
+- [x] M8: Hygiene - extract dynamic-route orchestration into `search_service/dynamic_query_engine.zig`.
+- [x] M8: Hygiene - extract query parse/route dispatch classification into `search_service/query_dispatch.zig`.
+- [x] M8: Hygiene - unify static-query refresh scheduling + async-worker kickoff via `search_service/query_refresh_gate.zig`.
+- [x] M8: Hygiene - decouple cache refresh entrypoints from `query_mu` to reduce lock-order deadlock risk.
+- [x] M8: Hygiene - add concurrency regression test for `drainScheduledRefresh` and repeated `searchQuery` calls.
+- [x] M8: Hygiene - extract query metrics lock access helpers into `search_service/query_metrics_access.zig`.
+- [x] M8: Hygiene - extract history teardown lifecycle helper into `search_service/history_access.zig`.

@@ -1,0 +1,6 @@
+# IPC Vendor Sources
+
+# Format:
+# <local_filename> | <url> | <fetched_utc_iso8601> | <notes>
+
+dbus-specification.html | https://dbus.freedesktop.org/doc/dbus-specification.html | 2026-02-25T09:47:23Z | fetched via scripts/fetch_vendor_spec.sh

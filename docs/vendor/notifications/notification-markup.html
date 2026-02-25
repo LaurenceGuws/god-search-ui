@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>Markup | Desktop Notifications Specification</title><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" /><link rel="stylesheet" type="text/css" href="static/css/style.css" /><link rel="stylesheet" type="text/css" href="static/css/highlight.css" /><meta name="generator" content="DAPS 3.3.2" /><meta name="book-title" content="Desktop Notifications Specification" /><meta name="chapter-title" content="4. Markup" /><meta name="description" content="Body text may contain markup. The markup is XML-based, and consists of a small subset of HTML along with a few additional tags. The following tags should be supported by the notification server. Though it is optional, it is recommended. Notification servers that do not support these tags should filt…" /><link rel="home" href="index.html" title="Desktop Notifications Specification" /><link rel="up" href="index.html" title="Desktop Notifications Specification" /><link rel="prev" href="backwards-compat.html" title="3. Backwards Compatibility" /><link rel="next" href="icons-and-images.html" title="5. Icons and Images" />
+<script src="static/js/highlight.min.js" type="text/javascript"></script><script>
+
+document.addEventListener('DOMContentLoaded', (event) => {
+  document.querySelectorAll('.verbatim-wrap.highlight').forEach((block) => {
+    hljs.highlightBlock(block);
+  });
+});
+hljs.configure({
+  useBR: false
+});
+
+</script></head><body class="offline js-off"><div class="bypass-block"><a href="#_content">Jump to content</a><a href="#_bottom-navigation">Jump to page navigation: previous page [access key p]/next page [access key n]</a></div><div id="_outer-wrap"><div id="_white-bg"><div id="_header"><div id="_logo"><a href="https://specifications.freedesktop.org/"><img src="static/images/logo.svg" alt="Freedesktop Logo" /><span></span></a></div><div class="crumbs"><a class="single-crumb" href="markup.html"><span class="single-contents-icon"></span>Markup</a><div class="bubble-corner active-contents"></div></div><div class="clearme"></div></div></div><div id="_toolbar-wrap"><div id="_toolbar"><div id="_toc-area" class="inactive"><a id="_toc-area-button" class="tool" title="Contents" accesskey="c" href="index.html"><span class="tool-spacer"><span class="toc-icon">Contents</span><span class="clearme"></span></span><span class="tool-label">Contents</span></a><div class="active-contents bubble-corner"></div><div class="active-contents bubble"><div class="bubble-container"><h6>Desktop Notifications Specification</h6><div id="_bubble-toc"><ol><li class="inactive"><a href="index.html#introduction"><span class="number">1 </span><span class="name">Introduction</span></a></li><li class="inactive"><a href="basic-design.html"><span class="number">2 </span><span class="name">Basic Design</span></a></li><li class="inactive"><a href="backwards-compat.html"><span class="number">3 </span><span class="name">Backwards Compatibility</span></a></li><li class="inactive"><a href="markup.html"><span class="number">4 </span><span class="name">Markup</span></a></li><li class="inactive"><a href="icons-and-images.html"><span class="number">5 </span><span class="name">Icons and Images</span></a></li><li class="inactive"><a href="categories.html"><span class="number">6 </span><span class="name">Categories</span></a></li><li class="inactive"><a href="urgency-levels.html"><span class="number">7 </span><span class="name">Urgency Levels</span></a></li><li class="inactive"><a href="hints.html"><span class="number">8 </span><span class="name">Hints</span></a></li><li class="inactive"><a href="protocol.html"><span class="number">9 </span><span class="name">D-BUS Protocol</span></a></li></ol></div><div class="clearme"></div></div></div></div><div id="_nav-area" class="inactive"><div class="tool"><span class="nav-inner"><span class="tool-label">Navigation</span><a accesskey="p" class="tool-spacer" title="3. Backwards Compatibility" href="backwards-compat.html"><span class="prev-icon">←</span></a><a accesskey="n" class="tool-spacer" title="5. Icons and Images" href="icons-and-images.html"><span class="next-icon">→</span></a></span></div></div></div></div><div id="_fixed-header-wrap" class="inactive"><div id="_fixed-header"><div class="crumbs"><a class="single-crumb" href="markup.html"><span class="single-contents-icon"></span>Show Contents: Markup</a></div><div class="buttons"><a class="top-button button" href="#">Top</a><div class="button"><a accesskey="p" class="tool-spacer" title="3. Backwards Compatibility" href="backwards-compat.html"><span class="prev-icon">←</span></a><a accesskey="n" class="tool-spacer" title="5. Icons and Images" href="icons-and-images.html"><span class="next-icon">→</span></a></div><div class="clearme"></div></div><div class="clearme"></div></div><div class="active-contents bubble"><div class="bubble-container"><div id="_bubble-toc"><ol><li class="inactive"><a href="index.html#introduction"><span class="number">1 </span><span class="name">Introduction</span></a></li><li class="inactive"><a href="basic-design.html"><span class="number">2 </span><span class="name">Basic Design</span></a></li><li class="inactive"><a href="backwards-compat.html"><span class="number">3 </span><span class="name">Backwards Compatibility</span></a></li><li class="inactive"><a href="markup.html"><span class="number">4 </span><span class="name">Markup</span></a></li><li class="inactive"><a href="icons-and-images.html"><span class="number">5 </span><span class="name">Icons and Images</span></a></li><li class="inactive"><a href="categories.html"><span class="number">6 </span><span class="name">Categories</span></a></li><li class="inactive"><a href="urgency-levels.html"><span class="number">7 </span><span class="name">Urgency Levels</span></a></li><li class="inactive"><a href="hints.html"><span class="number">8 </span><span class="name">Hints</span></a></li><li class="inactive"><a href="protocol.html"><span class="number">9 </span><span class="name">D-BUS Protocol</span></a></li></ol></div><div class="clearme"></div></div></div></div><div id="_toc-bubble-wrap"></div><div id="_content" class=""><div class="documentation"><div class="sect1" id="markup"><div class="titlepage"><div><div><h2 class="title" id="markup"><span class="number">4 </span><span xmlns:dm="urn:x-suse:ns:docmanager" class="name">Markup</span> <a title="Permalink" class="permalink" href="markup.html">#</a></h2></div></div></div><p>
+   Body text may contain markup. The markup is XML-based, and consists
+   of a small subset of HTML along with a few additional tags.
+  </p><p>
+   The following tags should be supported by the notification server.
+   Though it is optional, it is recommended. Notification servers that do
+   not support these tags should filter them out.
+  </p><div class="informaltable"><table class="informaltable" border="1"><colgroup><col /><col /></colgroup><tbody valign="top"><tr><td valign="top">
+       <code class="sgmltag-starttag">&lt;b&gt;</code> ...
+       <code class="sgmltag-endtag">&lt;/b&gt;</code>
+      </td><td valign="top">Bold</td></tr><tr><td valign="top">
+       <code class="sgmltag-starttag">&lt;i&gt;</code> ...
+       <code class="sgmltag-endtag">&lt;/i&gt;</code>
+      </td><td valign="top">Italic</td></tr><tr><td valign="top">
+       <code class="sgmltag-starttag">&lt;u&gt;</code> ...
+       <code class="sgmltag-endtag">&lt;/u&gt;</code>
+      </td><td valign="top">Underline</td></tr><tr><td valign="top">
+       <code class="sgmltag-starttag">&lt;a href="..."&gt;</code> ...
+       <code class="sgmltag-endtag">&lt;/a&gt;</code>
+      </td><td valign="top">Hyperlink</td></tr><tr><td valign="top">
+       <code class="sgmltag-emptytag">&lt;img src="..." alt="..."/&gt;</code>
+      </td><td valign="top">Image</td></tr></tbody></table></div><p>
+   A full-blown HTML implementation is not required of this spec, and
+   notifications should never take advantage of tags that are not listed
+   above. As notifications are not a substitute for web browsers or complex
+   dialogs, advanced layout is not necessary, and may in fact limit the
+   number of systems that notification services can run on, due to memory
+   usage and screen space. Such examples are PDAs, certain cell phones, and
+   slow PCs or laptops with little memory.
+  </p><p>
+   For the same reason, a full XML or XHTML implementation using XSLT or
+   CSS stylesheets is not part of this specification. Information that
+   must be presented in a more complex form should use an application-specific
+   dialog, a web browser, or some other display mechanism.
+  </p><p>
+   The tags specified above mark up the content in a way that allows them
+   to be stripped out on some implementations without impacting the actual
+   content.
+  </p><div class="sect2" id="hyperlinks"><div class="titlepage"><div><div><h3 class="title" id="hyperlinks"><span class="number">4.1 </span><span xmlns:dm="urn:x-suse:ns:docmanager" class="name">Hyperlinks</span> <a title="Permalink" class="permalink" href="markup.html#hyperlinks">#</a></h3></div></div></div><p>
+    Hyperlinks allow for linking one or more words to a URI. There is no
+    requirement to allow for images to be linked, and it is highly suggested
+    that implementations do not allow this, as there is no clean-looking,
+    standard visual indicator for a hyperlinked image.
+   </p><p>
+    Hyperlinked text should appear in the standard blue underline format.
+   </p><p>
+    Hyperlinks cannot function as a replacement for actions. They are
+    used to link to local directories or remote sites using standard URI
+    schemes.
+   </p><p>
+    Implementations are not required to support hyperlinks.
+   </p></div><div class="sect2" id="images"><div class="titlepage"><div><div><h3 class="title" id="images"><span class="number">4.2 </span><span xmlns:dm="urn:x-suse:ns:docmanager" class="name">Images</span> <a title="Permalink" class="permalink" href="markup.html#images">#</a></h3></div></div></div><p>
+    Images may be placed in the notification, but this should be done with
+    caution. The image should never exceed 200x100, but this should be thought
+    of as a maximum size. Images should always have alternative text
+    provided through the <code class="literal">alt="..."</code> attribute.
+   </p><p>
+    Image data cannot be embedded in the message itself. Images referenced
+    must always be local files.
+   </p><p>
+    Implementations are not required to support images.
+   </p></div></div></div><div class="page-bottom"><div id="_bottom-navigation"><a class="nav-link" href="icons-and-images.html"><span class="next-icon">→</span><span class="nav-label">Icons and Images</span></a><a class="nav-link" href="backwards-compat.html"><span class="prev-icon">←</span><span class="nav-label">Backwards Compatibility</span></a></div></div></div><div id="_inward"></div></div><div id="_footer-wrap"><div id="_footer"><p>©
+        2026 
+        Freedesktop.org</p></div></div></body></html>

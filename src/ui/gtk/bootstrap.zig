@@ -13,6 +13,7 @@ pub const LaunchContext = struct {
     resident_mode: bool,
     start_hidden: bool,
     ctx: ?*UiContext,
+    gtk_app: *c.GtkApplication,
 };
 
 pub const ActivateHooks = struct {

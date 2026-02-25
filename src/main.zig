@@ -11,10 +11,25 @@ pub fn main() !void {
     const logger = god_search_ui.app.Logger.init(.info);
     logger.info("god-search-ui starting (mode={s})", .{@tagName(state.mode)});
 
+    if (argValueAfterFlag(args, "--ctl")) |raw_cmd| {
+        const cmd = parseControlCommand(raw_cmd) orelse {
+            std.process.exit(13);
+        };
+        const ok = god_search_ui.ipc.control.trySendCommand(allocator, cmd) catch false;
+        if (ok) {
+            std.process.exit(0);
+        }
+        std.process.exit(10);
+    }
+
     const ui_mode = hasArg(args, "--ui") or hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
     if (ui_mode) {
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
+        if (!resident_mode and hasArg(args, "--ui")) {
+            const summoned = god_search_ui.ipc.control.trySendCommand(allocator, .summon) catch false;
+            if (summoned) return;
+        }
         var runtime = try setupRuntime(allocator);
         defer runtime.deinit(allocator);
         runtime.rebindProviderContexts();
@@ -134,4 +149,22 @@ fn hasArg(args: []const []const u8, needle: []const u8) bool {
         if (std.mem.eql(u8, arg, needle)) return true;
     }
     return false;
+}
+
+fn argValueAfterFlag(args: []const []const u8, flag: []const u8) ?[]const u8 {
+    if (args.len < 3) return null;
+    var i: usize = 1;
+    while (i + 1 < args.len) : (i += 1) {
+        if (std.mem.eql(u8, args[i], flag)) return args[i + 1];
+    }
+    return null;
+}
+
+fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
+    if (std.mem.eql(u8, value, "ping")) return .ping;
+    if (std.mem.eql(u8, value, "summon")) return .summon;
+    if (std.mem.eql(u8, value, "hide")) return .hide;
+    if (std.mem.eql(u8, value, "toggle")) return .toggle;
+    if (std.mem.eql(u8, value, "version")) return .version;
+    return null;
 }

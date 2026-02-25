@@ -44,6 +44,15 @@ god-search-ui --ui-daemon
 ```
 With `--ui-daemon`, bind your launcher key to `god-search-ui --ui` so each press re-activates the warm instance.
 
+Control-plane commands (for resident/daemon mode):
+```bash
+god-search-ui --ctl ping
+god-search-ui --ctl summon
+god-search-ui --ctl hide
+god-search-ui --ctl toggle
+god-search-ui --ctl version
+```
+
 Optional advanced refresh mode:
 ```bash
 GOD_SEARCH_ASYNC_REFRESH=1 god-search-ui --ui
@@ -93,11 +102,11 @@ CI non-interactive guard:
 scripts/check_release_validate_ci.sh
 ```
 Release smoke mode reference:
-- `docs/RELEASE_SMOKE_MODES.md`
+- `docs/operations/RELEASE_SMOKE_MODES.md`
 Release validate mode reference:
-- `docs/RELEASE_VALIDATE_MODES.md`
+- `docs/operations/RELEASE_VALIDATE_MODES.md`
 Release contracts reference:
-- `docs/RELEASE_CONTRACTS.md`
+- `docs/operations/RELEASE_CONTRACTS.md`
 
 Release contracts quick cheat sheet:
 ```bash
@@ -211,20 +220,27 @@ scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
 - systemd user unit template: `packaging/systemd/god-search-ui.service`
 - desktop entry template: `packaging/desktop/god-search-ui.desktop`
 - icon asset: `assets/icons/god-search-ui.svg`
-- Notes: `docs/ARCH_PACKAGING.md`
-- Arch packaged install smoke: `docs/PACKAGED_INSTALL_SMOKE.md`
-- Hypr/Waybar integration: `docs/HYPR_WAYBAR_INTEGRATION.md`
-- GTK rollout checklist: `docs/GTK_ROLLOUT_CHECKLIST.md`
-- Troubleshooting runbook: `docs/TROUBLESHOOTING_RUNBOOK.md`
-- Release notes template: `docs/RELEASE_NOTES_TEMPLATE.md`
-- Release notes curation checklist: `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`
-- Release tagging/rollback runbook: `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
-- Release script matrix: `docs/RELEASE_SCRIPT_MATRIX.md`
-- Release contracts reference: `docs/RELEASE_CONTRACTS.md`
-- v0.1.1 patch plan: `docs/V0_1_1_PATCH_PLAN.md`
-- Post-release triage template: `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`
-- Triage log: `docs/TRIAGE_LOG.md`
-- Icon diagnostics reference: `docs/ICON_DIAGNOSTICS.md`
+- docs index and governance: `docs/README.md`
+- Notes: `docs/operations/ARCH_PACKAGING.md`
+- Arch packaged install smoke: `docs/operations/PACKAGED_INSTALL_SMOKE.md`
+- Hypr/Waybar integration: `docs/operations/HYPR_WAYBAR_INTEGRATION.md`
+- DE shell vision and architecture plan: `docs/architecture/DE_SHELL_VISION.md`
+- DE weak-areas execution roadmap: `docs/roadmaps/DE_WEAK_AREAS_ROADMAP.md`
+- WA-1 shell control-plane spec: `docs/architecture/WA1_CONTROL_PLANE_SPEC.md`
+- notifications protocol lock (from vendor artifacts): `docs/architecture/NOTIFICATIONS_PROTOCOL_LOCK.md`
+- vendor references index: `docs/vendor/README.md`
+- local external implementation workspace: `reference_repo/README.md`
+- GTK rollout checklist: `docs/operations/GTK_ROLLOUT_CHECKLIST.md`
+- Troubleshooting runbook: `docs/operations/TROUBLESHOOTING_RUNBOOK.md`
+- Release notes template: `docs/releases/RELEASE_NOTES_TEMPLATE.md`
+- Release notes curation checklist: `docs/releases/RELEASE_NOTES_CURATION_CHECKLIST.md`
+- Release tagging/rollback runbook: `docs/operations/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+- Release script matrix: `docs/operations/RELEASE_SCRIPT_MATRIX.md`
+- Release contracts reference: `docs/operations/RELEASE_CONTRACTS.md`
+- v0.1.1 patch plan (archived): `docs/archive/2026/V0_1_1_PATCH_PLAN.md`
+- Post-release triage template: `docs/project/POST_RELEASE_TRIAGE_TEMPLATE.md`
+- Triage log: `docs/project/TRIAGE_LOG.md`
+- Icon diagnostics reference: `docs/operations/ICON_DIAGNOSTICS.md`
 
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.

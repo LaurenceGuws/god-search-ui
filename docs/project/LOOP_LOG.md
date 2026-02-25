@@ -1,0 +1,5185 @@
+# Loop Log
+
+## 2026-02-21
+- Milestone: M0 Foundation
+- Task slice: Baseline dev loop tooling + CI + deterministic tests
+- Changes:
+  - Added `scripts/dev.sh` for `fmt/build/test/check` loop commands.
+  - Added GitHub Actions workflow `/.github/workflows/ci.yml`.
+  - Added `.gitignore` for Zig build artifacts.
+  - Removed template fuzz/noise tests from `src/main.zig`.
+  - Updated `README.md` with local loop commands.
+- Verification:
+  - `chmod +x scripts/dev.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending (repo not initialized yet in this workspace)
+- Risks/notes:
+  - No git repository exists yet in `~/personal/god-search-ui`.
+- Next slice:
+  - M0: initialize git, create first baseline commit, and add issue/task queue file.
+
+---
+## 2026-02-21 (Cycle 2)
+- Milestone: M0 Foundation
+- Task slice: Add `src/app/` boundary with minimal app state bootstrap
+- Changes:
+  - Added `src/app/state.zig` with `UiMode` and `AppState`.
+  - Added `src/app/bootstrap.zig` bootstrap function.
+  - Added `src/app/mod.zig` module barrel export.
+  - Wired `src/root.zig` to export `app`.
+  - Updated `src/main.zig` to bootstrap and print initial mode.
+  - Marked task complete in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - State is intentionally minimal; logger/config not yet connected.
+- Next slice:
+  - M0: Add structured logger with levels (`debug/info/warn/error`).
+
+---
+## 2026-02-21 (Cycle 3)
+- Milestone: M0 Foundation
+- Task slice: Add structured logger with levels (`debug/info/warn/error`)
+- Changes:
+  - Added `src/app/logger.zig` with `Level` enum and `Logger`.
+  - Added level helpers: `debug/info/warn/error`.
+  - Added enablement test for level filtering.
+  - Exported logger types from `src/app/mod.zig`.
+  - Wired startup logging in `src/main.zig`.
+  - Marked logger task complete in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Logger currently writes to stderr via `std.debug.print`.
+- Next slice:
+  - M1: Define `Candidate` model and `Provider` interface in `src/search/`.
+
+---
+## 2026-02-21 (Cycle 4)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Define `Candidate` model and `Provider` interface in `src/search/`
+- Changes:
+  - Added `src/search/types.zig` with:
+    - `CandidateKind`
+    - `Candidate`
+    - `ProviderHealth`
+    - `Provider` vtable contract
+    - `CandidateList`
+  - Added unit test using fake provider context.
+  - Added `src/search/mod.zig` exports.
+  - Exported `search` from `src/root.zig`.
+  - Marked search contract task complete in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Interface intentionally minimal; diagnostics payload can be expanded later.
+- Next slice:
+  - M1: Implement actions provider with static candidates and executor mapping.
+
+---
+## 2026-02-21 (Cycle 5)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Implement actions provider with static candidates and executor mapping
+- Changes:
+  - Added `src/providers/actions.zig`:
+    - static action candidates (`Settings`, `Power menu`, `Restart Waybar`, `Notifications panel`)
+    - action key to command resolver
+    - execution function using injected command runner
+  - Added tests for provider collection and action execution mapping.
+  - Added `src/providers/mod.zig` export barrel.
+  - Exported `providers` from `src/root.zig`.
+  - Updated `docs/TASK_QUEUE.md` with completion + next M1 slices.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Command strings are static for now; later config overrides can be layered on top.
+- Next slice:
+  - M1: Implement apps provider from `.desktop` cache/source with graceful fallback.
+
+---
+## 2026-02-21 (Cycle 6)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Implement apps provider from `.desktop` cache/source with graceful fallback
+- Changes:
+  - Added `src/providers/apps.zig` with:
+    - cache-based TSV collection (`category\\tname\\texec`)
+    - health reporting (`ready` when cache exists, `degraded` otherwise)
+    - fallback candidate when cache is missing/empty
+  - Added tests for cache collection and fallback behavior.
+  - Exported apps provider via `src/providers/mod.zig`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Candidate strings are retained in provider-owned memory until `deinit`.
+- Next slice:
+  - M1: Implement windows provider with optional `hyprctl`/`jq` diagnostics.
+
+---
+## 2026-02-21 (Cycle 7)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Implement windows provider with optional `hyprctl`/`jq` diagnostics
+- Changes:
+  - Added `src/providers/windows.zig`:
+    - provider health based on optional tool availability
+    - window collection via `hyprctl clients -j` + `jq` projection
+    - normalized window candidates (`title`, `class`, `address`)
+    - owned-string lifecycle management
+  - Added tests for ready/degraded health paths.
+  - Exported `WindowsProvider` in `src/providers/mod.zig`.
+  - Updated queue completion in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Runtime command execution currently shells through `sh -lc`.
+- Next slice:
+  - M1: Implement dirs provider with optional `zoxide` diagnostics.
+
+---
+## 2026-02-21 (Cycle 8)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Implement dirs provider with optional `zoxide` diagnostics
+- Changes:
+  - Added `src/providers/dirs.zig`:
+    - provider health based on optional `zoxide` availability
+    - directory collection from `zoxide query -l`
+    - normalized directory candidates (`basename`, `Directory`, `full path`)
+    - owned-string lifecycle management
+  - Added tests for ready/degraded health and candidate mapping.
+  - Exported `DirsProvider` in `src/providers/mod.zig`.
+  - Updated queue completion in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Runtime command execution currently shells for tool check.
+- Next slice:
+  - M1: Add provider registry and health snapshot report.
+
+---
+## 2026-02-21 (Cycle 9)
+- Milestone: M1 Data Model + Provider Contract
+- Task slice: Add provider registry and health snapshot report
+- Changes:
+  - Added `src/providers/registry.zig`:
+    - provider aggregation (`collectAll`)
+    - health snapshot generation (`healthSnapshot`)
+    - text report rendering (`renderHealthReport`)
+  - Added registry unit test covering aggregate collection + report content.
+  - Exported `ProviderRegistry` and `ProviderStatus` in `src/providers/mod.zig`.
+  - Updated `docs/TASK_QUEUE.md` to close M1 and open M2 ready slices.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Aggregation currently ignores per-provider collect errors by design for resilience.
+- Next slice:
+  - M2: Add query parser for prefix routing (`@ # ~ > = ?`).
+
+---
+## 2026-02-21 (Cycle 10)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Add query parser for prefix routing (`@ # ~ > = ?`)
+- Changes:
+  - Added `src/search/query.zig`:
+    - route enum for blended/apps/windows/dirs/run/calc/web
+    - parser for optional prefix-based routing
+    - unit tests for empty, prefixed, and plain queries
+  - Exported query types/parser in `src/search/mod.zig`.
+  - Updated queue completion in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Parser currently trims surrounding whitespace and strips one prefix char only.
+- Next slice:
+  - M2: Implement baseline blended ranking (exact/prefix/source weights).
+
+---
+## 2026-02-21 (Cycle 11)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Implement baseline blended ranking (exact/prefix/source weights)
+- Changes:
+  - Added `src/search/rank.zig`:
+    - scored candidate model
+    - ranking by source weight + exact/prefix/contains matching
+    - route-aware filtering
+    - deterministic sort by score then title
+  - Added ranking tests for exact-vs-prefix ordering and route filtering.
+  - Exported ranking symbols via `src/search/mod.zig`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Current matcher is lightweight substring logic; fuzzy matching is not yet added.
+- Next slice:
+  - M2: Add recency boost from action history.
+
+---
+## 2026-02-21 (Cycle 12)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Add recency boost from action history
+- Changes:
+  - Extended ranking with `rankCandidatesWithHistory`.
+  - Added action-history recency boost with decaying score bonus.
+  - Kept `rankCandidates` as a compatibility wrapper.
+  - Added recency ranking test.
+  - Exported `rankCandidatesWithHistory` in `src/search/mod.zig`.
+  - Marked recency slice complete in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Recency currently keys on exact `candidate.action` string match.
+- Next slice:
+  - M2: Wire query parser + ranking into a search service that consumes provider registry.
+
+---
+## 2026-02-21 (Cycle 13)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Wire query parser + ranking into a search service that consumes provider registry
+- Changes:
+  - Added `src/app/search_service.zig`:
+    - provider aggregation via `ProviderRegistry`
+    - query parsing + ranked search (`searchQuery`)
+    - selection history recording for recency (`recordSelection`)
+  - Added service test covering history-influenced ranking.
+  - Exported `SearchService` in `src/app/mod.zig`.
+  - Marked service slice complete and queued next M2/M3 tasks in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - History is currently in-memory only; persistence is a separate queued task.
+- Next slice:
+  - M2: Add history persistence store (file-backed) for recency reuse across launches.
+
+---
+## 2026-02-21 (Cycle 14)
+- Milestone: M2 Search + Ranking v1
+- Task slice: Add history persistence store (file-backed) for recency reuse across launches
+- Changes:
+  - Extended `src/app/search_service.zig` with:
+    - configurable history file path
+    - `loadHistory` and `saveHistory` methods
+    - absolute/relative path-safe file IO helpers
+  - Added roundtrip persistence test using temp directory fixtures.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Persisted history is plain newline-separated action keys.
+- Next slice:
+  - M3: Add minimal GTK4 window shell (search entry + list placeholder).
+
+---
+## 2026-02-21 (Cycle 15)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add minimal GTK4 window shell (search entry + list placeholder)
+- Changes:
+  - Added UI module split:
+    - `src/ui/mod.zig`
+    - `src/ui/stub_shell.zig`
+    - `src/ui/gtk_shell.zig`
+  - Added `--ui` run mode in `src/main.zig`.
+  - Added `enable_gtk` build option in `build.zig` and exposed `build_options`.
+  - Exported UI module from `src/root.zig`.
+  - Updated `README.md` with UI run commands.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK shell compiles only with `-Denable_gtk=true` and system GTK4 headers/libs.
+- Next slice:
+  - M3: Wire search service into UI update loop (query -> ranked rows).
+
+---
+## 2026-02-21 (Cycle 16)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Wire search service into UI update loop (query -> ranked rows)
+- Changes:
+  - Updated `src/main.zig` runtime setup to instantiate providers + registry + search service.
+  - Added history load/save integration for `--ui` sessions.
+  - Upgraded headless shell (`src/ui/stub_shell.zig`) to interactive query loop:
+    - reads query input
+    - calls `SearchService.searchQuery`
+    - prints top ranked rows
+    - records top action for recency feedback
+  - Added shell API parity for GTK/stub (`run(allocator, service)`).
+  - Updated `README.md` and queue entries.
+  - Fixed Zig 0.15 compatibility issues across providers/tests (append signatures, dynamic command checks).
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf ':q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK shell still renders placeholder row; ranked rows are currently visible in headless mode.
+- Next slice:
+  - M3: Render real ranked candidate rows in GTK list (instead of placeholder).
+
+---
+## 2026-02-21 (Cycle 17)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add keyboard navigation behaviors (`Esc`, arrows, Enter) in GTK shell
+- Changes:
+  - Added GTK key controller handling in `src/ui/gtk_shell.zig`.
+  - Implemented:
+    - `Esc` to close window
+    - `Up/Down` to move list selection
+    - `Enter/KP_Enter` to activate selected row
+  - Added small UI context struct for callback state.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK key behavior is feature-gated and requires GTK build mode to validate at runtime.
+- Next slice:
+  - M3: Render real ranked candidate rows in GTK list (instead of placeholder).
+
+---
+## 2026-02-21 (Cycle 18)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Render real ranked candidate rows in GTK list (instead of placeholder)
+- Changes:
+  - Updated `src/ui/gtk_shell.zig` to consume `SearchService` on activate.
+  - Added initial result population from `searchQuery("")`.
+  - Replaced static placeholder row with rendered ranked rows (`title — subtitle`).
+  - Added list clearing and re-selection helpers.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK rendering currently refreshes only on initial load; live query updates are next.
+- Next slice:
+  - M3: Connect GTK search entry changes to `SearchService.searchQuery`.
+
+---
+## 2026-02-21 (Cycle 19)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Connect GTK search entry changes to `SearchService.searchQuery`
+- Changes:
+  - Added GTK `search-changed` signal wiring in `src/ui/gtk_shell.zig`.
+  - On every entry update, query text now re-runs `SearchService.searchQuery`.
+  - Result list refreshes live from current ranked output.
+  - Switched entry prompt to placeholder text.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Current refresh strategy fully rebuilds list per change; can optimize later.
+- Next slice:
+  - M3: Add action execution hook for selected result (`Enter`).
+
+---
+## 2026-02-21 (Cycle 20)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add action execution hook for selected result (`Enter`)
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - attached candidate metadata (`kind`, `action`) to list rows
+    - wired `row-activated` callback to execute selected result
+    - implemented per-kind execution routing:
+      - `action` via `providers.executeAction`
+      - `app` via shell command
+      - `dir` via `xdg-open`
+      - `window` via `hyprctl focuswindow`
+    - records selection into history before execution
+  - Updated queue to close current M3 action hook item.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Command execution currently uses blocking `sh -lc`; async dispatch can be added later.
+- Next slice:
+  - M3: Add row-level icon/chip styling in GTK list renderer.
+
+---
+## 2026-02-21 (Cycle 21)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add row-level icon/chip styling in GTK list renderer
+- Changes:
+  - Updated GTK row rendering to use markup with:
+    - per-kind icons
+    - chip labels (`APP`, `WIN`, `DIR`, `ACT`, `TIP`)
+    - styled title/subtitle colors
+  - Added markup-escaping for row text safety.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Visual polish depends on font/icon availability and GTK theme rendering.
+- Next slice:
+  - M3: Add grouped sections in GTK list (apps/windows/dirs/actions).
+
+---
+## 2026-02-21 (Cycle 22)
+- Milestone: M3 GTK4/libadwaita UI Shell
+- Task slice: Add grouped sections in GTK list (apps/windows/dirs/actions)
+- Changes:
+  - Updated GTK list population to render grouped sections with headers:
+    - Apps
+    - Windows
+    - Directories
+    - Actions
+    - Hints
+  - Added non-selectable/non-activatable group header rows.
+  - Refactored candidate row rendering into dedicated helper.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Grouped order is fixed by kind priority, not adaptive to query intent.
+- Next slice:
+  - M4: Add confirmation mode for sensitive actions (`power`).
+
+---
+## 2026-02-21 (Cycle 23)
+- Milestone: M4 Action Execution + Safety
+- Task slice: Add confirmation mode for sensitive actions (`power`)
+- Changes:
+  - Added `requiresConfirmation(action)` in `src/providers/actions.zig`.
+  - Exported confirmation predicate in `src/providers/mod.zig`.
+  - Added GTK two-step confirmation flow for `power` action in `src/ui/gtk_shell.zig`:
+    - first activation arms confirmation
+    - second activation executes
+    - search placeholder reflects armed state
+    - confirmation clears on query updates or non-sensitive execution
+  - Added unit test for confirmation predicate.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Confirmation state is session-local and UI-local; no timeout yet.
+- Next slice:
+  - M4: Add telemetry event sink for action execution results.
+
+---
+## 2026-02-21 (Cycle 24)
+- Milestone: M4 Action Execution + Safety
+- Task slice: Add telemetry event sink for action execution results
+- Changes:
+  - Added `src/app/telemetry.zig` with file-backed telemetry sink.
+  - Exported `TelemetrySink` via `src/app/mod.zig`.
+  - Extended runtime in `src/main.zig` with telemetry path/sink setup.
+  - Updated shell interfaces to accept telemetry sink.
+  - Wired GTK execution paths to emit telemetry events for:
+    - guarded confirmations
+    - successful command execution
+    - execution failures/unknown actions
+  - Updated queue status and next slices in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf ':q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Headless stub currently does not execute commands, so telemetry there is minimal.
+- Next slice:
+  - M5: Add startup/query timing instrumentation.
+
+---
+## 2026-02-21 (Cycle 25)
+- Milestone: M5 Performance + Stability
+- Task slice: Add startup/query timing instrumentation
+- Changes:
+  - Added `src/app/metrics.zig` stopwatch helper.
+  - Exported `Stopwatch` in `src/app/mod.zig`.
+  - Added startup timing logs in `src/main.zig`.
+  - Added per-query elapsed timing capture in `SearchService` (`last_query_elapsed_ns`).
+  - Displayed query timing in headless UI loop (`src/ui/stub_shell.zig`).
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Timing is wall-clock style and not yet persisted as telemetry metrics.
+- Next slice:
+  - M5: Add provider snapshot cache prewarm for faster first query.
+
+---
+## 2026-02-21 (Cycle 26)
+- Milestone: M5 Performance + Stability
+- Task slice: Add provider snapshot cache prewarm for faster first query
+- Changes:
+  - Added candidate snapshot cache to `SearchService`:
+    - `cached_candidates`
+    - `cache_ready`
+    - `prewarmProviders()`
+  - Updated query flow to use cached snapshot when prewarmed.
+  - Added test verifying provider collect is called once after prewarm.
+  - Runtime now prewarms providers during `--ui` startup in `src/main.zig`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Cache invalidation is manual (currently at startup prewarm only).
+- Next slice:
+  - M6: Add Arch packaging skeleton (`PKGBUILD` + install notes).
+
+---
+## 2026-02-21 (Cycle 27)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add Arch packaging skeleton (`PKGBUILD` + install notes)
+- Changes:
+  - Added `packaging/arch/PKGBUILD` skeleton for `god-search-ui-git`.
+  - Added `docs/ARCH_PACKAGING.md` with build/install guidance and GTK variant notes.
+  - Updated `README.md` packaging section.
+  - Updated queue status with next follow-up items.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Source URL is local `file://` for workspace packaging; update for remote distribution.
+- Next slice:
+  - M6: Add install/service integration docs for Hypr/Waybar bindings.
+
+---
+## 2026-02-21 (Cycle 28)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add install/service integration docs for Hypr/Waybar bindings
+- Changes:
+  - Added `docs/HYPR_WAYBAR_INTEGRATION.md` with:
+    - Hypr keybind wiring
+    - Waybar launcher wiring
+    - optional systemd user service example
+    - validation checklist
+  - Linked integration guide in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Service example is optional; keybind integration remains primary path.
+- Next slice:
+  - M5: Add cache invalidation strategy for provider snapshot refresh.
+
+---
+## 2026-02-21 (Cycle 29)
+- Milestone: M5 Performance + Stability
+- Task slice: Add cache invalidation strategy for provider snapshot refresh
+- Changes:
+  - Extended `SearchService` cache model with:
+    - `cache_last_refresh_ns`
+    - `cache_ttl_ns`
+    - `invalidateSnapshot()`
+    - TTL-based `refreshSnapshotIfNeeded()`
+  - Query flow now refreshes stale snapshot automatically when needed.
+  - Added tests for invalidation-triggered recollection.
+  - Runtime now sets default cache TTL in `src/main.zig`.
+  - Updated M5 milestone notes in `docs/DEVELOPMENT_JOURNEY.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Refresh currently happens inline on query path (not backgrounded).
+- Next slice:
+  - M5: Add explicit refresh trigger command/path in UI layer.
+
+---
+## 2026-02-21 (Cycle 30)
+- Milestone: M5 Performance + Stability
+- Task slice: Add explicit refresh trigger command/path in UI layer
+- Changes:
+  - Added headless refresh command in `src/ui/stub_shell.zig`:
+    - `:refresh` invalidates + prewarms provider snapshot
+  - Added GTK refresh shortcut in `src/ui/gtk_shell.zig`:
+    - `Ctrl+R` invalidates + prewarms snapshot and refreshes visible results
+  - Documented refresh controls in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf ':refresh\\n:q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Refresh operation is synchronous and may briefly block UI on slow providers.
+- Next slice:
+  - M5: Add stale-cache indicator in UI when snapshot is auto-refreshed.
+
+---
+## 2026-02-21 (Cycle 31)
+- Milestone: M5 Performance + Stability
+- Task slice: Add stale-cache indicator in UI when snapshot is auto-refreshed
+- Changes:
+  - Added `last_query_refreshed_cache` tracking in `SearchService`.
+  - Cache refresh path now returns whether an auto-refresh occurred.
+  - Added test coverage for auto-refresh indicator behavior.
+  - Added headless indicator line when auto-refresh occurs.
+  - Added GTK placeholder hint when snapshot is auto-refreshed.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf ':refresh\\nkitty\\n:q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Indicator currently reports only automatic TTL refresh events, not manual refreshes.
+- Next slice:
+  - M6: Add rollout checklist for migrating from shell launcher to GTK launcher.
+
+---
+## 2026-02-21 (Cycle 32)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add rollout checklist for migrating from shell launcher to GTK launcher
+- Changes:
+  - Added `docs/GTK_ROLLOUT_CHECKLIST.md` with:
+    - phased migration path (parallel run -> cutover -> decommission)
+    - go/no-go gates
+    - rollback plan
+    - burn-in recommendation
+  - Linked checklist from `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Checklist assumes existing shell fallback keybind is still available.
+- Next slice:
+  - M5: Add background refresh strategy to avoid synchronous cache refresh on query path.
+
+---
+## 2026-02-21 (Cycle 33)
+- Milestone: M5 Performance + Stability
+- Task slice: Add background refresh strategy to avoid synchronous cache refresh on query path
+- Changes:
+  - Refactored cache-refresh behavior in `SearchService` to cooperative scheduling:
+    - query path serves cached snapshot immediately
+    - stale snapshot sets `refresh_requested`
+    - refresh runs through `drainScheduledRefresh()` outside query critical path
+  - Added state flags:
+    - `last_query_used_stale_cache`
+    - `last_query_refreshed_cache`
+  - Updated headless and GTK UI paths to drain scheduled refresh after rendering.
+  - Updated tests for scheduled refresh behavior.
+- Verification:
+  - `scripts/dev.sh check`
+  - `printf 'kitty\\n:q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Current strategy is cooperative (single-threaded), not detached threaded worker.
+- Next slice:
+  - M6: Add operator troubleshooting runbook for common failures.
+
+---
+## 2026-02-21 (Cycle 34)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add operator troubleshooting runbook for common failures
+- Changes:
+  - Added `docs/TROUBLESHOOTING_RUNBOOK.md` covering:
+    - baseline health checks
+    - GTK build/link failures
+    - crash triage
+    - empty results/action failures/history issues
+    - rollback + escalation checklist
+  - Linked runbook from `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Runbook assumes local paths under `~/.local/state/god-search-ui`.
+- Next slice:
+  - M5: Add async thread-based refresh worker (optional advanced path).
+
+---
+## 2026-02-21 (Cycle 35)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add systemd user unit example file under `packaging/systemd/`
+- Changes:
+  - Added `packaging/systemd/god-search-ui.service` template.
+  - Updated `docs/HYPR_WAYBAR_INTEGRATION.md` to reference template path and install location.
+  - Added README packaging reference for systemd template.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Service runs continuously; users may prefer keybind-only launch depending on workflow.
+- Next slice:
+  - M5: Add async thread-based refresh worker (optional advanced path).
+
+---
+## 2026-02-21 (Cycle 36)
+- Milestone: M5 Performance + Stability
+- Task slice: Add async thread-based refresh worker (optional advanced path)
+- Changes:
+  - Extended `SearchService` with optional async refresh worker support:
+    - `enable_async_refresh`
+    - background refresh thread lifecycle
+    - mutex-protected cache state for worker coordination
+  - Query path can schedule thread-based refresh when stale.
+  - Runtime toggle added via env var:
+    - `GOD_SEARCH_ASYNC_REFRESH=1`
+  - Added test coverage for optional async path.
+  - Updated README and queue status.
+- Verification:
+  - `scripts/dev.sh check`
+  - `GOD_SEARCH_ASYNC_REFRESH=1 printf ':q\\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Async mode is opt-in and intended as advanced/experimental.
+- Next slice:
+  - M6: Add changelog generation script for release notes draft.
+
+---
+## 2026-02-21 (Cycle 36)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add release-notes template for milestone cutovers
+- Changes:
+  - Added `docs/RELEASE_NOTES_TEMPLATE.md` with sections for:
+    - highlights/features/fixes
+    - behavior changes + migration
+    - verification + rollback notes
+  - Linked release template from `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Template is intentionally lightweight and manual.
+- Next slice:
+  - M5: Add async thread-based refresh worker (optional advanced path).
+
+---
+## 2026-02-21 (Cycle 37)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add changelog generation script for release notes draft
+- Changes:
+  - Added `scripts/gen_release_notes.sh` to generate draft notes using:
+    - `docs/RELEASE_NOTES_TEMPLATE.md`
+    - latest commit digest (`git log --oneline -20`)
+  - Added usage references in:
+    - `README.md`
+    - `docs/ARCH_PACKAGING.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/gen_release_notes.sh v0.1.0 /tmp/god-search-ui-release-notes.md`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Commit digest is intentionally simple and may require manual curation.
+- Next slice:
+  - M6: Add desktop file + icon assets for launcher integration.
+
+---
+## 2026-02-21 (Cycle 38)
+- Milestone: M6 Packaging + Integration
+- Task slice: Add desktop file + icon assets for launcher integration
+- Changes:
+  - Added desktop entry template:
+    - `packaging/desktop/god-search-ui.desktop`
+  - Added launcher icon asset:
+    - `assets/icons/god-search-ui.svg`
+  - Updated `packaging/arch/PKGBUILD` to install desktop file and icon.
+  - Added README packaging references.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `makepkg --printsrcinfo` (optional local packaging check)
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Desktop file assumes binary name `god-search-ui` is in `PATH`.
+- Next slice:
+  - M7: release hardening (tagging, packaged install smoke, rollout execution).
+
+---
+## 2026-02-21 (Cycle 39)
+- Milestone: M7 Release Hardening
+- Task slice: Add release smoke-test script for headless + GTK build verification
+- Changes:
+  - Added `scripts/release_smoke.sh` with end-to-end checks:
+    - `scripts/dev.sh check`
+    - headless UI smoke (`:refresh`, query, quit)
+    - GTK-enabled compile smoke (`zig build -Denable_gtk=true`)
+    - release notes generator smoke using temporary output file
+  - Linked script usage from `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/release_smoke.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - GTK runtime launch is not exercised here; this script validates GTK build path.
+- Next slice:
+  - M7: Add release tagging/rollback runbook with exact command sequence.
+
+---
+## 2026-02-21 (Cycle 40)
+- Milestone: M7 Release Hardening
+- Task slice: Add release tagging/rollback runbook with exact command sequence
+- Changes:
+  - Added `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md` with explicit command flow for:
+    - preflight checks
+    - release notes draft generation
+    - annotated tagging and push
+    - tag-only rollback
+    - code rollback (revert-first, hard reset as emergency path)
+  - Linked runbook in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Hard reset/force push path remains emergency-only and requires maintainer coordination.
+- Next slice:
+  - M7: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check).
+
+---
+## 2026-02-21 (Cycle 41)
+- Milestone: M7 Release Hardening
+- Task slice: Add packaged install smoke steps for Arch (`makepkg` + desktop entry check)
+- Changes:
+  - Added `docs/PACKAGED_INSTALL_SMOKE.md` with explicit smoke flow:
+    - `makepkg` build
+    - package install/uninstall
+    - desktop entry + icon path checks
+    - desktop file validation
+    - runtime smoke
+  - Linked smoke doc in:
+    - `README.md`
+    - `docs/ARCH_PACKAGING.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Install/uninstall commands require a real Arch host and sudo privileges.
+- Next slice:
+  - M7: automate packaged smoke into optional helper script.
+
+---
+## 2026-02-21 (Cycle 42)
+- Milestone: M7 Release Hardening
+- Task slice: Add optional Arch package smoke helper script
+- Changes:
+  - Added `scripts/arch_package_smoke.sh`:
+    - default path: build package + inspect package archive contents
+    - optional path: install/uninstall checks via `--install --uninstall`
+  - Linked helper usage in:
+    - `README.md`
+    - `docs/PACKAGED_INSTALL_SMOKE.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/arch_package_smoke.sh --help`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Full install/uninstall path requires Arch host with sudo/pacman.
+- Next slice:
+  - M7: release candidate cut (`v0.1.0-rc1`) using runbook flow.
+
+---
+## 2026-02-21 (Cycle 43)
+- Milestone: M7 Release Hardening
+- Task slice: Add release tag flow helper script (dry-run + apply modes)
+- Changes:
+  - Added `scripts/cut_release_tag.sh` with:
+    - required `--version`
+    - dry-run default
+    - `--apply` to create annotated tag
+    - optional `--push` (requires `--apply`)
+    - clean-tree and existing-tag guards
+    - preflight: `scripts/release_smoke.sh`
+  - Linked helper usage in:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --help`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--apply` generates release notes draft file under `docs/`.
+- Next slice:
+  - M7: run real `v0.1.0-rc1` cut on maintainer command.
+
+---
+## 2026-02-21 (Cycle 44)
+- Milestone: M7 Release Hardening
+- Task slice: Make release-tag dry-run mode side-effect free
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - dry-run now prints intended release-notes generation command
+    - release notes draft is generated only under `--apply`
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md` to clarify dry-run behavior.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --version v0.1.0-rc1`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Dry-run still executes preflight smoke checks by design.
+- Next slice:
+  - M7: run real `v0.1.0-rc1` cut on maintainer command.
+
+---
+## 2026-02-21 (Cycle 45)
+- Milestone: M7 Release Hardening
+- Task slice: Execute local RC tag cut (`v0.1.0-rc1`) with release preflight
+- Changes:
+  - Ran `scripts/cut_release_tag.sh --version v0.1.0-rc1 --apply`.
+  - Preflight passed (`scripts/release_smoke.sh`).
+  - Created local annotated tag `v0.1.0-rc1` at commit `9859dfe`.
+  - Generated draft notes file:
+    - `docs/release-notes-v0.1.0-rc1.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git show v0.1.0-rc1 --no-patch --oneline`
+  - `git tag -l`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Tag not pushed; remote publish requires explicit `--push` path.
+- Next slice:
+  - M7: decide publish action (`--push`) or iterate RC fixes.
+
+---
+## 2026-02-21 (Cycle 46)
+- Milestone: M7 Release Hardening
+- Task slice: Add `--commit-notes` option to release tag helper
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - new `--commit-notes` flag (requires `--apply`)
+    - optional commit step for generated `docs/release-notes-<version>.md` before tagging
+    - dry-run output includes commit plan when applicable
+  - Updated usage references in:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --help`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--commit-notes` creates an additional commit before tag creation.
+- Next slice:
+  - M7: decide whether to re-cut RC tag to include notes commit.
+
+---
+## 2026-02-21 (Cycle 47)
+- Milestone: M7 Release Hardening
+- Task slice: Execute local RC tag cut (`v0.1.0-rc2`) with notes in tagged commit
+- Changes:
+  - Ran:
+    - `scripts/cut_release_tag.sh --version v0.1.0-rc2 --apply --commit-notes`
+  - Preflight passed (`scripts/release_smoke.sh`).
+  - Generated and committed release notes:
+    - `docs/release-notes-v0.1.0-rc2.md`
+  - Created local annotated tag `v0.1.0-rc2` at commit `0e9a485`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git show v0.1.0-rc2 --no-patch --oneline`
+  - `git status --short`
+- Commit(s):
+  - script-created commit: `0e9a485`
+  - pending docs/log commit
+- Risks/notes:
+  - Tag not pushed; remote publish remains explicit.
+- Next slice:
+  - M7: optional publish flow (`--push`) after maintainer approval.
+
+---
+## 2026-02-21 (Cycle 48)
+- Milestone: M7 Release Hardening
+- Task slice: Add publish helper for existing local release tags
+- Changes:
+  - Added `scripts/publish_release_tag.sh`:
+    - dry-run default
+    - `--apply` to push `main` and specified tag
+    - guards for clean tree, local tag presence, `origin` presence, and remote tag non-existence
+  - Linked helper usage in:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/publish_release_tag.sh --help`
+  - `scripts/publish_release_tag.sh --version v0.1.0-rc2`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--apply` requires push permissions on `origin`.
+- Next slice:
+  - M7: publish `v0.1.0-rc2` on maintainer command.
+
+---
+## 2026-02-21 (Cycle 49)
+- Milestone: M7 Release Hardening
+- Task slice: Allow publish-helper dry-run without configured `origin`
+- Changes:
+  - Updated `scripts/publish_release_tag.sh`:
+    - dry-run mode now works without `origin`
+    - `--apply` still requires configured `origin`
+    - dry-run emits note when remote/tag checks cannot be enforced
+  - Updated runbook note in `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/publish_release_tag.sh --version v0.1.0-rc2`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Without `origin`, dry-run can only validate local prerequisites.
+- Next slice:
+  - M7: publish `v0.1.0-rc2` once `origin` is configured.
+
+---
+## 2026-02-21 (Cycle 50)
+- Milestone: M7 Release Hardening
+- Task slice: Add `--remote` option to publish helper
+- Changes:
+  - Updated `scripts/publish_release_tag.sh`:
+    - added `--remote <name>` (default `origin`)
+    - remote checks and push commands now use selected remote
+  - Updated docs:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/publish_release_tag.sh --help`
+  - `scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - apply mode still requires selected remote to exist and be writable.
+- Next slice:
+  - M7: publish RC once chosen remote is configured.
+
+---
+## 2026-02-21 (Cycle 51)
+- Milestone: M7 Release Hardening
+- Task slice: Record publish blocker in queue
+- Changes:
+  - Updated `docs/TASK_QUEUE.md` blocked section with explicit publish blocker:
+    - missing configured/writable git remote for `v0.1.0-rc2` publish step
+- Verification:
+  - `git remote -v`
+  - `scripts/publish_release_tag.sh --version v0.1.0-rc2`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - publish step cannot complete in current workspace until remote is configured.
+- Next slice:
+  - unblock by configuring remote and rerun publish helper with `--apply`.
+
+---
+## 2026-02-21 (Cycle 52)
+- Milestone: M7 Release Hardening
+- Task slice: Publish `v0.1.0-rc2` tag to `origin`
+- Changes:
+  - Ran:
+    - `scripts/publish_release_tag.sh --version v0.1.0-rc2 --apply`
+  - Results:
+    - `main` already up to date on `origin`
+    - tag pushed: `v0.1.0-rc2 -> origin`
+  - Cleared blocked publish item in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git remote -v`
+  - publish helper output confirms tag push
+- Commit(s):
+  - pending
+- Risks/notes:
+  - Earlier SSH key warning suggests key-path config should be reviewed, although push now succeeds.
+- Next slice:
+  - M7: decide whether to promote RC to `v0.1.0` tag.
+
+---
+## 2026-02-21 (Cycle 53)
+- Milestone: M7 Release Hardening
+- Task slice: Promote stable `v0.1.0` tag from main and publish
+- Changes:
+  - Ran:
+    - `scripts/cut_release_tag.sh --version v0.1.0 --apply --commit-notes --push`
+  - Results:
+    - generated and committed `docs/release-notes-v0.1.0.md`
+    - created annotated local tag `v0.1.0` at commit `1a9481a`
+    - pushed `main` and `v0.1.0` to `origin`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git tag -l | sort`
+  - `git ls-remote --tags origin | rg "v0.1.0(\\^\\{\\})?$"`
+- Commit(s):
+  - script-created commit: `1a9481a`
+  - pending docs/log commit
+- Risks/notes:
+  - release notes are template-based and may need editorial cleanup.
+- Next slice:
+  - M8: post-release patch planning (v0.1.1 scope).
+
+---
+## 2026-02-21 (Cycle 54)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add post-release patch plan for `v0.1.1`
+- Changes:
+  - Added `docs/V0_1_1_PATCH_PLAN.md` with:
+    - prioritized scope
+    - acceptance criteria
+    - explicit out-of-scope boundaries
+  - Linked patch plan in `README.md`.
+  - Extended milestone docs to include M8:
+    - `docs/DEVELOPMENT_JOURNEY.md`
+    - `docs/AGENT_ITERATION_LOOP.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - patch-plan priorities may change after first post-release issue batch.
+- Next slice:
+  - M8: queue first `v0.1.1` implementation bugfix item.
+
+---
+## 2026-02-21 (Cycle 55)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Fix publish-helper help text for `--remote`
+- Changes:
+  - Updated `scripts/publish_release_tag.sh` help text:
+    - `--apply` now correctly states push is to selected remote
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/publish_release_tag.sh --help`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - none
+- Next slice:
+  - M8: add guard test script for release-helper CLI docs/output consistency.
+
+---
+## 2026-02-21 (Cycle 56)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add guard script for release-helper CLI docs/output consistency
+- Changes:
+  - Added `scripts/check_release_helpers.sh` to validate help/usage contract for:
+    - `scripts/cut_release_tag.sh`
+    - `scripts/publish_release_tag.sh`
+  - Integrated helper contract check into `scripts/release_smoke.sh`.
+  - Linked helper check in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/check_release_helpers.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - contract checks are text-based and intentionally lightweight.
+- Next slice:
+  - M8: add runbook note for post-release patch checklist execution order.
+
+---
+## 2026-02-21 (Cycle 57)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add post-release patch checklist execution order to runbook docs
+- Changes:
+  - Added ordered patch execution checklist in:
+    - `docs/V0_1_1_PATCH_PLAN.md`
+  - Linked patch-plan execution order from:
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checklist includes manual GTK step that depends on local display/session.
+- Next slice:
+  - M8: queue first GTK UX patch candidate from `v0.1.1` plan.
+
+---
+## 2026-02-21 (Cycle 58)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add GTK explicit empty/error state rows in result list
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - render `"No results"` row when ranked slice is empty
+    - render `"Search failed: <error>"` row when query evaluation errors
+    - added `appendInfoRow` helper for non-activatable status rows
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status rows are non-selectable; keyboard selection remains on first selectable result when present.
+- Next slice:
+  - M8: add GTK placeholder text for empty query guidance.
+
+---
+## 2026-02-21 (Cycle 59)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add GTK placeholder guidance for empty-query state
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - when query is empty and no refresh/confirmation override is active, show:
+      - `"Type to search... (Esc to close, Ctrl+R to refresh)"`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - placeholder guidance is informational only and does not change key handling logic.
+- Next slice:
+  - M8: add first post-release issue triage template.
+
+---
+## 2026-02-21 (Cycle 60)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add post-release issue triage template for v0.1.1 planning
+- Changes:
+  - Added `docs/POST_RELEASE_TRIAGE_TEMPLATE.md`.
+  - Linked template from:
+    - `docs/V0_1_1_PATCH_PLAN.md`
+    - `README.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - template is intentionally minimal and may be extended as issue volume grows.
+- Next slice:
+  - M8: queue first concrete triage item from real-world usage.
+
+---
+## 2026-02-21 (Cycle 61)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add first concrete triage item from release publish session
+- Changes:
+  - Added `docs/TRIAGE_LOG.md` with first accepted issue:
+    - SSH key permission warning during initial remote push setup
+  - Linked triage log in:
+    - `README.md`
+    - `docs/V0_1_1_PATCH_PLAN.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - triage item is operational/documentation-focused, not product-code regression.
+- Next slice:
+  - M8: add runbook note for SSH key preflight check before publish.
+
+---
+## 2026-02-21 (Cycle 62)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add SSH key preflight check to release publish runbook
+- Changes:
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`:
+    - added `ssh -T git@github.com` preflight step
+    - added note on key path/permission checks for failed auth
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - host-specific SSH setup can still vary; runbook step is advisory.
+- Next slice:
+  - M8: add GTK runtime smoke command to release smoke script (optional mode).
+
+---
+## 2026-02-21 (Cycle 63)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add optional GTK runtime launch smoke mode to release smoke script
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - added optional `--with-gtk-runtime` mode
+    - runs short GTK launch smoke via timeout when enabled
+  - Updated docs:
+    - `README.md`
+    - `docs/V0_1_1_PATCH_PLAN.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --with-gtk-runtime`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - optional runtime smoke is best-effort and may no-op in headless/no-display sessions.
+- Next slice:
+  - M8: add quick script-usage matrix for release helper docs.
+
+---
+## 2026-02-21 (Cycle 64)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add release-helper script usage matrix documentation
+- Changes:
+  - Added `docs/RELEASE_SCRIPT_MATRIX.md` with:
+    - script purpose/safe-default/apply-mode matrix
+    - recommended execution order
+  - Linked matrix in:
+    - `README.md`
+    - `docs/V0_1_1_PATCH_PLAN.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - matrix should be updated when helper script flags evolve.
+- Next slice:
+  - M8: add lightweight script to validate matrix links/commands exist.
+
+---
+## 2026-02-21 (Cycle 65)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add lightweight script to validate release-matrix command references
+- Changes:
+  - Added `scripts/check_release_matrix.sh`:
+    - validates matrix file exists
+    - validates listed script references are present and executable
+    - validates recommended-order commands are present
+  - Integrated matrix validator in `scripts/release_smoke.sh`.
+  - Linked matrix validator in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checks are intentionally static/textual and do not execute apply-mode flows.
+- Next slice:
+  - M8: add patch-release notes draft (`v0.1.1`) from current commits.
+
+---
+## 2026-02-21 (Cycle 66)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add patch release notes draft for `v0.1.1`
+- Changes:
+  - Generated `docs/release-notes-v0.1.1.md` via:
+    - `scripts/gen_release_notes.sh v0.1.1 docs/release-notes-v0.1.1.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - highlights/fixes sections still need editorial fill-in before publish.
+- Next slice:
+  - M8: tighten release notes with concrete filled sections for v0.1.1.
+
+---
+## 2026-02-21 (Cycle 67)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Fill concrete highlights/fixes in `v0.1.1` release notes
+- Changes:
+  - Updated `docs/release-notes-v0.1.1.md`:
+    - filled highlights/new features/improvements/fixes
+    - filled verification summary and rollback baseline
+    - added known issue from triage log
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - release notes still reflect current local scope and should be refreshed if additional patch commits land.
+- Next slice:
+  - M8: add quick checklist script for v0.1.1 pre-cut readiness gate.
+
+---
+## 2026-02-21 (Cycle 68)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add pre-cut readiness gate script for `v0.1.1`
+- Changes:
+  - Added `scripts/precut_v0_1_1.sh` to run a compact pre-cut gate:
+    - release smoke
+    - helper/matrix contract checks
+    - GTK build check
+    - release-notes + triage artifact presence checks
+  - Linked gate script in `README.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/precut_v0_1_1.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - gate validates artifact presence, not editorial quality.
+- Next slice:
+  - M8: run real `v0.1.1` cut dry-run using precut gate path.
+
+---
+## 2026-02-21 (Cycle 69)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Run `v0.1.1` release cut dry-run and record outcome
+- Changes:
+  - Ran:
+    - `scripts/precut_v0_1_1.sh`
+    - `scripts/cut_release_tag.sh --version v0.1.1`
+  - Dry-run result:
+    - preflight/smoke path passes
+    - planned tag command emitted for `v0.1.1`
+    - no tag created (dry-run)
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - dry-run output includes:
+    - `git tag -a v0.1.1 -m "god-search-ui v0.1.1"`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - final publish still requires explicit `--apply --push` flow.
+- Next slice:
+  - M8: decide and execute `v0.1.1` apply cut when approved.
+
+---
+## 2026-02-21 (Cycle 70)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Execute `v0.1.1` apply cut and publish to `origin`
+- Changes:
+  - Ran:
+    - `scripts/precut_v0_1_1.sh`
+    - `scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --push`
+  - Results:
+    - release notes draft commit created: `998e18d`
+    - annotated tag created: `v0.1.1`
+    - pushed `main` and `v0.1.1` to `origin`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git tag -l | sort`
+  - `git ls-remote --tags origin | rg "v0.1.1(\\^\\{\\})?$"`
+- Commit(s):
+  - script-created commit: `998e18d`
+  - pending docs/log commit
+- Risks/notes:
+  - `--commit-notes` regenerated `docs/release-notes-v0.1.1.md`, replacing manually curated sections.
+- Next slice:
+  - M8: add note/workflow to preserve curated release-notes content during apply cuts.
+
+---
+## 2026-02-21 (Cycle 71)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add `--reuse-notes` option to preserve curated release notes
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - added `--reuse-notes` flag (requires `--apply`)
+    - apply mode now reuses existing `docs/release-notes-<version>.md` when requested
+    - guards if reuse target is missing
+  - Updated related docs/checks:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+    - `docs/RELEASE_SCRIPT_MATRIX.md`
+    - `scripts/check_release_helpers.sh`
+    - `scripts/check_release_matrix.sh`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --help`
+  - `scripts/check_release_helpers.sh`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--reuse-notes` assumes curated notes already exist and are up to date.
+- Next slice:
+  - M8: add post-cut note about `--reuse-notes` in v0.1.1 release notes.
+
+---
+## 2026-02-21 (Cycle 72)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add `--reuse-notes` workflow note in `v0.1.1` release notes
+- Changes:
+  - Updated `docs/release-notes-v0.1.1.md` migration notes with:
+    - `--reuse-notes` patch-cut workflow
+    - rationale to preserve curated notes content
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - release notes remain template-heavy from apply regeneration and may need manual curation.
+- Next slice:
+  - M8: add release-notes curation checklist to avoid template-only patch notes.
+
+---
+## 2026-02-21 (Cycle 73)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add release-notes curation checklist for patch cuts
+- Changes:
+  - Added `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`.
+  - Linked checklist in:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checklist enforces process discipline but does not auto-edit release notes.
+- Next slice:
+  - M8: add quick lint script to detect placeholder text in release notes.
+
+---
+## 2026-02-21 (Cycle 74)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add lint script to detect placeholder text in release notes
+- Changes:
+  - Added `scripts/lint_release_notes.sh`.
+  - Wired lint into `scripts/precut_v0_1_1.sh`.
+  - Linked lint usage in `README.md`.
+  - Refreshed `docs/release-notes-v0.1.1.md` to remove placeholders and satisfy lint.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/lint_release_notes.sh docs/release-notes-v0.1.1.md`
+  - `scripts/precut_v0_1_1.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - release-notes content must be kept current if new patch commits are added.
+- Next slice:
+  - M8: add final post-v0.1.1 maintenance checklist entry in docs.
+
+---
+## 2026-02-21 (Cycle 75)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add post-`v0.1.1` maintenance checklist entry in docs
+- Changes:
+  - Updated `docs/V0_1_1_PATCH_PLAN.md` with a post-`v0.1.1` maintenance checklist.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checklist is operational and assumes `origin` remains the primary release remote.
+- Next slice:
+  - M8: queue first `v0.1.2` candidate after triage updates.
+
+---
+## 2026-02-21 (Cycle 76)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Queue first `v0.1.2` candidate from triage findings
+- Changes:
+  - Added new triage entry in `docs/TRIAGE_LOG.md`:
+    - curated release notes overwrite risk during apply cut
+  - Added `v0.1.2` candidate seed in `docs/V0_1_1_PATCH_PLAN.md`.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - candidate is process/tooling focused rather than runtime UX.
+- Next slice:
+  - M8: implement first `v0.1.2` candidate change (default-safe notes mode).
+
+---
+## 2026-02-21 (Cycle 77)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Implement v0.1.2 candidate - default-safe notes mode
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - apply mode now defaults to reusing existing notes file when present
+    - added explicit `--regen-notes` override
+    - kept `--reuse-notes` explicit option
+    - added mutual-exclusion guard for `--reuse-notes` + `--regen-notes`
+  - Updated related docs/check scripts:
+    - `README.md`
+    - `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
+    - `docs/RELEASE_SCRIPT_MATRIX.md`
+    - `scripts/check_release_helpers.sh`
+    - `scripts/check_release_matrix.sh`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/cut_release_tag.sh --help`
+  - `scripts/check_release_helpers.sh`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - default behavior change should be communicated to maintainers using older apply workflow assumptions.
+- Next slice:
+  - M8: add explicit migration note in release-notes curation checklist for v0.1.2.
+
+---
+## 2026-02-21 (Cycle 78)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add migration note for default-safe notes mode in curation checklist
+- Changes:
+  - Updated `docs/RELEASE_NOTES_CURATION_CHECKLIST.md`:
+    - documented v0.1.2+ default-safe notes behavior
+    - clarified when to use `--regen-notes`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - maintainers should align personal release aliases/scripts with new default behavior.
+- Next slice:
+  - M8: add quick dry-run example for default-safe mode in release matrix.
+
+---
+## 2026-02-21 (Cycle 79)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add quick dry-run example for default-safe mode in release matrix
+- Changes:
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md` with:
+    - explicit dry-run command for v0.1.2
+    - expected output patterns for reuse/regenerate paths
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - expected output strings should stay aligned if helper messaging changes.
+- Next slice:
+  - M8: add automated dry-run assertion to verify default-safe output branch.
+
+---
+## 2026-02-21 (Cycle 80)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Add automated dry-run assertion for default-safe notes branch
+- Changes:
+  - Added `scripts/check_cut_dryrun_default_safe.sh`:
+    - verifies dry-run chooses reuse branch for `v0.1.2` when notes file exists
+    - verifies dry-run chooses regenerate branch for a missing-version notes file
+    - skips assertion in dirty worktrees (release/CI clean trees still execute assertion)
+  - Integrated script in `scripts/release_smoke.sh`.
+  - Linked script usage in `README.md`.
+  - Added `docs/release-notes-v0.1.2.md` draft to provide stable reuse-path fixture.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/check_cut_dryrun_default_safe.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - assertion runs fully only on clean worktrees.
+- Next slice:
+  - M8: add explicit `v0.1.2` queue item for applying/publishing this candidate set.
+
+---
+## 2026-02-21 (Cycle 81)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Queue `v0.1.2` dry-run cut using default-safe notes mode
+- Changes:
+  - Added ready queue item in `docs/TASK_QUEUE.md`:
+    - run `v0.1.2` cut dry-run and verify reuse-path behavior
+- Verification:
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dry-run uses current release scripts and does not create tags.
+- Next slice:
+  - M8: execute `v0.1.2` dry-run cut and record outcome.
+
+---
+## 2026-02-21 (Cycle 82)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Prevent recursive preflight in cut dry-run assertion checks
+- Changes:
+  - Updated `scripts/cut_release_tag.sh`:
+    - supports `CUT_RELEASE_SKIP_PREFLIGHT=1` for internal checks
+  - Updated `scripts/check_cut_dryrun_default_safe.sh`:
+    - calls cut helper with `CUT_RELEASE_SKIP_PREFLIGHT=1`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/check_cut_dryrun_default_safe.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/dev.sh check`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - preflight skip hook is intended for internal validation contexts only.
+- Next slice:
+  - M8: execute `v0.1.2` dry-run cut and record outcome.
+
+---
+## 2026-02-21 (Cycle 83)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Run `v0.1.2` release cut dry-run with default-safe notes mode
+- Changes:
+  - Ran:
+    - `scripts/cut_release_tag.sh --version v0.1.2`
+  - Result:
+    - dry-run preflight passed
+    - output selected reuse path:
+      - `[dry-run] would reuse: docs/release-notes-v0.1.2.md`
+    - output emitted planned tag command for `v0.1.2`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - dry-run output includes reuse branch and `git tag -a v0.1.2 ...`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - final cut/push still requires explicit `--apply --commit-notes --push`.
+- Next slice:
+  - M8: queue/apply `v0.1.2` cut when approved.
+
+---
+## 2026-02-21 (Cycle 84)
+- Milestone: M8 Patch Release Cadence
+- Task slice: Execute `v0.1.2` apply cut and publish to `origin`
+- Changes:
+  - Fixed apply-flow edge case in `scripts/cut_release_tag.sh`:
+    - when `--commit-notes` is set and notes are unchanged, skip commit cleanly
+  - Ran:
+    - `scripts/cut_release_tag.sh --version v0.1.2 --apply --commit-notes --push`
+  - Results:
+    - reused existing `docs/release-notes-v0.1.2.md`
+    - skipped notes commit (no content changes)
+    - created local tag `v0.1.2` at `547910a`
+    - pushed `main` and tag `v0.1.2` to `origin`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `git tag -l | sort`
+  - `git ls-remote --tags origin | rg "v0.1.2(\\^\\{\\})?$"`
+- Commit(s):
+  - fix commit: `547910a`
+  - pending docs/log commit
+- Risks/notes:
+  - release now tags helper-fix commit directly due no-op notes commit path.
+- Next slice:
+  - M8: add post-v0.1.2 maintenance checklist update.
+
+---
+## 2026-02-21 (Cycle 85)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 1 - scrolled results container + actionable-row selection
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced direct list embedding with `GtkScrolledWindow`
+    - removed startup placeholder row injection
+    - added `selectFirstActionableRow` helper
+    - updated arrow-key offset navigation to skip non-actionable rows (headers/info)
+    - updated initial post-render selection to choose first actionable row
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - navigation no longer lands on informational/header rows by design.
+- Next slice:
+  - M8: UX Phase 1 - add non-blocking action execution path.
+
+---
+## 2026-02-21 (Cycle 86)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 1 - switch GTK action execution to non-blocking spawn
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced synchronous `std.process.Child.run` action execution
+    - now uses GLib async spawn (`g_spawn_command_line_async`)
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - async spawn confirms launch dispatch, not child process exit status.
+- Next slice:
+  - M8: UX Phase 1 - add debounce for `search-changed`.
+
+---
+## 2026-02-21 (Cycle 87)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 1 - add debounce for GTK `search-changed`
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added `search_debounce_id` state to UI context
+    - changed `onSearchChanged` to schedule single-shot timeout (90ms)
+    - added `onSearchDebounced` callback to run search/render
+    - clears pending timeout in `onDestroy`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - debounce adds slight intentional delay to result updates.
+- Next slice:
+  - M8: UX Phase 1 - add visible launch feedback row for async command dispatch.
+
+---
+## 2026-02-21 (Cycle 88)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 1 - add visible launch feedback row for async command dispatch
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added `showLaunchFeedback` helper
+    - append non-actionable info rows after launch/focus/open attempts
+    - show success/failure feedback for app/action/dir/window dispatch paths
+    - preserve actionable row selection after feedback row append
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - feedback rows accumulate until next query refresh, by design for now.
+- Next slice:
+  - M8: UX Phase 2 - replace placeholder-based status with dedicated status line widget.
+
+---
+## 2026-02-21 (Cycle 89)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - replace placeholder status with dedicated status line
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added dedicated status label under search entry
+    - replaced placeholder-based refresh/confirmation/status messaging with status line updates
+    - status line now reflects refresh hints and launch feedback
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status label text is currently plain; no theme-class styling yet.
+- Next slice:
+  - M8: UX Phase 2 - add status line visual styling and spacing polish.
+
+---
+## 2026-02-21 (Cycle 90)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - style and spacing polish for GTK status line
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added bottom margin to status line widget for clearer spacing
+    - switched status rendering to muted markup style
+    - kept empty status line truly empty when no message is active
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status line color is currently hardcoded and should move to theme styling later.
+- Next slice:
+  - M8: UX Phase 2 - remove hardcoded row/chip colors into CSS/theme layer.
+
+---
+## 2026-02-21 (Cycle 91)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - centralize GTK color tokens for theme extraction
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - introduced shared color constants for header/chip/title/subtitle/status
+    - replaced repeated inline color literals in row/status markup
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - colors are centralized but still in-code; CSS extraction remains next-step.
+- Next slice:
+  - M8: UX Phase 2 - move markup style strings to minimal GTK CSS provider.
+
+---
+## 2026-02-21 (Cycle 92)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - move GTK row/status styling to minimal CSS provider
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added `installCss` to register app CSS provider
+    - moved status/header/info/candidate color styling to CSS classes
+    - simplified label markup to reduce inline color attributes
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - candidate line now uses simplified inline formatting (`-` separator) pending richer layout pass.
+- Next slice:
+  - M8: UX Phase 2 - replace single-line candidate markup with structured row layout.
+
+---
+## 2026-02-21 (Cycle 93)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - replace single-line candidate markup with structured row layout
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - changed candidate rows to two-line layout
+    - primary line: icon + chip + title
+    - secondary line: subtitle
+    - added CSS classes for primary/secondary text styling
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - row height increases; tune spacing further after visual pass.
+- Next slice:
+  - M8: UX Phase 2 - tighten candidate row spacing and secondary text truncation.
+
+---
+## 2026-02-21 (Cycle 94)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - tighten candidate row spacing and subtitle truncation
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - enabled ellipsize/truncation for secondary subtitle label
+    - constrained secondary label width for long paths/titles
+    - added compact vertical margins for candidate row content
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - max-width char count may need tuning for different DPI/font setups.
+- Next slice:
+  - M8: UX Phase 2 - add keyboard shortcut hint row when query is empty.
+
+---
+## 2026-02-21 (Cycle 95)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - add keyboard shortcut hint row for empty query state
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - when query is empty, prepend an informational shortcut row:
+      - Enter launch, Ctrl+R refresh, Esc close
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - adds one extra non-actionable row at top for empty-query state by design.
+- Next slice:
+  - M8: UX Phase 2 - keep launch feedback rows bounded (avoid unbounded accumulation).
+
+---
+## 2026-02-21 (Cycle 96)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - bound launch feedback rows to avoid accumulation
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - `showLaunchFeedback` now clears previous feedback rows before appending new one
+    - added feedback-row tagging and cleanup helpers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - feedback rows remain transient and clear on next query render.
+- Next slice:
+  - M8: UX Phase 2 - add lightweight visual separator between sections.
+
+---
+## 2026-02-21 (Cycle 97)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - add lightweight visual separator between populated sections
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - inserted non-activatable separator rows between populated result sections
+    - added `gs-separator` CSS class for subtle spacing and contrast
+    - kept keyboard navigation actionable-row-only behavior unchanged
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - visual tone of separator may need theme-specific opacity tuning later.
+- Next slice:
+  - M8: UX Phase 2 - adaptive GTK window sizing for improved small-screen behavior.
+
+---
+## 2026-02-21 (Cycle 98)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - adaptive GTK window sizing and minimum constraints
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced fixed startup size with monitor-aware default sizing
+    - added minimum size constraints to keep entry/list/status usable on smaller displays
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - currently uses first monitor geometry; multi-monitor-targeted positioning can be refined later.
+- Next slice:
+  - M8: UX Phase 2 - remove startup placeholder/status flicker on first paint.
+
+---
+## 2026-02-21 (Cycle 99)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 2 - remove empty-query startup "No results" flash
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - empty query now shows shortcut guidance without rendering a "No results" row
+    - non-empty queries keep existing explicit "No results" behavior
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - empty-query state is now intentionally guidance-only when providers return no items.
+- Next slice:
+  - M8: UX Phase 3 - improve keyboard selection visibility via focused row styling.
+
+---
+## 2026-02-21 (Cycle 100)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - improve keyboard selection visibility in GTK results
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - tagged result list with `gs-results` CSS class
+    - added selected/hover row styling for clearer keyboard focus tracking
+    - added small row radius/padding polish for stronger visual affordance
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - selected/hover colors may need further tuning against user theme variants.
+- Next slice:
+  - M8: UX Phase 3 - add section result counts in headers for scanability.
+
+---
+## 2026-02-21 (Cycle 101)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add per-section result counts in GTK headers
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - section headers now include candidate counts (for example `Apps (5)`)
+    - preserved section ordering and separator behavior
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - count label width may vary with large result sets; capped render list already limits this.
+- Next slice:
+  - M8: UX Phase 3 - tune blended ranking to keep action results near top for short queries.
+
+---
+## 2026-02-21 (Cycle 102)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - tune blended short-query ranking to surface action intents earlier
+- Changes:
+  - Updated `src/search/rank.zig`:
+    - added short-query kind bias (`len <= 2`) that boosts action candidates
+    - reduced short-query noise from windows/directories in blended results
+    - added regression test for `re` query ordering between app and action intent
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - short-query bias values are heuristic and may need telemetry-driven retuning.
+- Next slice:
+  - M8: UX Phase 3 - add lightweight loading status while search debounce is pending.
+
+---
+## 2026-02-21 (Cycle 103)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add lightweight searching status during debounced updates
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - set status to `Searching...` while debounce timer is active
+    - set status to `Search failed` on search error path to avoid stale loading state
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - brief status flicker can occur with very fast typing; intended as lightweight feedback.
+- Next slice:
+  - M8: UX Phase 3 - keep selected actionable row visible in scroll viewport.
+
+---
+## 2026-02-21 (Cycle 104)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - keep selected actionable row visible in scrolled viewport
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added `GtkScrolledWindow` handle to UI context
+    - scrolls viewport to keep selected actionable row visible during up/down navigation
+    - applied same visibility behavior to initial actionable-row auto-selection
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - visibility tracking uses a fixed estimated row height; can be refined with measured allocations later.
+- Next slice:
+  - M8: UX Phase 3 - add light per-kind glyph contrast tuning for faster scanning.
+
+---
+## 2026-02-21 (Cycle 105)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - tune per-kind chip contrast and title emphasis for faster scanning
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - made kind chips color-coded by source type
+    - fixed primary row emphasis so result title is bolded, not the chip
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - inline chip colors are static and may need theme-aware variants later.
+- Next slice:
+  - M8: UX Phase 3 - add explicit result limit indicator when list is truncated.
+
+---
+## 2026-02-21 (Cycle 106)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - show result-limit indicator when top 20 truncation applies
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - when ranked results exceed render cap, append informational row `Showing top 20 results`
+    - keeps existing grouped rendering and actionable selection behavior unchanged
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - fixed text assumes current cap of 20; should be parameterized if cap becomes configurable.
+- Next slice:
+  - M8: UX Phase 3 - add quick provider-route hint row for one-character prefix queries.
+
+---
+## 2026-02-21 (Cycle 107)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add quick provider-route hint row for one-character prefix queries
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added route hint row for bare one-character prefixes (`@ # ~ > = ?`)
+    - suppresses generic `No results` row for prefix-only queries to avoid noisy empty state
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - route hint copy is static; can be localized or themed later.
+- Next slice:
+  - M8: UX Phase 3 - add explicit zero-results guidance with route suggestions for unmatched queries.
+
+---
+## 2026-02-21 (Cycle 108)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add explicit zero-results guidance with route suggestions
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - kept `No results` message for unmatched non-empty queries
+    - added follow-up route suggestion row (`@ # ~ > = ?`) for immediate recovery path
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - route suggestion text is condensed and may need line-wrap-aware formatting on narrow layouts.
+- Next slice:
+  - M8: UX Phase 3 - add explicit selected-row status summary in footer.
+
+---
+## 2026-02-21 (Cycle 109)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add explicit selected-row status summary in footer
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - wired `row-selected` callback for GTK list
+    - candidate rows now carry title metadata (`gs-title`)
+    - footer status shows `Enter launch: <title>` for actionable selected rows
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status summary intentionally yields to refresh/confirmation statuses.
+- Next slice:
+  - M8: UX Phase 3 - adjust status copy to include selected candidate source kind.
+
+---
+## 2026-02-21 (Cycle 110)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - adjust selected-row status copy to include source kind
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - selected-row footer status now includes source kind label (`app/window/directory/action`)
+    - added source-kind label helper for consistent wording
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - kind labels are currently singular lowercase terms for compact status display.
+- Next slice:
+  - M8: UX Phase 3 - add inline query-prefix cheat-sheet to status for empty query state.
+
+---
+## 2026-02-21 (Cycle 111)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add inline query-prefix cheat sheet to empty-query status
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - expanded empty-query footer status with compact route prefixes (`@ # ~ > = ?`)
+    - preserved existing close/refresh controls in same status line
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - longer status text may truncate on narrow windows; list hint row still provides backup guidance.
+- Next slice:
+  - M8: UX Phase 3 - add concise post-launch status guidance for repeated Enter behavior.
+
+---
+## 2026-02-21 (Cycle 112)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add concise post-launch status guidance for repeated Enter behavior
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - post-launch footer status now includes repeat-Enter guidance for successful launches
+    - added helper for consistent launch-status phrasing by launch outcome type
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - repeated-Enter hint is shown only for successful launch feedback messages.
+- Next slice:
+  - M8: UX Phase 3 - compact empty-query info row copy to reduce visual duplication with status line.
+
+---
+## 2026-02-21 (Cycle 113)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - compact empty-query info row copy to reduce status-line duplication
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced verbose shortcut info row with concise empty-state prompt text
+    - relies on status line for detailed shortcut + route-prefix reference
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - empty-state guidance now splits detail between info row and status line by design.
+- Next slice:
+  - M8: UX Phase 3 - add subtle status color emphasis for success vs error launch feedback.
+
+---
+## 2026-02-21 (Cycle 114)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add subtle status color emphasis for success vs error launch feedback
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added status tone helper with success/error/neutral modes
+    - launch feedback now applies success or error tone automatically from message content
+    - introduced `gs-status-success` and `gs-status-error` CSS classes
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - tone mapping currently relies on launch feedback wording.
+- Next slice:
+  - M8: UX Phase 3 - add transient timeout to clear success/error status back to neutral hints.
+
+---
+## 2026-02-21 (Cycle 115)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add transient timeout to clear status emphasis back to neutral hints
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added status reset timer tracking in UI context
+    - launch feedback now schedules timed status reset to neutral idle hint/state
+    - added timer cleanup on window destroy to avoid stale callback execution
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - reset timeout value is fixed and may need tuning after live UX testing.
+- Next slice:
+  - M8: UX Phase 3 - reduce status jitter by avoiding redundant status text updates.
+
+---
+## 2026-02-21 (Cycle 116)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - reduce status jitter by avoiding redundant status text updates
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added cached status hash/tone fields in UI context
+    - `setStatusWithTone` now skips no-op updates when text and tone are unchanged
+    - added explicit tone-code helper for stable status dedupe checks
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dedupe uses hash+tone and assumes very low collision risk for short UI status strings.
+- Next slice:
+  - M8: UX Phase 3 - add slight adaptive debounce (shorter delay after query idle) to improve perceived responsiveness.
+
+---
+## 2026-02-21 (Cycle 117)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add adaptive query-length debounce for better responsiveness
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced fixed debounce delay with query-length adaptive timing
+    - short/empty queries keep conservative delay; longer queries trigger faster updates
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - debounce thresholds are heuristic and may need tuning from live usage.
+- Next slice:
+  - M8: UX Phase 3 - add max-height guard for status text to prevent layout jump on long messages.
+
+---
+## 2026-02-21 (Cycle 118)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add max-height guard for status text to prevent layout jump
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - status label is now single-line with ellipsize at end
+    - added max-width hint to avoid multi-line growth and list displacement
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - very long status strings truncate by design; detailed context remains available in result rows.
+- Next slice:
+  - M8: UX Phase 3 - add tiny hotkeys legend row style differentiation from generic info rows.
+
+---
+## 2026-02-21 (Cycle 119)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 3 - add hotkeys legend row style differentiation from generic info rows
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added dedicated legend-row renderer for empty-query hotkey guidance
+    - introduced `gs-legend` CSS class to visually distinguish hotkey legend from generic info rows
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - empty-state now renders two informational rows by design (prompt + hotkey legend).
+- Next slice:
+  - M8: UX Phase 3 - add lightweight status icon glyph prefix for success/failure states.
+
+---
+## 2026-02-21 (Cycle 120)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - status icon prefixes/tone routing + app icon support fallback
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added status prefix indicators and info/success/failure tone routing for status messages
+    - upgraded status styling with an explicit info tone class
+    - changed candidate primary rows to use icon widget + text layout
+    - added app icon support via icon-name lookup from app action command token with glyph fallback
+    - added icon styling class for consistent scan contrast
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - app icon lookup currently derives icon name from command token; provider-side icon metadata would be more accurate.
+- Next slice:
+  - M8: UX Phase 4 - enrich apps provider cache format to carry desktop icon metadata explicitly.
+
+---
+## 2026-02-21 (Cycle 121)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - explicit app icon metadata pipeline for GTK rows
+- Changes:
+  - Updated `src/search/types.zig`:
+    - added `Candidate.icon` field with backwards-compatible default
+    - added `Candidate.initWithIcon(...)` constructor
+  - Updated `src/providers/apps.zig`:
+    - extended TSV parse to optional 4th icon column (`category\tname\texec\ticon`)
+    - app candidates now carry icon metadata when present
+    - updated provider test fixture/assertions for icon column parsing
+  - Updated `src/ui/gtk_shell.zig`:
+    - app icon rendering now prefers provider icon metadata
+    - falls back to command-token icon lookup, then glyph fallback
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - icon metadata is optional; existing 3-column cache files remain compatible.
+- Next slice:
+  - M8: UX Phase 4 - document apps cache icon column and add migration note in troubleshooting docs.
+
+---
+## 2026-02-21 (Cycle 122)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - document apps-cache icon column and migration notes
+- Changes:
+  - Updated `docs/HYPR_WAYBAR_INTEGRATION.md`:
+    - documented legacy vs extended apps cache TSV formats
+    - added icon-column example for GTK icon rendering
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added cache format checks and icon-specific troubleshooting steps
+  - Updated `README.md`:
+    - added quick note for optional apps cache icon column support
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - docs assume external cache generator can emit 4-column TSV; generator ownership is outside this repo.
+- Next slice:
+  - M8: UX Phase 4 - add startup smoke assertion for 4-column apps cache compatibility.
+
+---
+## 2026-02-21 (Cycle 123)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add smoke assertions for legacy/extended apps cache compatibility
+- Changes:
+  - Updated `src/providers/apps.zig`:
+    - added mixed-format compatibility test (3-column + 4-column rows)
+  - Added `scripts/check_apps_cache_format.sh`:
+    - dedicated compatibility smoke command for apps cache parsing
+  - Updated `scripts/release_smoke.sh`:
+    - fixed step numbering and added apps cache format smoke step
+  - Updated `README.md`:
+    - documented apps cache compatibility check command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - compatibility checks validate parser behavior; external cache generation still depends on user environment tooling.
+- Next slice:
+  - M8: UX Phase 4 - add GTK runtime smoke option that validates app icon rendering path does not crash.
+
+---
+## 2026-02-21 (Cycle 124)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - extend optional GTK runtime smoke to exercise app icon rendering path
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - optional GTK runtime mode now provisions a temporary HOME with a 4-column apps cache fixture
+    - runtime launch smoke now exercises app icon render path under realistic startup data
+  - Updated `README.md`:
+    - documented that optional GTK runtime smoke validates icon render path with fixture data
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - runtime smoke remains timeout-based and non-interactive by design.
+- Next slice:
+  - M8: UX Phase 4 - add tiny release-smoke preflight for icon theme availability diagnostics.
+
+---
+## 2026-02-21 (Cycle 125)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add icon theme environment preflight diagnostics
+- Changes:
+  - Added `scripts/check_icon_theme_env.sh`:
+    - non-failing diagnostic for common icon theme presence under `/usr/share/icons`
+    - warns when environment likely lacks theme assets and glyph fallback is expected
+  - Updated `scripts/release_smoke.sh`:
+    - integrated icon-theme preflight as explicit smoke step
+    - updated smoke step numbering
+  - Updated `README.md`:
+    - documented icon-theme preflight command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - diagnostic is heuristic and intentionally non-blocking for CI and minimal host images.
+- Next slice:
+  - M8: UX Phase 4 - add startup status notice when app icon metadata is absent and glyph fallback is in use.
+
+---
+## 2026-02-21 (Cycle 126)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add startup notice for app icon glyph fallback state
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - detects when app rows have neither icon metadata nor derivable command token icon
+    - surfaces startup status notice when glyph fallback is active in empty-query view
+    - added shared action-command token helper and reused it in icon lookup path
+    - mapped fallback notice to info tone
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - fallback detection is heuristic and based on icon metadata/token availability, not theme render success.
+- Next slice:
+  - M8: UX Phase 4 - add headless diagnostics command to print icon metadata/fallback stats.
+
+---
+## 2026-02-21 (Cycle 127)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add headless icon diagnostics command for metadata/fallback stats
+- Changes:
+  - Updated `src/ui/stub_shell.zig`:
+    - added `:icondiag` command in headless mode
+    - prints app icon diagnostics (metadata count, token fallback count, likely glyph fallback count)
+    - added shared action-token parsing helper and command list banner
+  - Updated `README.md`:
+    - documented `:icondiag` headless command
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added icon diagnostics command in missing-icon triage steps
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf ':icondiag\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - diagnostics are based on candidate snapshot and token heuristics, not GTK theme render introspection.
+- Next slice:
+  - M8: UX Phase 4 - add GTK status copy hint pointing to `:icondiag` when fallback warning is shown.
+
+---
+## 2026-02-21 (Cycle 128)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 - add GTK fallback warning hint for `:icondiag` diagnostics
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - fallback startup warning now points users to headless `:icondiag` for detailed breakdown
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - hint text may truncate on narrow windows due single-line status guard.
+- Next slice:
+  - M8: UX Phase 4 - add docs cross-link from GTK troubleshooting path to `:icondiag` command.
+
+---
+## 2026-02-21 (Cycle 129)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - include `:icondiag` path in headless release smoke flow
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - headless smoke now runs `:icondiag` before query checks
+  - Updated `README.md`:
+    - documented icon diagnostics coverage in release smoke flow
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/release_smoke.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - smoke output is slightly noisier due diagnostics printout.
+- Next slice:
+  - M8: UX Phase 4 - add compact docs table for icon-resolution order (metadata -> token -> glyph).
+
+---
+## 2026-02-21 (Cycle 130)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - document icon resolution order for app rows
+- Changes:
+  - Updated `docs/HYPR_WAYBAR_INTEGRATION.md`:
+    - added compact table for GTK app icon resolution order
+  - Updated `README.md`:
+    - added one-line icon resolution order note near apps cache format section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - docs reflect current runtime behavior; provider-level desktop icon extraction can improve first-priority coverage later.
+- Next slice:
+  - M8: UX Phase 4 - add provider-level metric output in `:icondiag` for icon metadata coverage ratio.
+
+---
+## 2026-02-21 (Cycle 131)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - expand icon diagnostics metrics + JSON mode and smoke coverage
+- Changes:
+  - Updated `src/ui/stub_shell.zig`:
+    - added coverage ratios (`metadata coverage`, `glyph fallback ratio`) to `:icondiag`
+    - added up to 5 fallback sample rows in text mode
+    - added machine-readable `:icondiag --json` mode
+    - updated headless command banner
+  - Updated `scripts/release_smoke.sh`:
+    - headless smoke now exercises both `:icondiag` and `:icondiag --json`
+  - Updated `README.md`:
+    - documented `:icondiag --json` command
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added GTK fallback-status cross-link to headless diagnostics
+    - added JSON diagnostics command for automation workflows
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf ':icondiag\n:icondiag --json\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - fallback sample output uses candidate/action strings and may vary with provider cache content.
+- Next slice:
+  - M8: UX Phase 4 - add docs for icon diagnostics JSON schema and thresholds.
+
+---
+## 2026-02-21 (Cycle 132)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - icon diagnostics JSON schema docs + automated smoke validation
+- Changes:
+  - Updated `src/ui/stub_shell.zig`:
+    - expanded `:icondiag` with coverage ratios and fallback samples
+    - added `:icondiag --json` output mode
+  - Added `docs/ICON_DIAGNOSTICS.md`:
+    - documented diagnostics fields, interpretation, and suggested thresholds
+  - Added `scripts/check_icondiag_json.sh`:
+    - validates diagnostics JSON output presence and expected key set
+  - Updated `scripts/release_smoke.sh`:
+    - added `icondiag` JSON schema smoke step
+    - updated smoke step numbering
+  - Updated `README.md`:
+    - documented JSON diagnostics command and new smoke script
+    - linked icon diagnostics reference doc
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added JSON diagnostics usage for automation
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf ':icondiag\n:icondiag --json\n:q\n' | zig build run -- --ui`
+  - `scripts/check_icondiag_json.sh`
+  - `scripts/release_smoke.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - JSON validation currently checks schema keys, not numeric threshold policy.
+- Next slice:
+  - M8: UX Phase 4 - add helper script to fail CI when glyph fallback ratio exceeds configurable threshold.
+
+---
+## 2026-02-21 (Cycle 133)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - configurable glyph-fallback threshold guard for CI
+- Changes:
+  - Added `scripts/check_icondiag_threshold.sh`:
+    - reads `:icondiag --json` output
+    - fails when `glyph_fallback_pct` exceeds `MAX_GLYPH_FALLBACK_PCT` (default `5`)
+  - Updated `scripts/release_smoke.sh`:
+    - added threshold smoke step
+    - updated smoke step numbering
+  - Updated `README.md`:
+    - documented threshold gate command usage
+  - Updated `docs/ICON_DIAGNOSTICS.md`:
+    - documented threshold script behavior and exit semantics
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_icondiag_threshold.sh`
+  - `scripts/release_smoke.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - threshold gating depends on runtime candidate snapshot and should be calibrated per environment.
+- Next slice:
+  - M8: UX Phase 4 - add release-smoke switch to enable strict icon threshold mode for CI.
+
+---
+## 2026-02-21 (Cycle 134)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - strict icon-threshold release-smoke mode + CI wiring
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - added argument parsing for:
+      - `--strict-icon-threshold`
+      - `--icon-threshold=<N>`
+      - `--skip-gtk-build`
+      - `--with-gtk-runtime`
+    - threshold smoke now uses configured icon threshold value
+    - strict mode defaults threshold to `5`
+  - Updated `.github/workflows/ci.yml`:
+    - added CI smoke step using strict icon-threshold mode without GTK build dependency
+  - Updated `README.md`:
+    - documented strict mode and CI/minimal-host invocation
+  - Updated `docs/ICON_DIAGNOSTICS.md`:
+    - documented release-smoke strict-mode usage for threshold gating
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5`
+  - `scripts/release_smoke.sh --skip-gtk-build --strict-icon-threshold --icon-threshold=5`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - CI strict gate currently evaluates fallback ratio from local snapshot content; threshold should remain configurable.
+- Next slice:
+  - M8: UX Phase 4 - add release-smoke `--ci` preset alias to bundle stable CI flags.
+
+---
+## 2026-02-21 (Cycle 135)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add `release_smoke --ci` preset alias and switch CI workflow
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - added `--ci` preset alias (`--skip-gtk-build` + strict icon threshold with default limit `5`)
+    - updated usage/help text and preset status output
+  - Updated `.github/workflows/ci.yml`:
+    - switched icon-threshold smoke step to `scripts/release_smoke.sh --ci`
+  - Updated `README.md`:
+    - replaced explicit CI flag combination with `--ci` preset command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `--ci` preset still runs headless diagnostic flows and can vary with host snapshot content.
+- Next slice:
+  - M8: UX Phase 4 - add docs table for release-smoke modes (`default`, `--ci`, `--with-gtk-runtime`).
+
+---
+## 2026-02-21 (Cycle 136)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - release-smoke mode docs table + `--help` CLI support
+- Changes:
+  - Updated `scripts/release_smoke.sh`:
+    - added `--help` output with option descriptions
+  - Added `docs/RELEASE_SMOKE_MODES.md`:
+    - documented default/CI/strict/runtime smoke modes and usage patterns
+  - Updated `README.md`:
+    - linked dedicated release-smoke modes reference doc
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/release_smoke.sh --help`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - smoke mode docs assume current script behavior and should be updated with future CLI option changes.
+- Next slice:
+  - M8: UX Phase 4 - add guard script that checks release-smoke docs and `--help` stay in sync.
+
+---
+## 2026-02-21 (Cycle 137)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-smoke help/docs contract guard and integrate into smoke flow
+- Changes:
+  - Added `scripts/check_release_smoke_contract.sh`:
+    - validates `scripts/release_smoke.sh --help` includes expected options
+    - validates `docs/RELEASE_SMOKE_MODES.md` includes expected mode commands and notes
+  - Updated `scripts/release_smoke.sh`:
+    - added contract guard step
+    - updated smoke step numbering
+  - Updated `README.md`:
+    - documented `scripts/check_release_smoke_contract.sh`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_smoke_contract.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - contract checks are string-based and should be updated if docs/help phrasing changes intentionally.
+- Next slice:
+  - M8: UX Phase 4 - update release script matrix to include new icon diagnostics guard scripts.
+
+---
+## 2026-02-21 (Cycle 138)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - expand release script matrix/checks for icon diagnostics guard scripts
+- Changes:
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added CI preset row for release smoke
+    - added icon diagnostics/contract guard scripts to matrix table
+    - updated recommended order to include `release_smoke.sh --ci`
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates new matrix script entries exist and are executable
+    - validates CI preset presence in recommended order
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - matrix validation is strict by design; any future script additions require matrix updates.
+- Next slice:
+  - M8: UX Phase 4 - add a single meta guard script that runs all release-doc contract checks together.
+
+---
+## 2026-02-21 (Cycle 139)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - meta release-docs contract guard + smoke integration
+- Changes:
+  - Added `scripts/check_release_docs_contracts.sh`:
+    - runs `check_release_helpers`, `check_release_matrix`, and `check_release_smoke_contract`
+  - Updated `scripts/release_smoke.sh`:
+    - added meta-contract guard step
+    - updated smoke step numbering
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added meta-contract guard script row
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates meta-contract guard script reference/executability
+  - Updated `README.md`:
+    - documented meta-contract guard command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/release_smoke.sh`
+  - `scripts/release_smoke.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - meta guard is intentionally compositional and depends on underlying check scripts staying stable.
+- Next slice:
+  - M8: UX Phase 4 - add one-pass release validation script alias that chains smoke + docs contracts for operators.
+
+---
+## 2026-02-21 (Cycle 140)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add one-pass `release_validate.sh` operator wrapper and matrix wiring
+- Changes:
+  - Added `scripts/release_validate.sh`:
+    - runs `release_smoke.sh` with forwarded args
+    - runs `check_release_docs_contracts.sh` after smoke
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added `release_validate.sh` row
+    - added `release_validate.sh --ci` in recommended order
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates `release_validate.sh` presence/reference
+  - Updated `README.md`:
+    - documented one-pass operator wrapper command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_validate.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - wrapper intentionally composes existing checks and does not add independent validation logic.
+- Next slice:
+  - M8: UX Phase 4 - add lightweight CI guard to ensure `release_validate.sh --ci` remains non-interactive.
+
+---
+## 2026-02-21 (Cycle 141)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add CI non-interactive guard for `release_validate --ci`
+- Changes:
+  - Added `scripts/check_release_validate_ci.sh`:
+    - runs `release_validate.sh --ci` under timeout guard
+    - fails on timeout or non-zero exit
+  - Updated `.github/workflows/ci.yml`:
+    - switched CI release validation step to `check_release_validate_ci.sh`
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added CI guard script row
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates CI guard script presence/reference
+  - Updated `README.md`:
+    - documented CI non-interactive guard command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/check_release_validate_ci.sh`
+  - `scripts/release_validate.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - timeout default (`300s`) is conservative and can be tuned with `RELEASE_VALIDATE_TIMEOUT_SECS`.
+- Next slice:
+  - M8: UX Phase 4 - add release-validation preset docs in runbook with expected output markers.
+
+---
+## 2026-02-21 (Cycle 142)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add runbook guidance for `release_validate --ci` markers and triage
+- Changes:
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`:
+    - added `scripts/release_validate.sh --ci` to preflight sequence
+    - documented required success markers before tagging
+  - Updated `docs/RELEASE_SMOKE_MODES.md`:
+    - added operator preset section for `release_validate --ci`
+    - documented expected completion markers
+  - Updated `docs/TROUBLESHOOTING_RUNBOOK.md`:
+    - added failure section for `release_validate --ci` with staged triage steps
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_smoke_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/release_validate.sh --ci`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - expected markers are string-based and should be updated if output wording changes.
+- Next slice:
+  - M8: UX Phase 4 - add explicit “clean worktree required” guard script for release-validate preset.
+
+---
+## 2026-02-21 (Cycle 143)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add explicit clean-worktree guard for `release_validate` preset
+- Changes:
+  - Added `scripts/check_clean_worktree.sh`:
+    - fails when worktree has uncommitted changes
+  - Updated `scripts/release_validate.sh`:
+    - added `--require-clean` and `--allow-dirty` flags
+    - supports `RELEASE_VALIDATE_ALLOW_DIRTY=1` override for local iterative runs
+  - Updated `scripts/check_release_validate_ci.sh`:
+    - enforces `--require-clean` during CI guard runs
+    - supports local dirty override via `RELEASE_VALIDATE_ALLOW_DIRTY=1`
+  - Updated docs:
+    - `README.md`, `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`, `docs/TROUBLESHOOTING_RUNBOOK.md`
+    - `docs/RELEASE_SCRIPT_MATRIX.md` + `scripts/check_release_matrix.sh` include clean-worktree guard
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/release_validate.sh --ci --require-clean --allow-dirty`
+  - `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_validate_ci.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - clean-worktree enforcement is opt-in (`--require-clean`) to avoid disrupting active dev loops.
+- Next slice:
+  - M8: UX Phase 4 - add explicit release_validate `--help` output and contract checker script.
+
+---
+## 2026-02-21 (Cycle 144)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add `release_validate --help` and contract checker
+- Changes:
+  - Updated `scripts/release_validate.sh`:
+    - added explicit `--help` output and option descriptions
+  - Added `scripts/check_release_validate_contract.sh`:
+    - validates release-validate CLI help and docs references
+  - Updated `scripts/check_release_docs_contracts.sh`:
+    - now includes release-validate contract check
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md` and `scripts/check_release_matrix.sh`:
+    - added release-validate contract checker to matrix/check set
+  - Updated `README.md`:
+    - documented `scripts/check_release_validate_contract.sh`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_validate_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/release_validate.sh --help`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - contract checks are intentionally strict on docs/help string presence.
+- Next slice:
+  - M8: UX Phase 4 - add release_validate mode table and options to dedicated docs page.
+
+---
+## 2026-02-21 (Cycle 145)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add dedicated release-validate modes/options docs page
+- Changes:
+  - Added `docs/RELEASE_VALIDATE_MODES.md`:
+    - mode table for default/CI/clean/allow-dirty flows
+    - option reference and success markers
+  - Updated `README.md`:
+    - linked release-validate modes reference page
+  - Updated `scripts/check_release_validate_contract.sh`:
+    - now validates dedicated release-validate docs coverage
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_validate_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - validate-contract checker now depends on the dedicated docs page; keep it updated with CLI changes.
+- Next slice:
+  - M8: UX Phase 4 - add release_validate docs contract to release script matrix references.
+
+---
+## 2026-02-21 (Cycle 146)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add related-doc references to release matrix and enforce in checks
+- Changes:
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added `Related Docs` section for smoke/validate/icon diagnostics references
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates related-doc references are present
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/check_release_docs_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - matrix checks become stricter; docs reference changes must be kept synchronized.
+- Next slice:
+  - M8: UX Phase 4 - add one command alias for all release contract checks in README quick list.
+
+---
+## 2026-02-21 (Cycle 147)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add one-command alias for all release contract checks
+- Changes:
+  - Added `scripts/check_release_contracts.sh`:
+    - runs docs contracts guard and CI validate guard checks
+  - Updated `README.md`:
+    - added one-command release contracts alias in quick list
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added release contracts alias row
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates release contracts alias script reference/executability
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - alias command inherits runtime cost of CI validate guard.
+- Next slice:
+  - M8: UX Phase 4 - add optional `--docs-only` mode to release contracts alias for faster local iteration.
+
+---
+## 2026-02-21 (Cycle 148)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add `check_release_contracts --docs-only` fast path
+- Changes:
+  - Updated `scripts/check_release_contracts.sh`:
+    - added `--docs-only` mode and `--help` output
+    - docs-only runs contract docs checks without CI validate guard
+  - Updated `README.md`:
+    - documented docs-only command
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - adjusted safe/apply modes for release contracts alias
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts.sh --docs-only`
+  - `RELEASE_VALIDATE_ALLOW_DIRTY=1 scripts/check_release_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - docs-only mode intentionally skips CI validate guard coverage.
+- Next slice:
+  - M8: UX Phase 4 - add contract checker for `check_release_contracts.sh` CLI/docs sync.
+
+---
+## 2026-02-21 (Cycle 149)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add contract checker for release-contracts alias CLI/docs sync
+- Changes:
+  - Added `scripts/check_release_contracts_contract.sh`:
+    - validates alias CLI help options (`--docs-only`, `--help`)
+    - validates README + matrix references for alias commands
+  - Updated `scripts/check_release_docs_contracts.sh`:
+    - includes release-contracts alias contract check
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md` and `scripts/check_release_matrix.sh`:
+    - added/validated release-contracts alias contract checker script row
+  - Updated `README.md`:
+    - documented release-contracts alias contract checker command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - contract checks are string-reference based and require updates when docs wording changes.
+- Next slice:
+  - M8: UX Phase 4 - add release-contracts alias docs section to matrix related docs.
+
+---
+## 2026-02-21 (Cycle 150)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add dedicated release-contracts docs page and matrix related-doc reference
+- Changes:
+  - Added `docs/RELEASE_CONTRACTS.md`:
+    - summarized contract layers, primary entry points, and CI guard behavior
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added release contracts reference under related docs
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates release contracts doc reference
+  - Updated `README.md`:
+    - linked release contracts reference
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/check_release_docs_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - release contracts doc is high-level by design; script-specific behavior remains in each script's help output.
+- Next slice:
+  - M8: UX Phase 4 - add release_contracts doc consistency check in release docs meta guard.
+
+---
+## 2026-02-21 (Cycle 151)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts doc consistency check and meta-guard integration
+- Changes:
+  - Added `scripts/check_release_contracts_doc.sh`:
+    - validates required sections and script references in `docs/RELEASE_CONTRACTS.md`
+  - Updated `scripts/check_release_docs_contracts.sh`:
+    - now includes release-contracts doc consistency check
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md` and `scripts/check_release_matrix.sh`:
+    - added/validated release-contracts doc checker script row
+  - Updated `README.md`:
+    - documented release-contracts doc checker command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - doc checker intentionally enforces section headers and key script mentions via string checks.
+- Next slice:
+  - M8: UX Phase 4 - add quick smoke command in release-contracts doc for local dirty-override workflow.
+
+---
+## 2026-02-21 (Cycle 152)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add local dirty-worktree quick-smoke guidance for release contracts
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added explicit local dirty-worktree quick-smoke command
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates quick-smoke section/header and command string presence
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dirty-worktree override is explicitly documented for local iteration only.
+- Next slice:
+  - M8: UX Phase 4 - add explicit warning banner in release-contracts doc for dirty override non-CI usage.
+
+---
+## 2026-02-21 (Cycle 153)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add explicit warning banner for dirty override non-CI usage
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added warning that dirty override is local-only
+    - added explicit clean-worktree release command reference
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates warning banner and clean-worktree command reference
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - warning language is explicit by design to prevent CI/release misuse.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts “operator quick order” section aligned to runbook steps.
+
+---
+## 2026-02-21 (Cycle 154)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release contracts operator quick-order section aligned with runbook
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added numbered operator quick-order release flow
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates quick-order section and key release flow commands
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - quick-order flow remains a condensed guide; detailed edge-case handling stays in runbooks.
+- Next slice:
+  - M8: UX Phase 4 - add cross-link from release contracts doc to release rollback runbook and smoke modes.
+
+---
+## 2026-02-21 (Cycle 155)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add cross-links from release contracts doc to rollback/smoke/validate references
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added related references section linking rollback runbook and mode docs
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates related references section and expected doc links
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - cross-link checks rely on explicit filenames; renames require checker updates.
+- Next slice:
+  - M8: UX Phase 4 - add concise "when to run which script" table in release contracts doc.
+
+---
+## 2026-02-21 (Cycle 156)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add concise “when to run which script” table in release contracts doc
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added scenario-to-script table for quick operator decisions
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates scenario table header and key command references
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - scenario table is concise by design; detailed decision branches remain in runbooks.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts doc pointer in rollback runbook preflight section.
+
+---
+## 2026-02-21 (Cycle 157)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts pointer in rollback runbook preflight
+- Changes:
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`:
+    - added release contracts reference in preflight section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - preflight references now intentionally converge on release contracts as the central entrypoint.
+- Next slice:
+  - M8: UX Phase 4 - add release-contracts doc contract check for rollback-runbook backlink presence.
+
+---
+## 2026-02-21 (Cycle 158)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce rollback-runbook backlink in release-contracts doc checker
+- Changes:
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - now validates rollback runbook exists
+    - now validates rollback runbook references `docs/RELEASE_CONTRACTS.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now enforces a two-way docs linkage contract between contracts doc and rollback runbook.
+- Next slice:
+  - M8: UX Phase 4 - add short release-contracts cheat sheet block in README release section.
+
+---
+## 2026-02-21 (Cycle 159)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts cheat sheet block to README
+- Changes:
+  - Updated `README.md`:
+    - added concise release-contracts quick command block in release section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - README cheat sheet is intentionally minimal and defers details to docs references.
+- Next slice:
+  - M8: UX Phase 4 - add release-contracts README contract check for cheat-sheet command presence.
+
+---
+## 2026-02-21 (Cycle 160)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce README release-contracts cheat-sheet command presence
+- Changes:
+  - Updated `scripts/check_release_contracts_contract.sh`:
+    - now validates all README cheat-sheet commands for release contracts:
+      - docs-only contracts alias
+      - clean release-validate preset
+      - CI non-interactive guard
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now intentionally couples README cheat-sheet content with contract expectations.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts section link to top-level README docs list for discoverability.
+
+---
+## 2026-02-21 (Cycle 161)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts doc link to top-level README docs list
+- Changes:
+  - Updated `README.md`:
+    - added `docs/RELEASE_CONTRACTS.md` link in top-level docs list for discoverability
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - README now references release contracts doc in both release section and top-level docs list by design.
+- Next slice:
+  - M8: UX Phase 4 - add release-contracts top-level docs-link assertion to contracts alias checker.
+
+---
+## 2026-02-21 (Cycle 162)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce dual README release-contracts references in alias contract checker
+- Changes:
+  - Updated `scripts/check_release_contracts_contract.sh`:
+    - added assertion that README contains at least two `Release contracts reference:` entries
+    - ensures both release section and top-level docs list stay aligned
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker intentionally couples README structure to discoverability expectations.
+- Next slice:
+  - M8: UX Phase 4 - add short release contracts onboarding note to README "Next" section.
+
+---
+## 2026-02-21 (Cycle 163)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contracts onboarding note in README Next section
+- Changes:
+  - Updated `README.md`:
+    - added concise release-ops onboarding sequence in `Next` section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - README `Next` now mixes roadmap and operational onboarding by design for discoverability.
+- Next slice:
+  - M8: UX Phase 4 - add README onboarding phrase assertion to release contracts alias checker.
+
+---
+## 2026-02-21 (Cycle 164)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce README release onboarding phrase in contracts alias checker
+- Changes:
+  - Updated `scripts/check_release_contracts_contract.sh`:
+    - added assertion for README release onboarding phrase in `Next` section
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now couples README onboarding wording to contract expectations.
+- Next slice:
+  - M8: UX Phase 4 - add concise release contract command order to release matrix notes section.
+
+---
+## 2026-02-21 (Cycle 165)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add concise release-contract command order to release matrix
+- Changes:
+  - Updated `docs/RELEASE_SCRIPT_MATRIX.md`:
+    - added short release contracts quick-order command block
+  - Updated `scripts/check_release_matrix.sh`:
+    - validates quick-order header and commands in matrix doc
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_matrix.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - quick-order commands are docs contracts and must be updated in checker when intentionally changed.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts quick-order assertion to contracts-doc checker for parity.
+
+---
+## 2026-02-21 (Cycle 166)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce quick-order parity between release contracts doc and release matrix
+- Changes:
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates quick-order command set in both:
+      - `docs/RELEASE_CONTRACTS.md`
+      - `docs/RELEASE_SCRIPT_MATRIX.md`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now intentionally duplicates quick-order command assertions for cross-doc parity.
+- Next slice:
+  - M8: UX Phase 4 - add short release contracts command block to rollback runbook for operator continuity.
+
+---
+## 2026-02-21 (Cycle 167)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-contract command block to rollback runbook preflight
+- Changes:
+  - Updated `docs/RELEASE_TAG_ROLLBACK_RUNBOOK.md`:
+    - added quick release-contract command block in preflight section
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates rollback runbook includes release-contract quick commands
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - runbook now intentionally duplicates command trio for operator continuity between docs.
+- Next slice:
+  - M8: UX Phase 4 - add runbook quick-command presence assertion to release-validate contract checker.
+
+---
+## 2026-02-21 (Cycle 168)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - enforce rollback runbook quick-command presence in release-validate checker
+- Changes:
+  - Updated `scripts/check_release_validate_contract.sh`:
+    - now validates rollback runbook exists
+    - now validates rollback runbook includes release-validate clean command and CI guard command
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_validate_contract.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - checker now enforces consistency between validate docs and rollback runbook command snippets.
+- Next slice:
+  - M8: UX Phase 4 - add release-validate contract check summary line to release-contracts docs.
+
+---
+## 2026-02-21 (Cycle 169)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4 bundle - add release-validate contract summary line in release contracts doc
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added explicit release-validate contract summary note
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates summary header and release-validate contract command presence
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_docs_contracts.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - summary line intentionally duplicates script mention for operator visibility.
+- Next slice:
+  - M8: UX Phase 4 - add release contracts doc note for `check_release_contracts.sh --docs-only` default local recommendation.
+
+---
+## 2026-02-21 (Cycle 170)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 4/5 bundle - local docs-only default note + GTK navigation/readability polish
+- Changes:
+  - Updated `docs/RELEASE_CONTRACTS.md`:
+    - added local default recommendation to run `scripts/check_release_contracts.sh --docs-only` first
+  - Updated `scripts/check_release_contracts_doc.sh`:
+    - validates the local default recommendation note exists
+    - fixed backtick command-substitution bug in fixed-string assertion by using single-quoted pattern
+  - Updated `src/ui/gtk_shell.zig`:
+    - expanded keyboard navigation:
+      - `Ctrl+L` focuses search input
+      - `PageUp/PageDown` moves across actionable rows faster
+      - `Home/End` jumps to first/last actionable row
+    - improved actionable selection movement logic for multi-step navigation
+    - switched selected-row scroll visibility to use real row allocations instead of fixed row height
+    - added query-term highlighting (case-insensitive first match) in candidate title/subtitle markup
+    - added tooltips on primary/secondary labels for full untruncated text
+    - adjusted status prefixes to bracketed forms for clearer status tone scanning
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `scripts/check_release_contracts_doc.sh`
+  - `scripts/check_release_contracts.sh --docs-only`
+  - `scripts/check_release_docs_contracts.sh`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - match highlighting currently emphasizes only the first substring match per field to keep row rendering lightweight.
+  - keyboard paging moves by actionable-row count rather than visual page height.
+- Next slice:
+  - M8: UX Phase 5 - add richer row micro-layout polish pass (chip/icon/title baseline alignment + subtitle density tuning).
+
+---
+## 2026-02-21 (Cycle 171)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 5 bundle - candidate row micro-layout refactor and CSS chip extraction
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - refactored candidate primary row layout to:
+      - left icon
+      - center title (ellipsized, expandable)
+      - right aligned kind chip
+    - replaced kind chip inline markup with dedicated widget + CSS classes
+    - added per-kind chip CSS classes (`app/window/dir/action/hint`) with pill styling
+    - tightened row padding/spacing for denser scan-friendly list layout
+    - expanded empty-query legend row to include:
+      - `Ctrl+L`, `PageUp/PageDown`, `Home/End`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - chip palette remains app-defined CSS and may require another pass for certain light themes.
+- Next slice:
+  - M8: UX Phase 5 - add actionable row focus-ring and contrast pass for improved selection visibility on mixed themes.
+
+---
+## 2026-02-21 (Cycle 172)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 5 bundle - actionable/meta row styling split and selected-row contrast pass
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - tagged non-actionable rows with `gs-meta-row` class
+    - tagged selectable result rows with `gs-actionable-row` class
+    - strengthened selected actionable row styling:
+      - clearer background and border for keyboard focus
+      - selected-state foreground tuning for title/subtitle readability
+    - tuned hover styling to target actionable rows only
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - selected-row palette still uses explicit app CSS values; a fully theme-derived variant can be added later.
+- Next slice:
+  - M8: UX Phase 5 - add theme-friendly fallback selection profile and reduce hardcoded color reliance.
+
+---
+## 2026-02-21 (Cycle 173)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 5 bundle - directory action menu instead of forced file-manager open
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - changed `dir` activation behavior from immediate `xdg-open` to in-place action menu
+    - added directory action options:
+      - Open Terminal Here
+      - Open in File Explorer
+      - Open in Editor
+      - Copy Path
+    - added shell-safe single-quote escaping helper for directory path command arguments
+    - added `dir_option` execution path:
+      - execute selected directory option command
+      - close window on success
+      - keep window open with feedback on failure
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - terminal option uses `${TERMINAL:-xterm}` fallback and may require local terminal env tuning.
+  - copy-path option prefers `wl-copy` then falls back to `xclip`.
+- Next slice:
+  - M8: UX Phase 5 - add configurable default directory action profile and env/doc wiring.
+
+---
+## 2026-02-22 (Cycle 174)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 5 bundle - GTK runtime regression fixes from directory-action rollout
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - replaced `gtk_entry_set_placeholder_text` with `gtk_search_entry_set_placeholder_text`
+      to match actual `GtkSearchEntry` API and remove runtime GTK critical
+    - removed invalid GTK CSS `spacing` property from `.gs-candidate-content`
+      to remove theme parser warning
+    - hardened terminal launch command for directory actions:
+      - uses `$TERMINAL` only when executable
+      - falls back through common terminals (`kitty`, `alacritty`, `foot*`, `wezterm`,
+        `gnome-terminal`, `konsole`, `xfce4-terminal`, `tilix`, `xterm`)
+      - exits cleanly with non-zero when no terminal is available
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - if no terminal binary exists, terminal option now fails fast without noisy `exec: xterm: not found`.
+- Next slice:
+  - M8: UX Phase 5 - add in-UI explicit error hint when directory terminal option has no available terminal.
+
+---
+## 2026-02-22 (Cycle 175)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - add `fd`/`rg` route modules and file action UX
+- Changes:
+  - Updated `src/search/types.zig`:
+    - added candidate kinds:
+      - `file`
+      - `grep`
+  - Updated `src/search/query.zig`:
+    - added routes:
+      - `%` => `files`
+      - `&` => `grep`
+    - added route parsing tests for new prefixes
+  - Updated `src/search/rank.zig`:
+    - route matching support for `files`/`grep`
+    - scoring/bias support for `file`/`grep` candidate kinds
+  - Updated `src/app/search_service.zig`:
+    - added dynamic route execution path for query-time tools:
+      - `%` route runs `fd` and maps output to file candidates
+      - `&` route runs `rg` and maps output to grep candidates
+    - implemented shell capture + quoting helpers for safe command composition
+  - Updated `src/ui/gtk_shell.zig`:
+    - added grouped sections for Files and Code Search
+    - added route hints and status text for `%` and `&`
+    - added file/grep execution flow:
+      - opens file action menu instead of immediate launch
+      - action options: open in editor, open default app, reveal in file explorer, copy path
+      - close-on-success behavior preserved
+    - extended kind chip/icon/tag mapping and CSS tokens for file/grep
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `fd`/`rg` routes query under `$HOME` and are capped for responsiveness (`head`/max-results).
+  - `rg` action parser treats trailing `:<digits>` as line metadata for editor line-jump commands.
+- Next slice:
+  - M8: UX Phase 6 - document `%`/`&` routes and add smoke assertions for fd/rg availability/degraded behavior.
+
+---
+## 2026-02-22 (Cycle 176)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - stabilize `&` grep route under real-world shell/output conditions
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - fixed `rg` route command composition (removed nested `sh -lc` quoting issue)
+    - removed shell pipeline dependence (`| head`) in favor of Zig-side result capping
+      to avoid `pipefail`/SIGPIPE-induced empty results
+    - made `rg` command tolerant of non-zero scanner exits while still consuming stdout (`|| true`)
+    - fixed dynamic candidate string ownership lifecycle for route results
+      (avoids invalid memory access / dropped rows)
+    - raised dynamic command capture budget in `runShellCapture` (`8 MiB`) so large `rg` output
+      no longer fails silently due default output cap
+  - Updated `src/search/rank.zig`:
+    - replaced strict ASCII-lower conversion with lossy-safe ASCII lowering helper
+      so non-ASCII grep snippets no longer zero-out rankability
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf '& wiki_life\n:q\n' | zig build run -- --ui` (headless smoke)
+- Commit(s):
+  - pending
+- Risks/notes:
+  - broad `$HOME` grep can still be slow for high-hit terms; result cap now prevents empty-route failures.
+- Next slice:
+  - M8: UX Phase 6 - add route-root controls and ignore-pattern defaults for faster `%`/`&` query paths.
+
+---
+## 2026-02-22 (Cycle 177)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - app icon resolution fixes for env-wrapped launchers + 2x icon sizing
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - improved app icon resolution pipeline:
+      - new icon variant resolution helper with fallback variants:
+        - basename extraction from path-like icon names
+        - `.desktop` suffix stripping
+        - `-desktop` suffix stripping
+      - optional theme existence check (`gtk_icon_theme_has_icon`) before selecting a variant
+    - improved action-token extraction for app icon fallback:
+      - ignores `env` prefix
+      - skips env assignments (`KEY=VALUE`) and option-like tokens
+      - handles quoted/path executables and keeps basename token
+    - increased app icon visual size:
+      - image pixel size `16 -> 24`
+      - icon class font scale set to `2em` (about 2x heading text)
+  - Updated `src/ui/stub_shell.zig`:
+    - aligned `:icondiag` command-token parsing with GTK logic for consistent diagnostics.
+  - Verified local icon assets exist for affected apps:
+    - `zide-stable`, `zide-test`, `bitwarden`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf ':icondiag\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - best results still come from explicit icon metadata column in app cache; token/variant fallback is heuristic.
+- Next slice:
+  - M8: UX Phase 6 - add optional desktop-file icon enrichment when cache icon column is missing.
+
+---
+## 2026-02-22 (Cycle 178)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - default empty-query suggestions switch to module-filter list
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - empty query no longer renders blended result list
+    - added dedicated default module-filter menu on launch/empty input:
+      - Apps (`@`), Windows (`#`), Directories (`~`), Files (`%`), Code Search (`&`), Run (`>`), Calc (`=`), Web (`?`)
+    - module rows are actionable and keyboard-selectable
+    - selecting a module row injects `<prefix><space>` into search entry and focuses input
+      (e.g. `@ `, `% `, `& `)
+    - added module-kind handling in selection execution/status label mapping
+    - preserved no-prefix behavior:
+      - typing without module prefix still uses blended search path unchanged
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - module menu now intentionally replaces previous empty-query blended list to keep launch suggestions focused.
+- Next slice:
+  - M8: UX Phase 6 - add optional desktop-file icon enrichment when cache icon column is missing.
+
+---
+## 2026-02-22 (Cycle 179)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX Phase 6 bundle - fix `&` route misses on `comb-migration-api` query and reduce home-scan noise
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - hardened `rg` route command for large-output terms:
+      - added bounded search output controls:
+        - `--max-count 200`
+        - `--max-columns 300`
+        - `--max-columns-preview`
+      - kept Zig-side parsing cap and tolerant command completion
+    - expanded dynamic search exclusions for both `%` (fd) and `&` (rg):
+      - `.cache`
+      - `.codex`
+      - `.local/share/Trash`
+      - `.local/share/opencode`
+      - `.local/share/containers`
+      - existing `.git` / `node_modules` exclusions remain
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf '& : comb-migration-api\n:q\n' | zig build run -- --ui`
+  - `printf '& comb-migration-api\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - default search root is still `$HOME`; exclusions are tuned to reduce noise, not a full project-root scoping feature.
+- Next slice:
+  - M8: UX Phase 6 - add configurable search roots for `%`/`&` (cwd-first or env-configured roots).
+
+---
+## 2026-02-22 (Cycle 180)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX responsiveness pass - reduce GTK thread churn and improve perceived smoothness
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - route-aware debounce for heavy dynamic modules:
+      - `%`/`&` now use longer debounce windows for short terms
+      - preserves faster debounce for normal app/window/dir/action flows
+    - added render diff hashing:
+      - computes hash from query + hints + rendered rows
+      - skips list clear/rebuild when rendered state is unchanged
+    - refined empty-query menu rendering:
+      - module filter menu only rebuilds when empty-view hash changes
+    - added CSS transitions for actionable row/state changes:
+      - smoother hover/selection/color updates
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this pass reduces churn/jitter but does not yet move `%`/`&` process execution fully off the GTK thread.
+- Next slice:
+  - M8: UX responsiveness - async worker path for `%`/`&` query execution with stale-result handoff.
+
+---
+## 2026-02-22 (Cycle 181)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX responsiveness - async `%`/`&` route worker with stale-result handoff
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added async route worker path for dynamic modules (`%`/`&`)
+    - query generation token added to drop stale completions
+    - background worker computes ranked results, then posts to GTK main loop via `g_idle_add`
+    - main loop renders returned rows without blocking debounce callback path
+  - Updated `src/app/search_service.zig`:
+    - added service-level query mutex around query mutation/read paths:
+      - `searchQuery`
+      - snapshot prewarm/invalidate/drain
+      - selection recording
+    - ensures thread-safe service access when async route workers and UI thread overlap
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - context object is intentionally retained until process exit to avoid async callback use-after-free after window destroy.
+  - headless mode remains synchronous by design.
+- Next slice:
+  - M8: UX responsiveness - add explicit async in-flight spinner row + cancellation on query clear.
+
+---
+## 2026-02-22 (Cycle 182)
+- Milestone: M8 Patch Release Cadence
+- Task slice: UX responsiveness - async in-flight spinner row + cancellation lifecycle
+- Changes:
+  - Updated `src/ui/gtk_shell.zig`:
+    - added async spinner state in `UiContext`:
+      - timer id
+      - spinner frame phase
+      - in-flight flag
+    - added explicit async in-flight row rendering for `%`/`&` routes:
+      - animated frame (`| / - \`) with "Searching modules..."
+      - row tagged and safely replaced per frame tick
+    - added async cancellation semantics:
+      - increments generation and clears spinner row when query clears
+      - cancels spinner when route switches from async to non-async
+      - cancels spinner on async worker completion before result render
+    - added spinner timer cleanup in `onDestroy`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+  - `printf '& comb-migration-api\n% bitwarden\n:q\n' | zig build run -- --ui`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - headless mode remains synchronous and does not render spinner UI rows by design.
+- Next slice:
+  - M8: UX responsiveness - progressive async result streaming (first-N early paint for `%`/`&`).
+
+---
+## 2026-02-22 (Cycle 183)
+- Milestone: M8 Patch Release Cadence
+- Task slice: async stability hardening for `%`/`&` worker lifecycle
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - removed per-query dynamic string invalidation in `searchDynamicRoute`
+    - dynamic route strings now remain valid for async worker copy and are released on service deinit
+  - Updated `src/ui/gtk_shell.zig`:
+    - coalesced async route execution to one in-flight worker at a time
+    - added latest-query pending queue for `%`/`&` while a worker is active
+    - stale worker completion now launches the newest pending query instead of spawning thread bursts
+    - pending async query memory is cleaned on cancel and window destroy
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `scripts/dev.sh check`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dynamic-route owned strings are retained for process lifetime (freed on deinit) to guarantee async safety.
+  - this favors stability over bounded per-query memory reclamation.
+- Next slice:
+  - M8: UX responsiveness - progressive async result streaming (first-N early paint for `%`/`&`).
+
+---
+## 2026-02-22 (Cycle 184)
+- Milestone: M8 UX Modularization
+- Task slice: split GTK shell responsibilities into `src/ui/gtk/` modules
+- Changes:
+  - Added `src/ui/gtk/types.zig`:
+    - shared GTK C bindings/constants and `UiContext` type
+  - Added `src/ui/gtk/styles.zig`:
+    - centralized GTK CSS install/theme payload
+  - Added `src/ui/gtk/widgets.zig`:
+    - shared row builders (`header/info/legend/async/module menu`) and chip/icon helpers
+  - Added `src/ui/gtk/actions.zig`:
+    - command execution + dir/file action command builders/parsing
+  - Updated `src/ui/gtk_shell.zig` to delegate style/widget/action concerns to new modules.
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `gtk_shell.zig` is reduced but still hosts controller/async/render orchestration; next split should target async/controller submodules.
+- Next slice:
+  - M8: extract async route worker + event-controller logic from `gtk_shell.zig`.
+
+---
+## 2026-02-22 (Cycle 185)
+- Milestone: M8 UX Modularization
+- Task slice: extract GTK navigation and query helper logic from shell
+- Changes:
+  - Added `src/ui/gtk/navigation.zig`:
+    - row navigation/activation helpers
+    - selected-row visibility scrolling helper
+    - scrollbar active-class toggling
+  - Added `src/ui/gtk/query_helpers.zig`:
+    - route debounce, route icon/hint, async-route detection
+    - token highlighting + markup helper pipeline
+    - status label text helpers
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates navigation + query helper calls to new modules
+    - removed in-file implementations for extracted helpers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - shell still owns async worker lifecycle and render pipeline; next extraction should target `startAsyncRouteSearch`/worker callbacks.
+- Next slice:
+  - M8: extract async route worker lifecycle into `gtk/async_search.zig`.
+
+---
+## 2026-02-22 (Cycle 186)
+- Milestone: M8 UX Modularization
+- Task slice: extract async worker state lifecycle from shell
+- Changes:
+  - Added `src/ui/gtk/async_state.zig`:
+    - async payload structs (`AsyncRenderedRow`, `AsyncSearchResult`)
+    - pending async query queue/take/free helpers
+    - async payload memory cleanup helper
+  - Updated `src/ui/gtk_shell.zig`:
+    - switched to `gtk_async` aliases for async payload types
+    - delegated pending-query and async payload cleanup helpers
+    - removed in-file implementations of extracted async state helpers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - async worker lifecycle callbacks still live in shell; follow-up extraction can move worker orchestration behind callback hooks.
+- Next slice:
+  - M8: extract async worker orchestration (`start/spawn/on-ready/spinner`) into `gtk/async_search.zig`.
+
+---
+## 2026-02-22 (Cycle 187)
+- Milestone: M8 UX Modularization
+- Task slice: extract async route worker orchestration from shell
+- Changes:
+  - Added `src/ui/gtk/async_search.zig`:
+    - async start/cancel/launch-pending orchestration
+    - worker spawn + threaded query execution
+    - idle-loop handoff via payload-owned `on_ready` callback
+  - Updated `src/ui/gtk/async_state.zig`:
+    - added `on_ready` callback pointer on async payload struct
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates async orchestration to `gtk_async_search`
+    - removed in-file worker spawn/thread function implementations
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - shell still contains render pipeline + action menu code; next extraction should target result row rendering and action-menu controllers.
+- Next slice:
+  - M8: extract render/grouping pipeline into `gtk/render.zig`.
+
+---
+## 2026-02-22 (Cycle 188)
+- Milestone: M8 UX Modularization
+- Task slice: extract grouped render pipeline from shell
+- Changes:
+  - Added `src/ui/gtk/render.zig`:
+    - render-hash calculation
+    - grouped section rendering (`Apps/Windows/Directories/Files/Code Search/Actions/Hints`)
+    - candidate row rendering + row metadata/tooltips
+    - hook-based icon widget resolution from shell
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates render hash and grouped row rendering to `gtk_render`
+    - removed in-file grouped render and candidate row builder implementations
+    - removed now-unused local kind tagging/chip wrapper helpers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - render module now owns row metadata keys (`gs-kind`, `gs-action`, `gs-title`), so future schema changes should be centralized there.
+- Next slice:
+  - M8: extract action-menu presentation/dispatch (`dir/file` option menu rows) into `gtk/menus.zig`.
+
+---
+## 2026-02-22 (Cycle 189)
+- Milestone: M8 UX Modularization
+- Task slice: extract directory/file option menu UI from shell
+- Changes:
+  - Added `src/ui/gtk/menus.zig`:
+    - directory action menu presentation + option-row rendering
+    - file action menu presentation + option-row rendering
+    - delegates command building/parsing to `gtk/actions.zig`
+    - exposes lightweight hooks for status + first-row selection
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates `showDirActionMenu`/`showFileActionMenu` to `gtk_menus`
+    - removed in-file dir/file option row builders and parse/build wrappers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - menu option row schema (`gs-kind` tags) now centralized in `gtk/menus.zig`.
+- Next slice:
+  - M8: extract status/feedback tone engine into `gtk/status.zig` and shrink shell below 900 LOC.
+
+---
+## 2026-02-22 (Cycle 190)
+- Milestone: M8 UX Modularization
+- Task slice: extract status/feedback engine from shell
+- Changes:
+  - Added `src/ui/gtk/status.zig`:
+    - status tone model + CSS-class application
+    - launch feedback rows
+    - delayed status reset timer callback behavior
+    - unified `setStatus`/`showLaunchFeedback` entry points
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates status and feedback flows to `gtk_status`
+    - removed in-file status tone + feedback/reset implementations
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - status reset timer ownership remains in `UiContext`; shell destroy-path cleanup is unchanged.
+- Next slice:
+  - M8: extract app-icon resolution/fallback helpers into `gtk/icons.zig`.
+
+---
+## 2026-02-22 (Cycle 191)
+- Milestone: M8 UX Modularization
+- Task slice: extract app icon resolution/fallback helpers from shell
+- Changes:
+  - Added `src/ui/gtk/icons.zig`:
+    - app icon widget resolution entrypoint for row rendering
+    - icon-name variant matching (`.desktop`/`-desktop` stripping)
+    - action-token extraction for `env`/flag-wrapped exec commands
+    - app-glyph fallback detection helper
+  - Updated `src/ui/gtk_shell.zig`:
+    - render hook now uses `gtk_icons.candidateIconWidget`
+    - app-fallback status check now uses `gtk_icons.hasAppGlyphFallback`
+    - removed in-file icon/token/variant helper implementations
+    - removed now-dead local icon wrapper helper
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - icon behavior should remain identical; logic is moved but unchanged semantically.
+- Next slice:
+  - M8: optional final split of shell activation/bootstrap glue into `gtk/bootstrap.zig`.
+
+---
+## 2026-02-22 (Cycle 192)
+- Milestone: M8 UX Modularization
+- Task slice: extract GTK activate/bootstrap assembly from shell
+- Changes:
+  - Added `src/ui/gtk/bootstrap.zig`:
+    - window construction + monitor-aware initial sizing
+    - base widget/context allocation and initialization
+    - signal wiring for input/list/destroy hooks
+    - post-activate callback hook for shell-specific initial render/setup
+  - Updated `src/ui/gtk_shell.zig`:
+    - `onActivate` now delegates to `gtk_bootstrap.activate`
+    - removed in-file window/bootstrap assembly and sizing helper
+    - added small `afterActivate` hook for route icon + initial render + scrollbar class sync
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - callback signatures are now centralized in `gtk/bootstrap.zig` hook contract; shell callback changes should keep that contract in sync.
+- Next slice:
+  - M8: optional final cleanup pass (`gtk_shell.zig` naming/section ordering and thin wrappers removal).
+
+---
+## 2026-02-22 (Cycle 193)
+- Milestone: M8 UX Modularization
+- Task slice: extract row-selection dispatch and input controller flow from shell
+- Changes:
+  - Added `src/ui/gtk/selection.zig`:
+    - centralized selected-row execution handling by kind/action
+    - action confirmation and command dispatch behavior via callback hooks
+    - module filter activation helper for default module list rows
+  - Added `src/ui/gtk/controller.zig`:
+    - keyboard/navigation key handling (`Esc`, `Ctrl+L`, `Ctrl+R`, arrows/page/home/end, Enter)
+    - entry activation + scrollbar-adjustment handlers
+    - route-prefix icon updates for the search entry
+    - selected-row status messaging logic
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates row activation to `gtk_selection.executeSelected`
+    - delegates keyboard/input/selection controller behavior to `gtk_controller`
+    - removed dead shell-local action dispatch and route-icon helper code
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - shell callback signatures remain the integration boundary; behavior now depends on hook contracts in `selection.zig` and `controller.zig`.
+- Next slice:
+  - M8: split render orchestration from shell (`populateResults` + async/result routing coordinator).
+
+---
+## 2026-02-22 (Cycle 194)
+- Milestone: M8 UX Modularization
+- Task slice: extract result/query orchestration from shell
+- Changes:
+  - Added `src/ui/gtk/results_flow.zig`:
+    - query-path orchestration (`populateResults`) for empty query/default menu, async-route handoff, and sync search fallback
+    - ranked-row render/status policy (`renderRankedRows`) with route hints, truncation notice, and stale/refresh status decisions
+    - direct module usage for list/status/nav concerns (`widgets`, `status`, `navigation`, `render`, `icons`, `query_helpers`)
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates populate flow to `gtk_results_flow.populateResults`
+    - delegates async-ready render finalization to `gtk_results_flow.renderRankedRows`
+    - removed shell-local duplicate render/list helper code that moved into `results_flow`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - async hooks are still shell-owned callbacks; deeper extraction of spinner/worker callback wiring remains optional.
+- Next slice:
+  - M8: extract async spinner/worker callback bridge from shell into a dedicated coordinator.
+
+---
+## 2026-02-22 (Cycle 195)
+- Milestone: M8 UX Modularization
+- Task slice: extract async spinner/worker coordination from shell
+- Changes:
+  - Added `src/ui/gtk/async_coordinator.zig`:
+    - async route start/cancel/launch-pending wrappers around `gtk/async_search.zig`
+    - spinner lifecycle management (`begin/end/tick/frame`) including status updates
+    - isolated async in-flight UI row maintenance (`appendAsyncRow`/`clearAsyncRows` via `widgets`)
+  - Updated `src/ui/gtk_shell.zig`:
+    - delegates async route/spinner entry points to `gtk_async_coord`
+    - removed shell-local spinner callbacks and helper wrappers
+    - removed now-unused shell imports tied to extracted behavior
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/gtk_shell.zig ./src/ui/gtk/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - `onAsyncSearchReady` callback remains shell-owned but now depends on coordinator contract for spinner lifecycle.
+- Next slice:
+  - M8: optional final shell thinning pass by extracting refresh/bootstrap callbacks into a small façade module.
+
+---
+## 2026-02-22 (Cycle 196)
+- Milestone: M8 Code Hygiene / Service Modularization
+- Task slice: split `SearchService` internals into dedicated submodules
+- Changes:
+  - Added `src/app/search_service/dynamic_routes.zig`:
+    - `%` (`fd`) and `&` (`rg`) dynamic candidate collection logic
+    - shell command helpers and dynamic owned-string retention helpers
+  - Added `src/app/search_service/history_store.zig`:
+    - selection history append/trim behavior
+    - history load/save and newest-first view materialization
+  - Added `src/app/search_service/cache_refresh.zig`:
+    - snapshot prewarm/invalidate primitives
+    - TTL-based refresh scheduling policy
+  - Updated `src/app/search_service.zig`:
+    - delegates dynamic route collection, history operations, and cache refresh policy to submodules
+    - keeps public `SearchService` API and locking model unchanged
+    - removed moved helper implementations from monolithic file
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_store.zig src/app/search_service/cache_refresh.zig src/app/search_service/dynamic_routes.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/app/search_service.zig ./src/app/search_service/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - history save/load now runs under `query_mu` lock for consistency with record/history view access.
+- Next slice:
+  - M8: split `src/ui/stub_shell.zig` into headless controller + command handlers to keep shell parity with GTK modularization.
+
+---
+## 2026-02-22 (Cycle 197)
+- Milestone: M8 Code Hygiene / Shell Modularization
+- Task slice: split headless shell path into focused modules
+- Changes:
+  - Added `src/ui/headless/controller.zig`:
+    - query loop, `:q`/`:refresh`/`:icondiag` command handling, and selection recording
+  - Added `src/ui/headless/render.zig`:
+    - query timing/status metadata output and top-results rendering
+  - Added `src/ui/headless/icon_diag.zig`:
+    - icon diagnostics data path (`text` and `--json`) and JSON escaping helpers
+  - Updated `src/ui/stub_shell.zig`:
+    - reduced to thin shell entrypoint delegating to `headless/controller.zig`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/stub_shell.zig src/ui/headless/controller.zig src/ui/headless/render.zig src/ui/headless/icon_diag.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/stub_shell.zig ./src/ui/headless/ --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior and command surface are intentionally unchanged; this is structural separation only.
+- Next slice:
+  - M8: define shared execution/router contracts for GTK and headless so both shells reuse the same command-dispatch primitives.
+
+---
+## 2026-02-22 (Cycle 198)
+- Milestone: M8 Code Hygiene / Shared Dispatch
+- Task slice: centralize candidate dispatch contracts used by GTK and headless flows
+- Changes:
+  - Added `src/ui/common/dispatch.zig`:
+    - shared command planning for actionable kinds (`action`, `app`, `dir_option`, `file_option`, `window`)
+    - shared confirmation/check helpers and selection recording predicates
+    - owned-command lifecycle handling for dynamically built command strings
+  - Updated `src/ui/gtk/selection.zig`:
+    - now delegates command planning and kind classification to shared dispatch module
+    - retained GTK-only UI hooks for status, confirmation prompt, menus, telemetry, and close-on-success behavior
+  - Updated `src/ui/headless/controller.zig`:
+    - uses shared candidate-recording predicate for consistent history behavior with GTK route semantics
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/dispatch.zig src/ui/gtk/selection.zig src/ui/headless/controller.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/common/dispatch.zig ./src/ui/gtk/selection.zig ./src/ui/headless/controller.zig --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dispatch behavior is unchanged by intent; logic moved behind a shared contract to reduce drift.
+- Next slice:
+  - M8: extract a small `ui/common/commands.zig` command-router (`:refresh`, `:icondiag`, future AI/browser commands) and reuse it in headless + upcoming GTK command palette paths.
+
+---
+## 2026-02-22 (Cycle 199)
+- Milestone: M8 Code Hygiene / Shared Commands
+- Task slice: extract shared command router for headless shell commands
+- Changes:
+  - Added `src/ui/common/commands.zig`:
+    - command parse contract for `:q`, `:refresh`, `:icondiag`, and `:icondiag --json`
+  - Updated `src/ui/headless/controller.zig`:
+    - replaced inline string-command branching with `common_commands.parse(...)` switch
+    - preserved existing behavior and output text
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/commands.zig src/ui/headless/controller.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this isolates command parsing logic for future reuse in GTK command-palette paths.
+- Next slice:
+  - M8: begin extracting a shared execution adapter (`ui/common/execute.zig`) that maps ranked candidates to launch/menu intents for both shells.
+
+---
+## 2026-02-22 (Cycle 200)
+- Milestone: M8 Code Hygiene / Shared Execution Adapter
+- Task slice: extract shared selection execution adapter and route GTK through it
+- Changes:
+  - Added `src/ui/common/execute.zig`:
+    - centralized selection-decision resolution into explicit intents (`module_filter`, `dir_menu`, `file_menu`, `run_plan`, `none`)
+    - shared guard-confirmation resolution (`guard_waiting_confirmation`) and power-confirm clear policy
+    - integrates with shared command planning contract from `ui/common/dispatch.zig`
+  - Updated `src/ui/gtk/selection.zig`:
+    - now consumes `common_execute.resolveSelection(...)` and executes resulting intent
+    - keeps GTK-specific UI side effects (status hooks, menu presentation, telemetry, close-on-success)
+    - restores explicit unknown-action feedback path when command resolution fails
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/execute.zig src/ui/gtk/selection.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/common/execute.zig ./src/ui/gtk/selection.zig --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - adapter currently wired for GTK selection path; headless execution remains query-display oriented and can adopt this adapter when interactive selection is added.
+- Next slice:
+  - M8: introduce `ui/common/actions.zig` execution runtime (run command + telemetry outcome helper) to remove duplicate run/error handling in GTK selection.
+
+---
+## 2026-02-22 (Cycle 201)
+- Milestone: M8 Code Hygiene / Shared Action Runtime
+- Task slice: extract shared command execution runtime and route GTK selection through it
+- Changes:
+  - Added `src/ui/common/actions.zig`:
+    - centralized command-plan execution with unified outcomes (`noop`, `ok`, `failed`)
+    - standardized telemetry detail routing (`unknown-action` vs `command-failed`)
+    - standardized fallback error-message handling
+  - Updated `src/ui/gtk/selection.zig`:
+    - switched command run/error/telemetry branching to `common_actions.executePlan(...)`
+    - preserved GTK-specific side effects (feedback UI + close-on-success)
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/actions.zig src/ui/gtk/selection.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior-intent changes expected; execution flow is now centralized for reuse by future shells/command palette.
+- Next slice:
+  - M8: add shared candidate kind codec (`ui/common/kinds.zig`) to remove string-kind branching (`\"app\"`, `\"dir\"`, etc.) from GTK path.
+
+---
+## 2026-02-22 (Cycle 202)
+- Milestone: M8 Code Hygiene / Shared Kind Codec
+- Task slice: add typed UI-kind codec and route dispatch primitives through it
+- Changes:
+  - Added `src/ui/common/kinds.zig`:
+    - canonical `UiKind` enum for shell row kinds and parser from row-kind strings
+  - Updated `src/ui/common/dispatch.zig`:
+    - switched helper predicates (`shouldRecordSelection`, `requiresConfirmation`, module/menu checks) to enum-based kind matching
+    - switched command planning branch logic to `switch (UiKind)` instead of repeated string equality chains
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/kinds.zig src/ui/common/dispatch.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this is a structural primitive change; behavior should remain equivalent while reducing string-branch duplication.
+- Next slice:
+  - M8: route `gtk/selection.zig` kind handling to `UiKind` directly and reduce remaining raw `kind` string handling in the GTK path.
+
+---
+## 2026-02-22 (Cycle 203)
+- Milestone: M8 Code Hygiene / Enum-Based Dispatch Flow
+- Task slice: parse row kind once and use enum-based dispatch primitives in shared execution path
+- Changes:
+  - Updated `src/ui/common/dispatch.zig`:
+    - added enum-based helper variants (`*Kind`/`*Enum`) for selection recording, confirmation checks, menu kind checks, and command planning
+    - preserved string-based wrappers for compatibility while routing them through enum helpers
+  - Updated `src/ui/common/execute.zig`:
+    - now parses kind string once and uses enum-based dispatch helpers throughout decision resolution
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/dispatch.zig src/ui/common/execute.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - reduces repeated parsing/string branching in hot selection path while keeping external behavior unchanged.
+- Next slice:
+  - M8: expose `UiKind` in GTK row data lifecycle and retire remaining raw kind-string comparisons in selection telemetry paths.
+
+---
+## 2026-02-22 (Cycle 204)
+- Milestone: M8 Code Hygiene / Typed GTK Row Kind Metadata
+- Task slice: wire typed `UiKind` IDs through GTK row metadata and selection/status paths
+- Changes:
+  - Updated `src/ui/common/kinds.zig`:
+    - added `hint` support in `UiKind`
+    - added canonical `tag`, `statusLabel`, and `fromCandidateKind` helpers
+  - Updated `src/ui/gtk/render.zig`:
+    - candidate rows now set both legacy `gs-kind` and typed `gs-kind-id` metadata
+    - kind-tag generation now flows through shared `UiKind` mapping
+  - Updated `src/ui/gtk/widgets.zig` and `src/ui/gtk/menus.zig`:
+    - module and option rows now also set `gs-kind-id` metadata
+  - Updated `src/ui/gtk_shell.zig`:
+    - row activation now resolves kind via `gs-kind-id` first, with legacy string fallback
+    - selection call now passes `UiKind` instead of raw kind strings
+  - Updated `src/ui/gtk/controller.zig`:
+    - selected-row status label now resolves via typed kind (`UiKind`) with fallback parsing
+  - Updated `src/ui/common/execute.zig` and `src/ui/common/actions.zig`:
+    - selection resolution and plan execution now accept/propagate typed `UiKind`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/common/kinds.zig src/ui/gtk/render.zig src/ui/gtk/widgets.zig src/ui/gtk/menus.zig src/ui/gtk/controller.zig src/ui/gtk_shell.zig src/ui/gtk/selection.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+  - `scc ./src/ui/common/ ./src/ui/gtk/selection.zig ./src/ui/gtk/render.zig ./src/ui/gtk/controller.zig ./src/ui/gtk/widgets.zig ./src/ui/gtk/menus.zig ./src/ui/gtk_shell.zig --by-file`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - legacy `gs-kind` string metadata is intentionally retained as compatibility fallback during migration.
+- Next slice:
+  - M8: remove remaining `gs-kind` fallback usage after confirming all row producers consistently set `gs-kind-id`.
+
+---
+## 2026-02-22 (Cycle 205)
+- Milestone: M8 Code Hygiene / Typed Kind Finalization
+- Task slice: remove legacy `gs-kind` fallback path and rely on typed row kind IDs
+- Changes:
+  - Updated `src/ui/gtk/render.zig`, `src/ui/gtk/widgets.zig`, and `src/ui/gtk/menus.zig`:
+    - actionable rows no longer store legacy `gs-kind` string metadata
+    - actionable rows now rely on `gs-kind-id` as canonical row kind metadata
+  - Updated `src/ui/gtk_shell.zig` and `src/ui/gtk/controller.zig`:
+    - removed fallback parsing of `gs-kind` string metadata
+    - row kind resolution now uses `gs-kind-id` only (falls back to `.unknown` if missing)
+  - Updated `src/ui/gtk/query_helpers.zig`:
+    - removed now-unused string-based `kindStatusLabel` helper
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/gtk_shell.zig src/ui/gtk/controller.zig src/ui/gtk/render.zig src/ui/gtk/widgets.zig src/ui/gtk/menus.zig src/ui/gtk/query_helpers.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this assumes all actionable row producers correctly set `gs-kind-id`; meta/info rows remain non-actionable and unaffected.
+- Next slice:
+  - M8: add a shared row-metadata helper (`gtk/row_data.zig`) to centralize action/title/kind-id read/write and eliminate duplicated key strings.
+
+---
+## 2026-02-22 (Cycle 206)
+- Milestone: M8 Code Hygiene / GTK Row Metadata Consolidation
+- Task slice: centralize actionable row metadata read/write behind a shared GTK helper
+- Changes:
+  - Added `src/ui/gtk/row_data.zig`:
+    - canonical row metadata writer for actionable rows (`kind-id`, `action`, `title`)
+    - canonical metadata readers for `kind`, `action`, and `title`
+  - Updated `src/ui/gtk/render.zig`, `src/ui/gtk/widgets.zig`, and `src/ui/gtk/menus.zig`:
+    - switched actionable row metadata writes to `gtk_row_data.setActionableData(...)`
+  - Updated `src/ui/gtk_shell.zig` and `src/ui/gtk/controller.zig`:
+    - switched actionable row metadata reads to `gtk_row_data.{kind,action,title}(...)`
+  - Updated `src/ui/gtk/navigation.zig`:
+    - switched actionable-row detection checks to `gtk_row_data.action(...) != null`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/ui/gtk/row_data.zig src/ui/gtk/render.zig src/ui/gtk/widgets.zig src/ui/gtk/menus.zig src/ui/gtk_shell.zig src/ui/gtk/controller.zig src/ui/gtk/navigation.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - row metadata key strings now live in one module, reducing drift when new row fields are introduced.
+- Next slice:
+  - M8: add focused unit tests for `ui/common/{dispatch,execute,actions,kinds}` and `gtk/row_data` behavior to lock contracts before AI/browser module growth.
+
+---
+## 2026-02-22 (Cycle 207)
+- Milestone: M8 Code Hygiene / SearchService Concurrency + Persistence
+- Task slice: reduce search lock contention and harden dynamic-route/history infrastructure
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - narrowed `query_mu` usage in `searchQuery` to short state updates/snapshots instead of whole-query execution
+    - added dedicated `dynamic_mu` and `dynamic_tool_state` ownership for dynamic-route collection path
+    - switched history ranking inputs to owned history snapshots (safe without long-lived global lock)
+    - added explicit helpers for last-query flag/timing updates under lock
+  - Updated `src/app/search_service/dynamic_routes.zig`:
+    - added cached dynamic-tool availability state (`fd`/`rg`) to avoid repeated shell probes on hot query path
+  - Updated `src/app/search_service/history_store.zig`:
+    - added owned history snapshot API + cleanup helper
+    - switched history persistence to atomic writes (`.tmp` + rename)
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_store.zig src/app/search_service/dynamic_routes.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - dynamic route string retention is still process-lifetime by design; this pass reduces contention and shell overhead but does not yet solve long-session growth of `dynamic_owned`.
+- Next slice:
+  - M8: introduce bounded dynamic string interning/generation cleanup strategy so `%`/`&` route memory cannot grow indefinitely in long-running sessions.
+
+---
+## 2026-02-22 (Cycle 208)
+- Milestone: M8 Code Hygiene / Dynamic Route Memory Bounding
+- Task slice: cap long-session `%`/`&` route memory growth via retained generation pruning
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - replaced single unbounded `dynamic_owned` pool with retained `dynamic_generations`
+    - added `dynamic_generation_keep` policy (default 12) and prune helper
+    - dynamic route collection now allocates into a fresh generation and prunes oldest generations beyond retention cap
+    - updated deinit to free all retained generations safely
+  - Updated `src/app/search_service/dynamic_routes.zig`:
+    - retained tool-state cache integration from prior slice remains compatible with per-generation storage writes
+  - Updated `src/app/search_service/history_store.zig`:
+    - retained owned history snapshot and atomic write hardening from prior slice
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_store.zig src/app/search_service/dynamic_routes.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - generation pruning is count-based (`dynamic_generation_keep`) and intentionally conservative to avoid immediate reclaim races with short-lived consumers.
+- Next slice:
+  - M8: reduce `cache_mu` hold time by ranking on a copied snapshot (or immutable snapshot pointer swap) rather than while holding the cache mutex.
+
+---
+## 2026-02-22 (Cycle 209)
+- Milestone: M8 Code Hygiene / Cache Lock Contention
+- Task slice: move cached ranking off `cache_mu` critical section using owned candidate snapshots
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - cached-query path now deep-copies cache candidates under `cache_mu`
+    - ranking now runs against copied snapshot outside the cache lock
+    - added owned-candidate snapshot copy/free helpers for safe lock release semantics
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this trades some per-query allocation in cache-hit path for significantly shorter cache lock hold time and lower contention with refresh paths.
+- Next slice:
+  - M8: unify candidate ownership semantics to avoid deep-copy churn on cache hits (immutable snapshot swap + ref-counted slabs).
+
+---
+## 2026-02-22 (Cycle 210)
+- Milestone: M8 Code Hygiene / Immutable Cache Snapshot Path
+- Task slice: remove per-query cache deep-copy churn using retained immutable cache snapshots
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - added retained `cached_rank_generations` with bounded retention (`cache_generation_keep`)
+    - prewarm now clones collected candidates once into immutable snapshot generations
+    - cache-hit query path now ranks against latest retained snapshot outside `cache_mu` without per-query deep-copy
+    - added cache snapshot generation prune/cleanup helpers for owned candidate slices
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this favors lower lock contention and lower steady-state query allocation pressure; retained snapshot generations trade a bounded amount of memory for safety and throughput.
+- Next slice:
+  - M8: slim `search_service.zig` by extracting cache snapshot generation lifecycle into `search_service/cache_snapshots.zig`.
+
+---
+## 2026-02-22 (Cycle 211)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract cache snapshot generation lifecycle into dedicated module
+- Changes:
+  - Added `src/app/search_service/cache_snapshots.zig`:
+    - owned candidate snapshot clone helper
+    - latest snapshot selector
+    - generation prune and clear lifecycle helpers
+  - Updated `src/app/search_service.zig`:
+    - delegates snapshot clone/latest/prune/clear behavior to `cache_snapshots` module
+    - removed in-file snapshot clone/free/prune helper implementations
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/cache_snapshots.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior should remain unchanged; this is responsibility extraction to keep service orchestration lean.
+- Next slice:
+  - M8: extract `SearchService` tests into dedicated `src/app/search_service_test.zig` to reduce production-file density and improve navigation.
+
+---
+## 2026-02-22 (Cycle 212)
+- Milestone: M8 Code Hygiene / Test Structure
+- Task slice: move `SearchService` tests out of production file into dedicated test module
+- Changes:
+  - Added `src/app/search_service_test.zig`:
+    - migrated all `SearchService` behavior tests from `search_service.zig`
+  - Updated `src/app/search_service.zig`:
+    - removed inline test bodies
+    - added compact test import shim (`test { _ = @import(\"search_service_test.zig\"); }`)
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service_test.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior changes; this is structure/navigation hygiene only.
+- Next slice:
+  - M8: extract remaining `SearchService` orchestration helpers (query flag/timing + dynamic generation policy) into submodules to push `search_service.zig` further toward thin composition.
+
+---
+## 2026-02-22 (Cycle 213)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract dynamic generation lifecycle policy into dedicated module
+- Changes:
+  - Added `src/app/search_service/dynamic_generations.zig`:
+    - generation `begin`, `prune`, and `clear` lifecycle helpers for `%`/`&` dynamic-owned strings
+  - Updated `src/app/search_service.zig`:
+    - delegates dynamic generation lifecycle to `dynamic_generations` module
+    - removed in-file begin/prune helper methods
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/dynamic_generations.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior unchanged by intent; this continues reducing service-file responsibility density.
+- Next slice:
+  - M8: extract query timing/flag mutation helpers into a minimal `search_service/query_metrics.zig` helper to keep `SearchService` orchestration thin.
+
+---
+## 2026-02-22 (Cycle 214)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract query timing and flag mutation helpers into dedicated module
+- Changes:
+  - Added `src/app/search_service/query_metrics.zig`:
+    - query flag reset helper (`last_query_refreshed_cache`, `last_query_used_stale_cache`)
+    - query elapsed setter helper
+    - refreshed-cache marker helper
+  - Updated `src/app/search_service.zig`:
+    - replaced direct query metric flag mutations with `query_metrics` module calls
+    - renamed local helpers to `setQueryElapsed` / `resetQueryMetrics` to reflect new composition role
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_metrics.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior intentionally unchanged; this is a thin extraction to reduce orchestration-file mutation density.
+- Next slice:
+  - M8: extract snapshot refresh worker state transitions (`refresh_requested`/thread-running checks) into a `search_service/refresh_worker.zig` helper.
+
+---
+## 2026-02-22 (Cycle 215)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract async refresh worker transition helpers into dedicated module
+- Changes:
+  - Added `src/app/search_service/refresh_worker.zig`:
+    - start-eligibility predicate (`shouldStart`)
+    - explicit running/stopped state mutators
+  - Updated `src/app/search_service.zig`:
+    - moved async refresh-worker start guard logic to `refresh_worker.shouldStart(...)`
+    - moved running/stopped state writes to helper functions
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/refresh_worker.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior unchanged by intent; this is another orchestration-thinning extraction.
+- Next slice:
+  - M8: extract cache-refresh orchestration glue (`prewarm/invalidate/drain` lock choreography) into a focused coordinator module.
+
+---
+## 2026-02-22 (Cycle 216)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract cache refresh orchestration glue into dedicated coordinator module
+- Changes:
+  - Added `src/app/search_service/cache_coordinator.zig`:
+    - `prewarmLocked` for provider prewarm + rank snapshot generation append/prune
+    - `invalidateLocked` for cache invalidation state updates
+    - `shouldDrain` guard for drain orchestration
+  - Updated `src/app/search_service.zig`:
+    - `prewarmProviders`, `invalidateSnapshot`, and `drainScheduledRefresh` now delegate to coordinator helpers
+    - removed inline prewarm/invalidate glue logic from service orchestration body
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/cache_coordinator.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no semantic intent change; lock choreography remains in service entrypoints with glue logic extracted.
+- Next slice:
+  - M8: extract `searchQuery` non-route orchestration into `search_service/query_engine.zig` and keep `SearchService` as thin state/coordination façade.
+
+---
+## 2026-02-22 (Cycle 217)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract non-dynamic query orchestration into dedicated query engine module
+- Changes:
+  - Added `src/app/search_service/query_engine.zig`:
+    - `rankFromCacheOrCollect(...)` helper encapsulating cache-snapshot ranking vs provider collection fallback
+  - Updated `src/app/search_service.zig`:
+    - `searchQuery` non-dynamic path now delegates cache/collect ranking decision to query engine helper
+    - removed duplicate inline cache-fallback ranking branching
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_engine.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - semantics unchanged by intent; this is an orchestration extraction to keep core service path thinner.
+- Next slice:
+  - M8: extract history-facing lock helpers (`load/save/record/historySnapshot`) into a `search_service/history_access.zig` helper to reduce direct lock choreography in `SearchService`.
+
+---
+## 2026-02-22 (Cycle 218)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract history lock choreography into dedicated history access module
+- Changes:
+  - Added `src/app/search_service/history_access.zig`:
+    - `recordLocked`, `loadLocked`, `saveLocked`, and `snapshotNewestFirstOwnedLocked` wrappers
+    - centralized snapshot free helper
+  - Updated `src/app/search_service.zig`:
+    - history read/write/snapshot methods now delegate to `history_access` module
+    - replaced direct history-store free calls with `history_access.freeSnapshot`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_access.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior change intended; lock ownership remains in `SearchService` while operations moved behind a dedicated module boundary.
+- Next slice:
+  - M8: extract cache-hit snapshot selection + cache lock read helper into `search_service/cache_read.zig` to further thin `searchQuery`.
+
+---
+## 2026-02-22 (Cycle 219)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract cache snapshot read helper used by query orchestration
+- Changes:
+  - Added `src/app/search_service/cache_read.zig`:
+    - `CacheReadView` contract for cache readiness + latest snapshot
+    - `readViewLocked(...)` helper to centralize lock-protected cache view read
+  - Updated `src/app/search_service.zig`:
+    - `searchQuery` cache-read section now delegates to `cache_read.readViewLocked(...)`
+    - reduced inline cache read/selection boilerplate in core query path
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/cache_read.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no semantic change intended; this extraction reduces coordination noise in `searchQuery`.
+- Next slice:
+  - M8: extract dynamic route orchestration (`searchDynamicRoute`) into `search_service/dynamic_query_engine.zig` so `SearchService` remains a thin top-level coordinator.
+
+---
+## 2026-02-22 (Cycle 220)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract dynamic-route query orchestration into dedicated helper module
+- Changes:
+  - Added `src/app/search_service/dynamic_query_engine.zig`:
+    - `rankDynamicRoute(...)` helper that encapsulates dynamic-generation begin/prune + route collection + ranking
+  - Updated `src/app/search_service.zig`:
+    - `searchDynamicRoute(...)` now delegates orchestration to `dynamic_query_engine.rankDynamicRoute(...)`
+    - removed inline dynamic-route ranking boilerplate from service core
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/dynamic_query_engine.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior change intended; this is a structural extraction to keep `SearchService` focused on state/locking boundaries.
+- Next slice:
+  - M8: extract query-route classification + entry dispatch gate from `searchQuery` into a small helper to keep top-level flow linear.
+
+---
+## 2026-02-22 (Cycle 221)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract query parse + route dispatch gating from `searchQuery`
+- Changes:
+  - Added `src/app/search_service/query_dispatch.zig`:
+    - `parseAndClassify(...)` helper returning parsed query plus dynamic-route classification
+  - Updated `src/app/search_service.zig`:
+    - `searchQuery(...)` now delegates route dispatch classification to `query_dispatch`
+    - preserved existing dynamic/static query execution behavior while reducing top-level branching noise
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_dispatch.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior unchanged by intent; helper only centralizes query classification logic.
+- Next slice:
+  - M8: extract refresh scheduling + async-worker kickoff gate in `searchQuery` into a dedicated helper to simplify control flow.
+
+---
+## 2026-02-22 (Cycle 222)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: unify static-query refresh scheduling and async-worker gate into one helper path
+- Changes:
+  - Added `src/app/search_service/query_refresh_gate.zig`:
+    - `scheduleAndShouldStartWorker(...)` consolidating TTL scheduling + async-worker start eligibility
+  - Updated `src/app/search_service.zig`:
+    - replaced split `scheduleRefreshIfNeeded` + `startAsyncRefreshWorker` calls with `prepareRefreshForStaticQuery(...)`
+    - removed duplicated refresh-start guard branching from `searchQuery` hot path
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_refresh_gate.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior preserved by intent; extraction keeps lock ownership and thread spawn semantics in `SearchService`.
+- Next slice:
+  - M8: remove remaining small lock-wrapper boilerplate by extracting query metrics reset/set helpers at call sites via a compact scoped utility.
+
+---
+## 2026-02-22 (Cycle 223)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: reduce lock coupling between cache-refresh paths and query/history mutex
+- Changes:
+  - Updated `src/app/search_service.zig`:
+    - removed `query_mu` locking from `prewarmProviders(...)`
+    - removed `query_mu` locking from `invalidateSnapshot(...)`
+    - kept cache state coordination under `cache_mu` and metric flags under `query_mu`
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - this intentionally narrows lock scope; cache refresh/invalidate no longer participates in query/history lock ordering, which reduces deadlock surfaces.
+- Next slice:
+  - M8: add focused concurrency test covering `drainScheduledRefresh` + repeated query calls to guard lock-order regressions.
+
+---
+## 2026-02-22 (Cycle 224)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: add lock-order regression coverage for concurrent query + refresh drain paths
+- Changes:
+  - Updated `src/app/search_service_test.zig`:
+    - added `concurrent query and drainScheduledRefresh does not deadlock` test
+    - runs `searchQuery` and `invalidateSnapshot`/`drainScheduledRefresh` in parallel threads with atomic failure signaling
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service_test.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - concurrency tests can be timing-sensitive by nature; loop counts are intentionally moderate to keep CI runtime stable.
+- Next slice:
+  - M8: extract query metrics lock wrappers (`reset/set`) into a tiny scoped helper to further reduce repeated lock boilerplate in `SearchService`.
+
+---
+## 2026-02-22 (Cycle 225)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract query metrics lock choreography into dedicated helper module
+- Changes:
+  - Added `src/app/search_service/query_metrics_access.zig`:
+    - `resetFlags(...)`, `setElapsed(...)`, `markRefreshed(...)` helpers that own `query_mu` lock/unlock
+  - Updated `src/app/search_service.zig`:
+    - `searchQuery(...)` now uses `query_metrics_access` helpers directly
+    - `drainScheduledRefresh(...)` now marks refreshed flag via helper
+    - removed local `setQueryElapsed(...)` and `resetQueryMetrics(...)` wrappers
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/query_metrics_access.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - behavior unchanged by intent; this is lock-boilerplate consolidation only.
+- Next slice:
+  - M8: extract history list lifecycle cleanup from `deinit` into `history_access` to keep `SearchService` teardown narrowly declarative.
+
+---
+## 2026-02-22 (Cycle 226)
+- Milestone: M8 Code Hygiene / SearchService Decomposition
+- Task slice: extract history teardown lifecycle from `SearchService.deinit`
+- Changes:
+  - Updated `src/app/search_service/history_access.zig`:
+    - added `deinitHistory(...)` helper for freeing owned history entries + list teardown
+  - Updated `src/app/search_service.zig`:
+    - `deinit(...)` now delegates history teardown to `history_access.deinitHistory(...)`
+    - reduced inline lifecycle cleanup boilerplate in service struct
+  - Updated queue status in `docs/TASK_QUEUE.md`.
+- Verification:
+  - `zig fmt src/app/search_service.zig src/app/search_service/history_access.zig`
+  - `zig build test`
+  - `zig build -Denable_gtk=true`
+- Commit(s):
+  - pending
+- Risks/notes:
+  - no behavior change intended; this is pure teardown-path extraction.
+- Next slice:
+  - M8: move static-query pipeline chunk from `searchQuery` (recent snapshot + cache-read + rank call) into a dedicated helper for clearer top-level flow.
+
+---

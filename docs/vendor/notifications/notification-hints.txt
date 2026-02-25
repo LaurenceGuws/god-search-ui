@@ -1,0 +1,90 @@
+Jump to contentJump to page navigation: previous page [access key
+p]/next page [access key n]
+
+[Freedesktop Logo]
+
+Hints
+
+ContentsContents
+
+Desktop Notifications Specification
+
+1.  1 Introduction
+2.  2 Basic Design
+3.  3 Backwards Compatibility
+4.  4 Markup
+5.  5 Icons and Images
+6.  6 Categories
+7.  7 Urgency Levels
+8.  8 Hints
+9.  9 D-BUS Protocol
+
+Navigation←→
+
+Show Contents: Hints
+
+Top
+
+←→
+
+1.  1 Introduction
+2.  2 Basic Design
+3.  3 Backwards Compatibility
+4.  4 Markup
+5.  5 Icons and Images
+6.  6 Categories
+7.  7 Urgency Levels
+8.  8 Hints
+9.  9 D-BUS Protocol
+
+8 Hints #
+
+Hints are a way to provide extra data to a notification server that the
+server may be able to make use of.
+
+Neither clients nor notification servers are required to support any
+hints. Both sides should assume that hints are not passed, and should
+ignore any hints they do not understand.
+
+Third parties, when defining their own hints, should discuss the
+possibility of standardizing on the hint with other parties, preferably
+in a place such as the xdg (http://freedesktop.org/mailman/listinfo/xdg)
+mailing list at freedesktop.org (http://freedesktop.org/). If it
+warrants a standard, it will be added to the table above. If no
+consensus is reached, the hint name should be in the form of
+"x-vendor-name."
+
+The value type for the hint dictionary in D-BUS is of the
+DBUS_TYPE_VARIANT container type. This allows different data types
+(string, integer, boolean, etc.) to be used for hints. When adding a
+dictionary of hints, this type must be used, rather than putting the
+actual hint value in as the dictionary value.
+
+The following table lists the standard hints as defined by this
+specification. Future hints may be proposed and added to this list over
+time. Once again, implementations are not required to support these.
+
+Table 4: Standard Hints #
+
+  Name               Value Type
+  ------------------ ------------
+  "action-icons"     BOOLEAN
+  "category"         STRING
+  "desktop-entry"    STRING
+  "image-data"       (iiibiiay)
+  "image_data"       (iiibiiay)
+  "image-path"       STRING
+  "image_path"       STRING
+  "icon_data"        (iiibiiay)
+  "resident"         BOOLEAN
+  "sound-file"       STRING
+  "sound-name"       STRING
+  "suppress-sound"   BOOLEAN
+  "transient"        BOOLEAN
+  "x"                INT32
+  "y"                INT32
+  "urgency"          BYTE
+
+→D-BUS Protocol←Urgency Levels
+
+© 2026 Freedesktop.org
