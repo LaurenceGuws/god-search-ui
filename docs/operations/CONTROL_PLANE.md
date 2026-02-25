@@ -46,6 +46,15 @@ god-search-ui --ctl shell_health
 1. try live query via `--ctl shell_health`
 2. if unavailable/unreachable, print offline diagnostics snapshot
 
+Manual smoke:
+
+```bash
+god-search-ui --ui-daemon
+god-search-ui --ctl ping
+god-search-ui --ctl shell_health
+god-search-ui --print-shell-health
+```
+
 ## Notes
 
 - Control-plane commands are intended for daemon/resident mode.

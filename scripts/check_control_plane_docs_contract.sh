@@ -41,6 +41,8 @@ require "$README" 'Control-plane quickstart:' 'README control-plane quickstart h
 require "$README" 'god-search-ui --print-shell-health' 'README control-plane quickstart health command'
 require "$DOC" '## Exit Codes' 'CONTROL_PLANE exit codes section'
 require "$DOC" '--print-shell-health' 'CONTROL_PLANE health flow reference'
+require "$DOC" 'Manual smoke:' 'CONTROL_PLANE manual smoke header'
+require "$DOC" 'god-search-ui --ctl shell_health' 'CONTROL_PLANE manual smoke shell_health command'
 require "$DOC" 'docs/operations/CONTROL_PLANE_SMOKE.md' 'CONTROL_PLANE smoke reference'
 require "$RUNBOOK" 'scripts/control_plane_smoke.sh' 'RUNBOOK control-plane smoke reference'
 require "$RUNBOOK" 'god-search-ui --ctl ping' 'RUNBOOK ctl ping reference'
