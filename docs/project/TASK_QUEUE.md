@@ -5,10 +5,11 @@ Use this as the authoritative queue for autonomous agent cycles.
 ## Ready
 - [x] DE-R0: Implement WA-1.1 socket server MVP from `docs/WA1_CONTROL_PLANE_SPEC.md`.
 - [x] DE-R1: Break down `docs/roadmaps/DE_WEAK_AREAS_ROADMAP.md` WA-4.1 into implementation PR slice.
-- [ ] DE-M0: WA-4.1 Slice A - add module trait + registry primitives (`src/shell/module.zig`, `src/shell/registry.zig`).
-- [ ] DE-M1: WA-4.1 Slice B - route launcher startup via module registry adapter.
-- [ ] DE-M2: WA-4.1 Slice C - route notifications daemon ownership via module adapter.
-- [ ] DE-M3: WA-4.1 Slice D - add minimal typed event bus + module health snapshot.
+- [x] DE-M0: WA-4.1 Slice A - add module trait + registry primitives (`src/shell/module.zig`, `src/shell/registry.zig`).
+- [x] DE-M1: WA-4.1 Slice B - route launcher startup via module registry adapter.
+- [x] DE-M2: WA-4.1 Slice C - route notifications daemon ownership via module adapter.
+- [x] DE-M3: WA-4.1 Slice D - add minimal typed event bus + module health snapshot.
+- [ ] DE-R2: Route shell control-plane commands through typed shell event bus.
 - [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
 - [x] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
@@ -27,7 +28,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-M3: WA-4.1 Slice D - add minimal typed event bus + module health snapshot.
+- [ ] DE-R2: Route shell control-plane commands through typed shell event bus.
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -47,6 +48,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-M0: WA-4.1 Slice A module trait + registry primitives (`src/shell/module.zig`, `src/shell/registry.zig`)
 - [x] DE-M1: WA-4.1 Slice B launcher startup routed through module registry adapter
 - [x] DE-M2: WA-4.1 Slice C notifications daemon ownership routed through module adapter
+- [x] DE-M3: WA-4.1 Slice D typed event bus + module health snapshot primitives
 
 ## Blocked
 - [ ] (empty)

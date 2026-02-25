@@ -86,6 +86,14 @@ pub const Shell = struct {
         try module_registry.register(NotificationsModule.factory(&notifications_ctx));
         try module_registry.register(LauncherModule.factory(&launcher_ctx));
         try module_registry.startAll();
+        const module_health = try module_registry.healthSnapshot(allocator);
+        defer allocator.free(module_health);
+        for (module_health) |entry| {
+            std.log.debug(
+                "module.health module={s} status={s} detail={s}",
+                .{ entry.name, shell_mod.health.statusLabel(entry.health.status), entry.health.detail },
+            );
+        }
     }
 
     fn onActivate(app_ptr: ?*anyopaque, user_data: ?*anyopaque) callconv(.c) void {
