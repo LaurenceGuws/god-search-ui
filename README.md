@@ -279,6 +279,10 @@ Lua config schema validator:
 ```bash
 scripts/validate_lua_config.sh
 ```
+Lua validator canary checks:
+```bash
+scripts/check_lua_config_validator.sh
+```
 Release-validate help/docs contract check:
 ```bash
 scripts/check_release_validate_contract.sh

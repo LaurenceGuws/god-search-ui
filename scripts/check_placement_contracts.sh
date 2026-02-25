@@ -48,5 +48,6 @@ trap 'rm -rf "$tmp_dir"' EXIT
 tmp_cfg="$tmp_dir/config.lua"
 scripts/init_lua_config.sh "$tmp_cfg" >/dev/null
 scripts/validate_lua_config.sh "$tmp_cfg" >/dev/null
+scripts/check_lua_config_validator.sh >/dev/null
 
 echo "placement contract checks passed"

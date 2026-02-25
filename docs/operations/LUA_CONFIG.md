@@ -160,3 +160,9 @@ Strict schema validator:
 ```bash
 scripts/validate_lua_config.sh
 ```
+
+Validator regression checks (positive + negative canaries):
+
+```bash
+scripts/check_lua_config_validator.sh
+```
