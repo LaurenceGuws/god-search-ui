@@ -68,10 +68,15 @@ pub const Shell = struct {
 
         var event_bus = shell_mod.EventBus.init(allocator);
         defer event_bus.deinit();
+        var health_store = gtk_shell_control.HealthStore{};
+        var control_ctx = gtk_shell_control.ControlContext{
+            .event_bus = &event_bus,
+            .health_store = &health_store,
+        };
 
         var control_server: ?ipc_control.Server = null;
         defer if (control_server) |*srv| srv.deinit();
-        control_server = try gtk_shell_control.maybeStart(allocator, options.resident_mode, &event_bus);
+        control_server = try gtk_shell_control.maybeStart(allocator, options.resident_mode, &control_ctx);
 
         var module_registry = shell_mod.Registry.init(allocator);
         defer module_registry.deinit();
@@ -81,23 +86,17 @@ pub const Shell = struct {
             .resident_mode = options.resident_mode,
             .surface_mode = options.surface_mode,
             .placement_policy = options.placement_policy.notifications,
+            .health_store = &health_store,
         };
         var launcher_ctx = LauncherModule.Context{
             .gtk_app = gtk_app,
             .launch = &launch,
             .event_bus = &event_bus,
+            .health_store = &health_store,
         };
         try module_registry.register(NotificationsModule.factory(&notifications_ctx));
         try module_registry.register(LauncherModule.factory(&launcher_ctx));
         try module_registry.startAll();
-        const module_health = try module_registry.healthSnapshot(allocator);
-        defer allocator.free(module_health);
-        for (module_health) |entry| {
-            std.log.debug(
-                "module.health module={s} status={s} detail={s}",
-                .{ entry.name, shell_mod.health.statusLabel(entry.health.status), entry.health.detail },
-            );
-        }
     }
 
     fn onActivate(app_ptr: ?*anyopaque, user_data: ?*anyopaque) callconv(.c) void {
@@ -410,6 +409,7 @@ pub const Shell = struct {
             resident_mode: bool,
             surface_mode: SurfaceMode,
             placement_policy: NotificationPolicy,
+            health_store: *gtk_shell_control.HealthStore,
         };
 
         const State = struct {
@@ -459,6 +459,9 @@ pub const Shell = struct {
                 );
                 popup.attach();
                 state.popup = popup;
+                state.ctx.health_store.setNotifications(.{ .status = .ready, .detail = "daemon active" });
+            } else {
+                state.ctx.health_store.setNotifications(.{ .status = .degraded, .detail = "daemon disabled or unavailable" });
             }
             state.started = true;
         }
@@ -476,6 +479,7 @@ pub const Shell = struct {
                 state.ctx.allocator.destroy(daemon);
                 state.daemon = null;
             }
+            state.ctx.health_store.setNotifications(.{ .status = .unknown, .detail = "not started" });
             state.started = false;
         }
 
@@ -501,6 +505,7 @@ pub const Shell = struct {
             gtk_app: *c.GtkApplication,
             launch: *LaunchContext,
             event_bus: *shell_mod.EventBus,
+            health_store: *gtk_shell_control.HealthStore,
         };
 
         const State = struct {
@@ -535,6 +540,7 @@ pub const Shell = struct {
 
         fn start(state_ptr: *anyopaque) !void {
             const state: *State = @ptrCast(@alignCast(state_ptr));
+            state.ctx.health_store.setLauncher(.{ .status = .ready, .detail = "gtk loop active" });
             try state.ctx.event_bus.subscribe(.{
                 .context = state,
                 .on_event = onBusEvent,
@@ -544,7 +550,10 @@ pub const Shell = struct {
             state.started = true;
         }
 
-        fn stop(_: *anyopaque) void {}
+        fn stop(state_ptr: *anyopaque) void {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            state.ctx.health_store.setLauncher(.{ .status = .unknown, .detail = "not started" });
+        }
 
         fn handleEvent(state_ptr: *anyopaque, event: shell_mod.module.Event) void {
             const state: *State = @ptrCast(@alignCast(state_ptr));

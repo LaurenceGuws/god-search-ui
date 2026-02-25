@@ -52,14 +52,11 @@ pub const Diagnostics = struct {
             .{ .name = "notifications", .health = .{ .status = .unknown, .detail = "diagnostic snapshot (offline)" } },
         };
 
-        try out.print("[\n", .{});
-        for (entries, 0..) |entry, idx| {
+        for (entries) |entry| {
             const line = try shell_mod.health.formatEntry(allocator, entry);
             defer allocator.free(line);
-            const comma = if (idx + 1 < entries.len) "," else "";
-            try out.print("  \"{s}\"{s}\n", .{ line, comma });
+            try out.print("{s}\n", .{line});
         }
-        try out.print("]\n", .{});
         try out.flush();
     }
 };

@@ -24,7 +24,8 @@ else
             var stdout_writer = @import("std").fs.File.stdout().writer(&stdout_buffer);
             const out = &stdout_writer.interface;
             _ = allocator;
-            try out.print("[\"module=launcher status=unknown detail=gtk-disabled\",\"module=notifications status=unknown detail=gtk-disabled\"]\n", .{});
+            try out.print("module=launcher status=unknown detail=gtk-disabled\n", .{});
+            try out.print("module=notifications status=unknown detail=gtk-disabled\n", .{});
             try out.flush();
         }
     };

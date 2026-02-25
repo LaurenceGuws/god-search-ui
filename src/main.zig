@@ -37,7 +37,21 @@ pub fn main() !void {
     }
 
     if (hasArg(args, "--print-shell-health")) {
-        try god_search_ui.ui.Diagnostics.printShellHealth(allocator);
+        const live = god_search_ui.ipc.control.queryCommandMessage(allocator, .shell_health) catch null;
+        if (live) |message| {
+            defer allocator.free(message);
+            var stdout_buffer: [4096]u8 = undefined;
+            var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+            const out = &stdout_writer.interface;
+            var it = std.mem.splitScalar(u8, message, ';');
+            while (it.next()) |part| {
+                if (part.len == 0) continue;
+                try out.print("{s}\n", .{part});
+            }
+            try out.flush();
+        } else {
+            try god_search_ui.ui.Diagnostics.printShellHealth(allocator);
+        }
         return;
     }
 
@@ -200,6 +214,7 @@ fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
     if (std.mem.eql(u8, value, "hide")) return .hide;
     if (std.mem.eql(u8, value, "toggle")) return .toggle;
     if (std.mem.eql(u8, value, "version")) return .version;
+    if (std.mem.eql(u8, value, "shell_health")) return .shell_health;
     return null;
 }
 

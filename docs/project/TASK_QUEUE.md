@@ -11,7 +11,8 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-M3: WA-4.1 Slice D - add minimal typed event bus + module health snapshot.
 - [x] DE-R2: Route shell control-plane commands through typed shell event bus.
 - [x] DE-R3: Add shell module-health diagnostics output path (`--print-shell-health`).
-- [ ] DE-R4: Upgrade shell-health diagnostics from static snapshot to live daemon query.
+- [x] DE-R4: Upgrade shell-health diagnostics from static snapshot to live daemon query.
+- [ ] DE-R5: Add shell-health contract check script (daemon query path + fallback path).
 - [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
 - [x] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
@@ -30,7 +31,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-R4: Upgrade shell-health diagnostics from static snapshot to live daemon query.
+- [ ] DE-R5: Add shell-health contract check script (daemon query path + fallback path).
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -53,6 +54,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-M3: WA-4.1 Slice D typed event bus + module health snapshot primitives
 - [x] DE-R2: Shell control-plane command routing moved onto typed shell event bus
 - [x] DE-R3: Added `--print-shell-health` diagnostics command path
+- [x] DE-R4: `--print-shell-health` now queries live daemon health over control socket
 
 ## Blocked
 - [ ] (empty)

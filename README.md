@@ -80,6 +80,7 @@ god-search-ui --ctl summon
 god-search-ui --ctl hide
 god-search-ui --ctl toggle
 god-search-ui --ctl version
+god-search-ui --ctl shell_health
 ```
 
 Runtime config introspection (prints resolved surface mode + placement policy):
@@ -95,6 +96,7 @@ Shell module health snapshot:
 ```bash
 god-search-ui --print-shell-health
 ```
+If a daemon is running, this queries live module health over the control socket.
 Placement smoke:
 ```bash
 scripts/placement_smoke.sh

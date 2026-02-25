@@ -6,14 +6,17 @@ pub const Command = enum {
     hide,
     toggle,
     version,
+    shell_health,
 };
 
-pub const HandlerResult = enum {
-    ok,
-    rejected,
+pub const HandlerResult = struct {
+    ok: bool,
+    code: []const u8,
+    message: []const u8,
 };
 
 pub const Handler = *const fn (Command, *anyopaque) HandlerResult;
+pub const QueryHandler = *const fn (std.mem.Allocator, Command, *anyopaque) anyerror!?[]u8;
 
 const Request = struct {
     v: u32 = 0,
@@ -34,6 +37,7 @@ pub const Server = struct {
     socket_path: []u8,
     listener_fd: std.posix.socket_t,
     handler: Handler,
+    query_handler: ?QueryHandler,
     user_data: *anyopaque,
     stop_flag: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
     thread: ?std.Thread = null,
@@ -41,6 +45,7 @@ pub const Server = struct {
     pub fn init(
         allocator: std.mem.Allocator,
         handler: Handler,
+        query_handler: ?QueryHandler,
         user_data: *anyopaque,
     ) !Server {
         const socket_path = try defaultSocketPathAlloc(allocator);
@@ -50,6 +55,7 @@ pub const Server = struct {
             .socket_path = socket_path,
             .listener_fd = listener_fd,
             .handler = handler,
+            .query_handler = query_handler,
             .user_data = user_data,
         };
     }
@@ -71,18 +77,34 @@ pub const Server = struct {
 };
 
 pub fn trySendCommand(allocator: std.mem.Allocator, cmd: Command) !bool {
+    const response = try sendCommand(allocator, cmd);
+    defer response.deinit();
+    if (!response.value.ok) return false;
+    return std.mem.eql(u8, response.value.code, "ok");
+}
+
+pub fn queryCommandMessage(allocator: std.mem.Allocator, cmd: Command) !?[]u8 {
+    const response = try sendCommand(allocator, cmd);
+    defer response.deinit();
+    if (!response.value.ok) return null;
+    if (!std.mem.eql(u8, response.value.code, "ok")) return null;
+    const msg = try allocator.dupe(u8, response.value.message);
+    return msg;
+}
+
+fn sendCommand(allocator: std.mem.Allocator, cmd: Command) !std.json.Parsed(Response) {
     const socket_path = try defaultSocketPathAlloc(allocator);
     defer allocator.free(socket_path);
 
     const fd = std.posix.socket(std.posix.AF.UNIX, std.posix.SOCK.STREAM | std.posix.SOCK.CLOEXEC, 0) catch |err| {
-        if (err == error.AddressFamilyNotSupported) return false;
+        if (err == error.AddressFamilyNotSupported) return error.NoSocketSupport;
         return err;
     };
     defer std.posix.close(fd);
 
     const addr = try std.net.Address.initUnix(socket_path);
     const connected = try connectWithRetryTimeout(fd, &addr.any, addr.getOsSockLen(), connect_timeout_ms);
-    if (!connected) return false;
+    if (!connected) return error.ConnectTimeout;
 
     const request = try std.fmt.allocPrint(allocator, "{{\"v\":1,\"cmd\":\"{s}\"}}", .{@tagName(cmd)});
     defer allocator.free(request);
@@ -96,18 +118,16 @@ pub fn trySendCommand(allocator: std.mem.Allocator, cmd: Command) !bool {
             .revents = 0,
         },
     };
-    const poll_count = std.posix.poll(&poll_fds, response_timeout_ms) catch return false;
-    if (poll_count <= 0) return false;
-    if ((poll_fds[0].revents & std.posix.POLL.IN) == 0) return false;
+    const poll_count = std.posix.poll(&poll_fds, response_timeout_ms) catch return error.PollFailed;
+    if (poll_count <= 0) return error.PollTimeout;
+    if ((poll_fds[0].revents & std.posix.POLL.IN) == 0) return error.NoPollInput;
 
     var response_buf: [1024]u8 = undefined;
-    const n = std.posix.read(fd, &response_buf) catch return false;
-    if (n == 0) return false;
+    const n = std.posix.read(fd, &response_buf) catch return error.ReadFailed;
+    if (n == 0) return error.EmptyResponse;
 
-    var parsed = std.json.parseFromSlice(Response, allocator, response_buf[0..n], .{}) catch return false;
-    defer parsed.deinit();
-    if (!parsed.value.ok) return false;
-    return std.mem.eql(u8, parsed.value.code, "ok");
+    const parsed = std.json.parseFromSlice(Response, allocator, response_buf[0..n], .{}) catch return error.BadResponse;
+    return parsed;
 }
 
 pub fn defaultSocketPathAlloc(allocator: std.mem.Allocator) ![]u8 {
@@ -198,13 +218,25 @@ fn handleClient(server: *Server, client_fd: std.posix.socket_t) void {
     switch (cmd) {
         .ping => writeResponse(client_fd, true, "ok", "pong"),
         .version => writeResponse(client_fd, true, "ok", "dev"),
+        .shell_health => {
+            const query = server.query_handler orelse {
+                writeResponse(client_fd, false, "rejected", "No query handler");
+                return;
+            };
+            const msg_opt = query(server.allocator, cmd, server.user_data) catch {
+                writeResponse(client_fd, false, "rejected", "Query failed");
+                return;
+            };
+            if (msg_opt) |msg| {
+                defer server.allocator.free(msg);
+                writeResponse(client_fd, true, "ok", msg);
+            } else {
+                writeResponse(client_fd, false, "rejected", "No data");
+            }
+        },
         else => {
             const result = server.handler(cmd, server.user_data);
-            if (result == .ok) {
-                writeResponse(client_fd, true, "ok", "accepted");
-            } else {
-                writeResponse(client_fd, false, "rejected", "Command rejected");
-            }
+            writeResponse(client_fd, result.ok, result.code, result.message);
         },
     }
 }
@@ -219,7 +251,7 @@ fn parseCommand(value: []const u8) ?Command {
 }
 
 fn writeResponse(fd: std.posix.socket_t, ok: bool, code: []const u8, message: []const u8) void {
-    var buf: [512]u8 = undefined;
+    var buf: [1024]u8 = undefined;
     const json = std.fmt.bufPrint(
         &buf,
         "{{\"ok\":{s},\"code\":\"{s}\",\"message\":\"{s}\"}}",
