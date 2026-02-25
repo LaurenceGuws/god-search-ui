@@ -22,6 +22,7 @@ const notifications_mod = @import("../notifications/mod.zig");
 const gtk_shell_control = @import("gtk/shell_control.zig");
 const gtk_shell_lifecycle = @import("gtk/shell_lifecycle.zig");
 const gtk_shell_notifications = @import("gtk/shell_notifications.zig");
+const gtk_shell_notifications_popup = @import("gtk/shell_notifications_popup.zig");
 const gtk_shell_startup = @import("gtk/shell_startup.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -67,6 +68,18 @@ pub const Shell = struct {
             allocator.destroy(daemon);
         };
         notifications_daemon = try gtk_shell_notifications.maybeStart(allocator, options.resident_mode);
+
+        var notifications_popup: ?*gtk_shell_notifications_popup.PopupManager = null;
+        defer if (notifications_popup) |popup| {
+            popup.deinit();
+            allocator.destroy(popup);
+        };
+        if (notifications_daemon) |daemon| {
+            const popup = try allocator.create(gtk_shell_notifications_popup.PopupManager);
+            popup.* = try gtk_shell_notifications_popup.PopupManager.init(allocator, gtk_app, daemon);
+            popup.attach();
+            notifications_popup = popup;
+        }
 
         _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), &launch, null, 0);
         _ = c.g_application_run(@ptrCast(gtk_app), 0, null);

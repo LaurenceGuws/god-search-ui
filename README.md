@@ -69,6 +69,8 @@ scripts/dev.sh check
 scripts/dev.sh fmt
 scripts/dev.sh build
 scripts/dev.sh test
+scripts/dev_notifications_takeover.sh takeover
+scripts/dev_notifications_takeover.sh smoke
 ```
 
 Draft release notes from latest commits:

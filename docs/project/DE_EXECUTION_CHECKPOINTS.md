@@ -106,3 +106,23 @@ gdbus call --session --dest org.freedesktop.Notifications --object-path /org/fre
 gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.GetCapabilities
 notify-send "god-search-ui" "dbus smoke"
 ```
+
+## CP-4 Notifications Popup + Close Reasons
+
+Scope:
+- GTK popup stack for notifications in resident daemon mode
+- `replaces_id` updates existing popup in place
+- timeout and dismiss interactions close notifications with spec reasons
+
+Done criteria:
+1. Notification popups render in resident daemon mode.
+2. `notify-send -p -r <id>` preserves notification ID (`replaces_id` behavior).
+3. Timeout emits `NotificationClosed(id, 1)`.
+4. D-Bus `CloseNotification` emits `NotificationClosed(id, 3)`.
+5. Control daemon remains healthy (`--ctl ping` succeeds while popup flow is active).
+
+Verification:
+```bash
+scripts/dev_notifications_takeover.sh takeover
+scripts/dev_notifications_takeover.sh smoke
+```

@@ -65,12 +65,33 @@ const vtable = c.GDBusInterfaceVTable{
 };
 
 pub const Daemon = struct {
+    pub const NotifyEvent = struct {
+        id: u32,
+        app_name: []const u8,
+        summary: []const u8,
+        body: []const u8,
+        expire_timeout: i32,
+        replaced: bool,
+    };
+
+    pub const ClosedEvent = struct {
+        id: u32,
+        reason: u32,
+    };
+
+    pub const Hooks = struct {
+        user_data: ?*anyopaque = null,
+        on_notify: ?*const fn (*anyopaque, NotifyEvent) void = null,
+        on_closed: ?*const fn (*anyopaque, ClosedEvent) void = null,
+    };
+
     allocator: std.mem.Allocator,
     state: notifications_state.Store,
     owner_id: c.guint = 0,
     registration_id: c.guint = 0,
     node_info: ?*c.GDBusNodeInfo = null,
     connection: ?*c.GDBusConnection = null,
+    hooks: Hooks = .{},
 
     pub fn init(allocator: std.mem.Allocator) !Daemon {
         var gerr: ?*c.GError = null;
@@ -119,6 +140,28 @@ pub const Daemon = struct {
             self.node_info = null;
         }
         self.state.deinit();
+    }
+
+    pub fn setHooks(self: *Daemon, hooks: Hooks) void {
+        self.hooks = hooks;
+    }
+
+    pub fn clearHooks(self: *Daemon) void {
+        self.hooks = .{};
+    }
+
+    pub fn closeWithReason(self: *Daemon, id: u32, reason: u32) bool {
+        if (!self.state.close(id)) return false;
+        emitNotificationClosed(self, id, reason);
+        if (self.hooks.on_closed) |on_closed| {
+            if (self.hooks.user_data) |user_data| {
+                on_closed(user_data, .{
+                    .id = id,
+                    .reason = reason,
+                });
+            }
+        }
+        return true;
     }
 };
 
@@ -261,6 +304,7 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
     const expire_timeout = c.g_variant_get_int32(expire_timeout_variant);
     const has_actions = c.g_variant_n_children(actions_variant) > 0;
 
+    const replaced = replaces_id != 0 and self.state.map.getPtr(replaces_id) != null;
     const id = self.state.notify(.{
         .app_name = std.mem.span(app_name),
         .summary = std.mem.span(summary),
@@ -276,6 +320,19 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
         );
         return;
     };
+
+    if (self.hooks.on_notify) |on_notify| {
+        if (self.hooks.user_data) |user_data| {
+            on_notify(user_data, .{
+                .id = id,
+                .app_name = std.mem.span(app_name),
+                .summary = std.mem.span(summary),
+                .body = std.mem.span(body),
+                .expire_timeout = expire_timeout,
+                .replaced = replaced and id == replaces_id,
+            });
+        }
+    }
 
     c.g_dbus_method_invocation_return_value(invocation, c.g_variant_new("(u)", id));
 }
@@ -295,9 +352,7 @@ fn handleCloseNotification(self: *Daemon, parameters: ?*c.GVariant, invocation: 
     defer c.g_variant_unref(id_variant);
     const notification_id = c.g_variant_get_uint32(id_variant);
 
-    if (self.state.close(notification_id)) {
-        emitNotificationClosed(self, notification_id, 3);
-    }
+    _ = self.closeWithReason(notification_id, 3);
 
     c.g_dbus_method_invocation_return_value(invocation, c.g_variant_new("()"));
 }

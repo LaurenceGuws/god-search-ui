@@ -67,7 +67,13 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-chip-file { color: #8bc3ff; background: rgba(139, 195, 255, 0.16); }\n" ++
         ".gs-chip-grep { color: #b8a6ff; background: rgba(184, 166, 255, 0.16); }\n" ++
         ".gs-chip-action { color: #f18cb6; background: rgba(241, 140, 182, 0.16); }\n" ++
-        ".gs-chip-hint { color: #9aa1b5; background: rgba(154, 161, 181, 0.16); }\n";
+        ".gs-chip-hint { color: #9aa1b5; background: rgba(154, 161, 181, 0.16); }\n" ++
+        ".gs-notify-frame { background: rgba(9, 13, 20, 0.88); border: 1px solid rgba(132, 160, 228, 0.32); border-radius: 10px; }\n" ++
+        ".gs-notify-list { background: transparent; }\n" ++
+        ".gs-notify-row { background: rgba(30, 38, 56, 0.82); border: 1px solid rgba(132, 160, 228, 0.20); border-radius: 8px; padding: 10px; }\n" ++
+        ".gs-notify-summary { color: #e8ecf7; font-weight: 700; }\n" ++
+        ".gs-notify-body { color: #bec9df; }\n" ++
+        ".gs-notify-close { min-width: 26px; min-height: 26px; padding: 0 8px; font-size: 0.82em; }\n";
 
     const provider = c.gtk_css_provider_new();
     defer c.g_object_unref(provider);

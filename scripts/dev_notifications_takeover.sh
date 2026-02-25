@@ -7,12 +7,13 @@ SOCKET_PATH="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/god-search-ui.sock"
 
 usage() {
     cat <<'USAGE'
-Usage: scripts/dev_notifications_takeover.sh [takeover|restore|status]
+Usage: scripts/dev_notifications_takeover.sh [takeover|restore|status|smoke]
 
 Modes:
   takeover  Stop swaync, start god-search-ui --ui-daemon, verify bus owner.
   restore   Kill god-search-ui daemon and restart swaync service/socket.
   status    Print current org.freedesktop.Notifications owner info.
+  smoke     Run quick replace/close/timeout signal checks against current owner.
 USAGE
 }
 
@@ -66,6 +67,42 @@ case "$MODE" in
     status)
         INFO="$(bus_info)"
         echo "[dev-notify] bus owner: ${INFO:-<none>}"
+        ;;
+    smoke)
+        echo "[dev-notify] running smoke checks"
+        INFO="$(bus_info)"
+        if [[ "$INFO" != *"god-search-ui"* ]]; then
+            echo "[dev-notify] ERROR: org.freedesktop.Notifications is not owned by god-search-ui"
+            echo "[dev-notify] current owner: ${INFO:-<none>}"
+            exit 3
+        fi
+
+        ID1="$(notify-send -p "god-search-ui smoke" "replace-one")"
+        ID2="$(notify-send -p -r "$ID1" "god-search-ui smoke" "replace-two")"
+        echo "[dev-notify] replace ids: first=$ID1 second=$ID2"
+        if [[ "$ID1" != "$ID2" ]]; then
+            echo "[dev-notify] ERROR: replace-id mismatch"
+            exit 4
+        fi
+
+        timeout 6 dbus-monitor "interface='org.freedesktop.Notifications'" >/tmp/god-search-ui-notify-smoke.log 2>&1 &
+        MON_PID=$!
+        sleep 0.4
+        gdbus call --session \
+            --dest org.freedesktop.Notifications \
+            --object-path /org/freedesktop/Notifications \
+            --method org.freedesktop.Notifications.CloseNotification \
+            "$ID1" >/dev/null
+        notify-send -t 900 "god-search-ui smoke" "timeout-check"
+        sleep 2
+        kill "$MON_PID" 2>/dev/null || true
+        wait "$MON_PID" 2>/dev/null || true
+
+        echo "[dev-notify] signal extract:"
+        rg -n "member=NotificationClosed|uint32 [0-9]+" /tmp/god-search-ui-notify-smoke.log | tail -n 10 || true
+        rg -q "uint32 3" /tmp/god-search-ui-notify-smoke.log || { echo "[dev-notify] ERROR: missing reason=3 close signal"; exit 5; }
+        rg -q "uint32 1" /tmp/god-search-ui-notify-smoke.log || { echo "[dev-notify] ERROR: missing reason=1 timeout signal"; exit 6; }
+        echo "[dev-notify] smoke checks passed"
         ;;
     -h|--help|help)
         usage
