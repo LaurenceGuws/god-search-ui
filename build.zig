@@ -17,8 +17,10 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
     const enable_gtk = b.option(bool, "enable_gtk", "Enable GTK4 UI shell") orelse false;
+    const enable_layer_shell = b.option(bool, "enable_layer_shell", "Enable gtk4-layer-shell integration") orelse false;
     const build_options = b.addOptions();
     build_options.addOption(bool, "enable_gtk", enable_gtk);
+    build_options.addOption(bool, "enable_layer_shell", enable_layer_shell);
     // It's also possible to define more custom flags to toggle optional features
     // of this build script using `b.option()`. All defined flags (including
     // target and optimize options) will be listed when running `zig build --help`
@@ -93,6 +95,9 @@ pub fn build(b: *std.Build) void {
     if (enable_gtk) {
         exe.linkLibC();
         exe.root_module.linkSystemLibrary("gtk4", .{ .use_pkg_config = .force });
+        if (enable_layer_shell) {
+            exe.root_module.linkSystemLibrary("gtk4-layer-shell-0", .{ .use_pkg_config = .force });
+        }
     }
 
     // This declares intent for the executable to be installed into the
@@ -136,6 +141,9 @@ pub fn build(b: *std.Build) void {
     if (enable_gtk) {
         mod_tests.linkLibC();
         mod_tests.root_module.linkSystemLibrary("gtk4", .{ .use_pkg_config = .force });
+        if (enable_layer_shell) {
+            mod_tests.root_module.linkSystemLibrary("gtk4-layer-shell-0", .{ .use_pkg_config = .force });
+        }
     }
 
     // A run step that will run the test executable.
@@ -150,6 +158,9 @@ pub fn build(b: *std.Build) void {
     if (enable_gtk) {
         exe_tests.linkLibC();
         exe_tests.root_module.linkSystemLibrary("gtk4", .{ .use_pkg_config = .force });
+        if (enable_layer_shell) {
+            exe_tests.root_module.linkSystemLibrary("gtk4-layer-shell-0", .{ .use_pkg_config = .force });
+        }
     }
 
     // A run step that will run the second test executable.

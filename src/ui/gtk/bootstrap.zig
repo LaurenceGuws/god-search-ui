@@ -2,6 +2,8 @@ const std = @import("std");
 const app_mod = @import("../../app/mod.zig");
 const gtk_types = @import("types.zig");
 const placement_bridge = @import("placement_bridge.zig");
+const layer_shell = @import("layer_shell.zig");
+const SurfaceMode = @import("../surfaces/mod.zig").SurfaceMode;
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -13,6 +15,7 @@ pub const LaunchContext = struct {
     telemetry: *app_mod.TelemetrySink,
     resident_mode: bool,
     start_hidden: bool,
+    surface_mode: SurfaceMode,
     ctx: ?*UiContext,
     gtk_app: *c.GtkApplication,
 };
@@ -41,6 +44,10 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     const launch_start_ns = std.time.nanoTimestamp();
     const window = c.gtk_application_window_new(gtk_app);
     c.gtk_window_set_title(@ptrCast(window), "God Search");
+    _ = if (layer_shell.shouldUseLayerShell(launch.surface_mode))
+        layer_shell.applyLauncher(window)
+    else
+        false;
     configureInitialWindowSize(window);
     hooks.install_css(window);
 

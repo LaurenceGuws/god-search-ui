@@ -26,6 +26,7 @@ pub fn main() !void {
     if (ui_mode) {
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
+        const surface_mode = resolveSurfaceMode(args);
         if (resident_mode) {
             const already_running = god_search_ui.ipc.control.trySendCommand(allocator, .ping) catch false;
             if (already_running) {
@@ -50,6 +51,7 @@ pub fn main() !void {
         try god_search_ui.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry, .{
             .resident_mode = resident_mode,
             .start_hidden = start_hidden,
+            .surface_mode = surface_mode,
         });
         return;
     }
@@ -176,4 +178,14 @@ fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
     if (std.mem.eql(u8, value, "toggle")) return .toggle;
     if (std.mem.eql(u8, value, "version")) return .version;
     return null;
+}
+
+fn resolveSurfaceMode(args: []const []const u8) god_search_ui.ui.surfaces.SurfaceMode {
+    if (argValueAfterFlag(args, "--surface-mode")) |raw| {
+        if (god_search_ui.ui.surfaces.SurfaceMode.parse(raw)) |mode| return mode;
+    }
+    const env = std.process.getEnvVarOwned(std.heap.page_allocator, "GOD_SEARCH_SURFACE_MODE") catch return .auto;
+    defer std.heap.page_allocator.free(env);
+    const trimmed = std.mem.trim(u8, env, " \t\r\n");
+    return god_search_ui.ui.surfaces.SurfaceMode.parse(trimmed) orelse .auto;
 }

@@ -2,6 +2,8 @@ const std = @import("std");
 const gtk_types = @import("types.zig");
 const notifications = @import("../../notifications/mod.zig");
 const placement_bridge = @import("placement_bridge.zig");
+const layer_shell = @import("layer_shell.zig");
+const SurfaceMode = @import("../surfaces/mod.zig").SurfaceMode;
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -38,15 +40,17 @@ pub const PopupManager = struct {
     allocator: std.mem.Allocator,
     daemon: *notifications.Daemon,
     gtk_app: *c.GtkApplication,
+    surface_mode: SurfaceMode,
     window: ?*c.GtkWidget,
     list: ?*c.GtkWidget,
     entries: std.ArrayList(PopupEntry),
 
-    pub fn init(allocator: std.mem.Allocator, gtk_app: *c.GtkApplication, daemon: *notifications.Daemon) !PopupManager {
+    pub fn init(allocator: std.mem.Allocator, gtk_app: *c.GtkApplication, daemon: *notifications.Daemon, surface_mode: SurfaceMode) !PopupManager {
         const manager = PopupManager{
             .allocator = allocator,
             .daemon = daemon,
             .gtk_app = gtk_app,
+            .surface_mode = surface_mode,
             .window = null,
             .list = null,
             .entries = .empty,
@@ -247,6 +251,10 @@ pub const PopupManager = struct {
 
         const window = c.gtk_application_window_new(self.gtk_app);
         c.gtk_window_set_title(@ptrCast(window), "God Search Notifications");
+        _ = if (layer_shell.shouldUseLayerShell(self.surface_mode))
+            layer_shell.applyNotifications(window)
+        else
+            false;
         placement_bridge.configureNotificationPopupWindow(window);
         c.gtk_window_set_resizable(@ptrCast(window), GFALSE);
         c.gtk_window_set_decorated(@ptrCast(window), GFALSE);

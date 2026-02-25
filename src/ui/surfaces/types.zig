@@ -6,6 +6,20 @@ pub const SurfaceState = enum {
     visible,
 };
 
+pub const SurfaceMode = enum {
+    auto,
+    toplevel,
+    layer_shell,
+
+    pub fn parse(raw: []const u8) ?SurfaceMode {
+        if (std.ascii.eqlIgnoreCase(raw, "auto")) return .auto;
+        if (std.ascii.eqlIgnoreCase(raw, "toplevel")) return .toplevel;
+        if (std.ascii.eqlIgnoreCase(raw, "layer-shell")) return .layer_shell;
+        if (std.ascii.eqlIgnoreCase(raw, "layer_shell")) return .layer_shell;
+        return null;
+    }
+};
+
 pub const Surface = struct {
     name: []const u8,
     context: *anyopaque,

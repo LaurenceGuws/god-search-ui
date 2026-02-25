@@ -34,6 +34,15 @@ zig build -Denable_gtk=true run -- --ui
 ```
 In GTK mode, use `Ctrl+R` to refresh provider snapshot cache.
 Route prefixes include `@ # ! ~ % & $ > = ?` (`$` = notifications history/dismiss route).
+Optional deterministic Wayland anchoring via layer-shell:
+```bash
+zig build -Denable_gtk=true -Denable_layer_shell=true run -- --ui --surface-mode layer-shell
+```
+Surface mode can also be set by env:
+```bash
+GOD_SEARCH_SURFACE_MODE=layer-shell god-search-ui --ui
+```
+Accepted values: `auto` (default), `toplevel`, `layer-shell`.
 
 Resident GTK modes (recommended for zero-drop fast summon):
 ```bash

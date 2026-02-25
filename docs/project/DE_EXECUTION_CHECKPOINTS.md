@@ -184,6 +184,7 @@ Done criteria:
 3. Surface placement contracts are defined for launcher + notifications.
 4. GTK launcher/popup creation paths consume placement policy via adapter bridge.
 5. Limitation is explicit: toplevel Wayland still compositor-placed until layer-shell adapter exists.
+6. Runtime surface mode switch exists (`toplevel`/`layer-shell`), with safe fallback when layer-shell is unavailable.
 
 Verification:
 ```bash
