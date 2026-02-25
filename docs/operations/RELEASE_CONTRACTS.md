@@ -27,6 +27,8 @@ Release contracts are guard scripts that keep release automation CLI/docs behavi
   - `scripts/check_shell_health_contract.sh`
 - Control-plane command smoke:
   - `scripts/control_plane_smoke.sh`
+- Control-plane docs parity contract:
+  - `scripts/check_control_plane_docs_contract.sh`
 
 Release-validate contract summary:
 - run `scripts/check_release_validate_contract.sh` after any docs/CLI updates touching release validate flows.
