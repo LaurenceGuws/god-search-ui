@@ -72,6 +72,7 @@ scripts/dev.sh test
 scripts/dev_notifications_takeover.sh takeover
 scripts/dev_notifications_takeover.sh smoke
 ```
+`smoke` also sends an action-capable notification; click its action button while running `dbus-monitor` to observe `ActionInvoked`.
 
 Draft release notes from latest commits:
 ```bash

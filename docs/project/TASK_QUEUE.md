@@ -15,10 +15,11 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-A2.2: Extract startup/activation lifecycle orchestration into a dedicated runtime module.
 - [x] DE-B1: Add notifications daemon MVP (`org.freedesktop.Notifications`: `Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`).
 - [x] DE-B2: Add notification popup renderer + timeout/replaces_id close interactions + `NotificationClosed` reason coverage.
-- [ ] DE-B3: Add action buttons/hints wiring and `ActionInvoked` signal flow.
+- [x] DE-B3: Add action buttons/hints wiring and `ActionInvoked` signal flow.
+- [ ] DE-B4: Add persistent notification history + dismiss-all UX.
 
 ## In Progress
-- [ ] DE-B3: notification actions/hints slice (`ActionInvoked`, selected hint handling)
+- [ ] DE-B4: notification history + bulk-dismiss slice
 
 ## Blocked
 - [ ] (empty)

@@ -13,12 +13,19 @@ const PopupEntry = struct {
     row: *c.GtkWidget,
     summary_label: *c.GtkLabel,
     body_label: *c.GtkLabel,
+    actions_box: *c.GtkWidget,
     timeout_id: c.guint,
 };
 
 const DismissPayload = struct {
     manager: *PopupManager,
     id: u32,
+};
+
+const ActionPayload = struct {
+    manager: *PopupManager,
+    id: u32,
+    action_key: ?[*:0]u8,
 };
 
 const TimeoutPayload = struct {
@@ -88,14 +95,17 @@ pub const PopupManager = struct {
             const entry = &self.entries.items[existing_idx];
             c.gtk_label_set_text(entry.summary_label, toCStr(event.summary));
             c.gtk_label_set_text(entry.body_label, toCStr(event.body));
+            updateActions(self, entry.actions_box, event.id, event.actions);
             rescheduleTimeout(self, entry, event.expire_timeout);
         } else {
             const row = createRow(self, event.id, event.summary, event.body) catch return;
+            updateActions(self, row.actions_box, event.id, event.actions);
             self.entries.append(self.allocator, .{
                 .id = event.id,
                 .row = row.row,
                 .summary_label = row.summary_label,
                 .body_label = row.body_label,
+                .actions_box = row.actions_box,
                 .timeout_id = 0,
             }) catch {
                 c.gtk_box_remove(@ptrCast(self.list.?), row.row);
@@ -161,6 +171,7 @@ pub const PopupManager = struct {
         row: *c.GtkWidget,
         summary_label: *c.GtkLabel,
         body_label: *c.GtkLabel,
+        actions_box: *c.GtkWidget,
     } {
         const row = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 6);
         c.gtk_widget_add_css_class(row, "gs-notify-row");
@@ -177,7 +188,7 @@ pub const PopupManager = struct {
         c.gtk_widget_add_css_class(close_btn, "gs-notify-close");
         const payload: *DismissPayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(DismissPayload))));
         payload.* = .{ .manager = self, .id = id };
-        _ = c.g_signal_connect_data(close_btn, "clicked", c.G_CALLBACK(onDismissClicked), payload, onPayloadDestroyed, 0);
+        _ = c.g_signal_connect_data(close_btn, "clicked", c.G_CALLBACK(onDismissClicked), payload, onDismissPayloadDestroyed, 0);
 
         c.gtk_box_append(@ptrCast(header), summary_label);
         c.gtk_box_append(@ptrCast(header), close_btn);
@@ -187,14 +198,20 @@ pub const PopupManager = struct {
         c.gtk_label_set_wrap(@ptrCast(body_label), GTRUE);
         c.gtk_widget_add_css_class(body_label, "gs-notify-body");
 
+        const actions_box = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 6);
+        c.gtk_widget_add_css_class(actions_box, "gs-notify-actions");
+        c.gtk_widget_set_visible(actions_box, GFALSE);
+
         c.gtk_box_append(@ptrCast(row), header);
         c.gtk_box_append(@ptrCast(row), body_label);
+        c.gtk_box_append(@ptrCast(row), actions_box);
         c.gtk_box_append(@ptrCast(self.list.?), row);
 
         return .{
             .row = @ptrCast(row),
             .summary_label = @ptrCast(summary_label),
             .body_label = @ptrCast(body_label),
+            .actions_box = @ptrCast(actions_box),
         };
     }
 
@@ -204,7 +221,23 @@ pub const PopupManager = struct {
         _ = payload.manager.daemon.closeWithReason(payload.id, 2);
     }
 
+    fn onActionClicked(_: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c) void {
+        if (user_data == null) return;
+        const payload: *ActionPayload = @ptrCast(@alignCast(user_data.?));
+        const action_key = payload.action_key orelse return;
+        payload.manager.daemon.emitActionInvoked(payload.id, std.mem.span(action_key));
+        _ = payload.manager.daemon.closeWithReason(payload.id, 2);
+    }
+
     fn onPayloadDestroyed(data: ?*anyopaque, _: ?*c.GClosure) callconv(.c) void {
+        if (data) |payload| {
+            const action_payload: *ActionPayload = @ptrCast(@alignCast(payload));
+            if (action_payload.action_key) |ptr| c.g_free(ptr);
+            c.g_free(payload);
+        }
+    }
+
+    fn onDismissPayloadDestroyed(data: ?*anyopaque, _: ?*c.GClosure) callconv(.c) void {
         if (data) |payload| c.g_free(payload);
     }
 
@@ -240,9 +273,39 @@ pub const PopupManager = struct {
         self.list = @ptrCast(list);
         return true;
     }
+
+    fn updateActions(self: *PopupManager, actions_box: *c.GtkWidget, id: u32, actions: []const notifications.Daemon.Action) void {
+        clearChildren(actions_box);
+        if (actions.len == 0) {
+            c.gtk_widget_set_visible(actions_box, GFALSE);
+            return;
+        }
+        for (actions) |action| {
+            const button = c.gtk_button_new_with_label(toCStr(action.label));
+            c.gtk_widget_add_css_class(button, "gs-notify-action-btn");
+            const payload: *ActionPayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(ActionPayload))));
+            payload.* = .{
+                .manager = self,
+                .id = id,
+                .action_key = c.g_strndup(action.key.ptr, @intCast(action.key.len)),
+            };
+            _ = c.g_signal_connect_data(button, "clicked", c.G_CALLBACK(onActionClicked), payload, onPayloadDestroyed, 0);
+            c.gtk_box_append(@ptrCast(actions_box), button);
+        }
+        c.gtk_widget_set_visible(actions_box, GTRUE);
+    }
 };
 
 fn toCStr(value: []const u8) [*:0]const u8 {
     if (value.len == 0) return "";
     return @ptrCast(value.ptr);
+}
+
+fn clearChildren(box: *c.GtkWidget) void {
+    var child = c.gtk_widget_get_first_child(box);
+    while (child != null) {
+        const next = c.gtk_widget_get_next_sibling(child);
+        c.gtk_box_remove(@ptrCast(box), child);
+        child = next;
+    }
 }

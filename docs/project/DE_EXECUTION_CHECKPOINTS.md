@@ -126,3 +126,23 @@ Verification:
 scripts/dev_notifications_takeover.sh takeover
 scripts/dev_notifications_takeover.sh smoke
 ```
+
+## CP-5 Notifications Actions + Hints (MVP)
+
+Scope:
+- parse `actions:as` and render action buttons in popup rows
+- emit `ActionInvoked(id, action_key)` on action click
+- parse MVP hints (`urgency`, `transient`) without request rejection
+
+Done criteria:
+1. `GetCapabilities` includes `actions`.
+2. `Notify` accepts action arrays and popup renders action buttons.
+3. Clicking an action button emits `ActionInvoked`.
+4. Hints parsing does not break notifications with `urgency`/`transient`.
+
+Verification:
+```bash
+scripts/dev_notifications_takeover.sh takeover
+scripts/dev_notifications_takeover.sh smoke
+# manual: click popup action button and confirm ActionInvoked via dbus-monitor
+```

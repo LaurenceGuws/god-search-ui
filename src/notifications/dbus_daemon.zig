@@ -65,6 +65,11 @@ const vtable = c.GDBusInterfaceVTable{
 };
 
 pub const Daemon = struct {
+    pub const Action = struct {
+        key: []const u8,
+        label: []const u8,
+    };
+
     pub const NotifyEvent = struct {
         id: u32,
         app_name: []const u8,
@@ -72,6 +77,9 @@ pub const Daemon = struct {
         body: []const u8,
         expire_timeout: i32,
         replaced: bool,
+        urgency: u8,
+        transient: bool,
+        actions: []const Action,
     };
 
     pub const ClosedEvent = struct {
@@ -163,6 +171,21 @@ pub const Daemon = struct {
         }
         return true;
     }
+
+    pub fn emitActionInvoked(self: *Daemon, id: u32, action_key: []const u8) void {
+        const conn = self.connection orelse return;
+        const key_z = self.allocator.dupeZ(u8, action_key) catch return;
+        defer self.allocator.free(key_z);
+        _ = c.g_dbus_connection_emit_signal(
+            conn,
+            null,
+            object_path,
+            interface_name,
+            "ActionInvoked",
+            c.g_variant_new("(us)", id, key_z.ptr),
+            null,
+        );
+    }
 };
 
 fn onBusAcquired(connection: ?*c.GDBusConnection, _: [*c]const u8, user_data: ?*anyopaque) callconv(.c) void {
@@ -248,11 +271,12 @@ fn onMethodCall(
 
 fn handleGetCapabilities(invocation: *c.GDBusMethodInvocation) void {
     var capabilities = [_]?[*:0]const u8{
+        "actions",
         "body",
         "body-markup",
         null,
     };
-    const caps = c.g_variant_new_strv(@ptrCast(&capabilities[0]), 2);
+    const caps = c.g_variant_new_strv(@ptrCast(&capabilities[0]), 3);
     var tuple_items = [_]?*c.GVariant{caps};
     c.g_dbus_method_invocation_return_value(invocation, c.g_variant_new_tuple(@ptrCast(&tuple_items[0]), 1));
 }
@@ -302,7 +326,10 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
     const body = c.g_variant_get_string(body_variant, null);
     const replaces_id = c.g_variant_get_uint32(replaces_id_variant);
     const expire_timeout = c.g_variant_get_int32(expire_timeout_variant);
-    const has_actions = c.g_variant_n_children(actions_variant) > 0;
+    const action_pairs = parseActions(self.allocator, actions_variant.?) catch &.{};
+    defer if (action_pairs.len > 0) self.allocator.free(action_pairs);
+    const has_actions = action_pairs.len > 0;
+    const parsed_hints = parseHints(hints_variant.?);
 
     const replaced = replaces_id != 0 and self.state.map.getPtr(replaces_id) != null;
     const id = self.state.notify(.{
@@ -330,6 +357,9 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
                 .body = std.mem.span(body),
                 .expire_timeout = expire_timeout,
                 .replaced = replaced and id == replaces_id,
+                .urgency = parsed_hints.urgency,
+                .transient = parsed_hints.transient,
+                .actions = action_pairs,
             });
         }
     }
@@ -376,6 +406,52 @@ fn returnInvalidArgs(invocation: *c.GDBusMethodInvocation, message: [*:0]const u
         "org.freedesktop.DBus.Error.InvalidArgs",
         message,
     );
+}
+
+const ParsedHints = struct {
+    urgency: u8 = 1,
+    transient: bool = false,
+};
+
+fn parseHints(hints_variant: *c.GVariant) ParsedHints {
+    var result: ParsedHints = .{};
+    var urgency: c.guchar = result.urgency;
+    if (c.g_variant_lookup(hints_variant, "urgency", "y", &urgency) != 0) {
+        result.urgency = urgency;
+    }
+    var transient_bool: c.gboolean = 0;
+    if (c.g_variant_lookup(hints_variant, "transient", "b", &transient_bool) != 0) {
+        result.transient = transient_bool != 0;
+    }
+    return result;
+}
+
+fn parseActions(allocator: std.mem.Allocator, actions_variant: *c.GVariant) ![]Daemon.Action {
+    const child_count = c.g_variant_n_children(actions_variant);
+    if (child_count < 2) return &.{};
+
+    const pair_count = child_count / 2;
+    var actions = try allocator.alloc(Daemon.Action, @intCast(pair_count));
+    errdefer allocator.free(actions);
+
+    var out_idx: usize = 0;
+    var i: usize = 0;
+    while (i + 1 < child_count and out_idx < actions.len) : (i += 2) {
+        const key_variant = c.g_variant_get_child_value(actions_variant, @intCast(i));
+        defer c.g_variant_unref(key_variant);
+        const label_variant = c.g_variant_get_child_value(actions_variant, @intCast(i + 1));
+        defer c.g_variant_unref(label_variant);
+
+        const key = std.mem.span(c.g_variant_get_string(key_variant, null));
+        const label = std.mem.span(c.g_variant_get_string(label_variant, null));
+        actions[out_idx] = .{
+            .key = key,
+            .label = label,
+        };
+        out_idx += 1;
+    }
+
+    return actions[0..out_idx];
 }
 
 fn logGError(context: []const u8, gerr: ?*c.GError) void {

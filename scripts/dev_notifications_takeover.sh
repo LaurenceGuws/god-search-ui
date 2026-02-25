@@ -85,6 +85,18 @@ case "$MODE" in
             exit 4
         fi
 
+        ACTION_OUT="$(gdbus call --session \
+            --dest org.freedesktop.Notifications \
+            --object-path /org/freedesktop/Notifications \
+            --method org.freedesktop.Notifications.Notify \
+            app 0 '' 'god-search-ui smoke action' 'click action button to emit ActionInvoked' \
+            "['default','Open']" "{}" 5000)"
+        echo "[dev-notify] action notify: $ACTION_OUT"
+        if [[ "$ACTION_OUT" != *"uint32"* ]]; then
+            echo "[dev-notify] ERROR: action notify call failed"
+            exit 7
+        fi
+
         timeout 6 dbus-monitor "interface='org.freedesktop.Notifications'" >/tmp/god-search-ui-notify-smoke.log 2>&1 &
         MON_PID=$!
         sleep 0.4

@@ -73,7 +73,9 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-notify-row { background: rgba(30, 38, 56, 0.82); border: 1px solid rgba(132, 160, 228, 0.20); border-radius: 8px; padding: 10px; }\n" ++
         ".gs-notify-summary { color: #e8ecf7; font-weight: 700; }\n" ++
         ".gs-notify-body { color: #bec9df; }\n" ++
-        ".gs-notify-close { min-width: 26px; min-height: 26px; padding: 0 8px; font-size: 0.82em; }\n";
+        ".gs-notify-close { min-width: 26px; min-height: 26px; padding: 0 8px; font-size: 0.82em; }\n" ++
+        ".gs-notify-actions { margin-top: 2px; }\n" ++
+        ".gs-notify-action-btn { min-height: 26px; padding: 0 10px; font-size: 0.86em; }\n";
 
     const provider = c.gtk_css_provider_new();
     defer c.g_object_unref(provider);
