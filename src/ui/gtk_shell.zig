@@ -19,6 +19,7 @@ const gtk_results_flow = @import("gtk/results_flow.zig");
 const gtk_widgets = @import("gtk/widgets.zig");
 const ipc_control = @import("../ipc/control.zig");
 const notifications_mod = @import("../notifications/mod.zig");
+const shell_mod = @import("../shell/mod.zig");
 const gtk_shell_control = @import("gtk/shell_control.zig");
 const gtk_shell_lifecycle = @import("gtk/shell_lifecycle.zig");
 const gtk_shell_notifications = @import("gtk/shell_notifications.zig");
@@ -95,8 +96,14 @@ pub const Shell = struct {
             notifications_popup = popup;
         }
 
-        _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), &launch, null, 0);
-        _ = c.g_application_run(@ptrCast(gtk_app), 0, null);
+        var module_registry = shell_mod.Registry.init(allocator);
+        defer module_registry.deinit();
+        var launcher_ctx = LauncherModule.Context{
+            .gtk_app = gtk_app,
+            .launch = &launch,
+        };
+        try module_registry.register(LauncherModule.factory(&launcher_ctx));
+        try module_registry.startAll();
     }
 
     fn onActivate(app_ptr: ?*anyopaque, user_data: ?*anyopaque) callconv(.c) void {
@@ -401,6 +408,67 @@ pub const Shell = struct {
         const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
         std.log.info("{s}={d:.2}", .{ metric_name, elapsed_ms });
     }
+
+    const LauncherModule = struct {
+        const Context = struct {
+            gtk_app: *c.GtkApplication,
+            launch: *LaunchContext,
+        };
+
+        const State = struct {
+            ctx: *Context,
+            started: bool = false,
+        };
+
+        fn factory(ctx: *Context) shell_mod.module.ModuleFactory {
+            return .{
+                .name = "launcher",
+                .context = ctx,
+                .init = init,
+            };
+        }
+
+        fn init(allocator: std.mem.Allocator, ctx_ptr: *anyopaque) !shell_mod.module.ModuleInstance {
+            const ctx: *Context = @ptrCast(@alignCast(ctx_ptr));
+            const state = try allocator.create(State);
+            state.* = .{ .ctx = ctx };
+            return .{
+                .name = "launcher",
+                .state = state,
+                .vtable = &.{
+                    .start = start,
+                    .stop = stop,
+                    .handle_event = handleEvent,
+                    .health = health,
+                    .deinit = deinit,
+                },
+            };
+        }
+
+        fn start(state_ptr: *anyopaque) !void {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            _ = c.g_signal_connect_data(state.ctx.gtk_app, "activate", c.G_CALLBACK(onActivate), state.ctx.launch, null, 0);
+            _ = c.g_application_run(@ptrCast(state.ctx.gtk_app), 0, null);
+            state.started = true;
+        }
+
+        fn stop(_: *anyopaque) void {}
+
+        fn handleEvent(_: *anyopaque, _: shell_mod.module.Event) void {}
+
+        fn health(state_ptr: *anyopaque) shell_mod.module.ModuleHealth {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            return if (state.started)
+                .{ .status = .ready, .detail = "gtk launcher exited cleanly" }
+            else
+                .{ .status = .unknown, .detail = "not started" };
+        }
+
+        fn deinit(allocator: std.mem.Allocator, state_ptr: *anyopaque) void {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            allocator.destroy(state);
+        }
+    };
 
     fn closeNotificationViaDaemon(ctx: *anyopaque, id: u32) bool {
         const daemon: *notifications_mod.Daemon = @ptrCast(@alignCast(ctx));
