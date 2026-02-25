@@ -32,6 +32,14 @@ Optional custom path:
 scripts/init_lua_config.sh /tmp/god-search-ui-config.lua
 ```
 
+Patch common keys from CLI:
+
+```bash
+scripts/set_lua_config.sh surface_mode layer-shell
+scripts/set_lua_config.sh launcher.monitor_name DP-1
+scripts/set_lua_config.sh notifications.anchor top_right
+```
+
 ## Contract
 
 ```lua

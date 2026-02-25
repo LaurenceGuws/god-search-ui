@@ -54,6 +54,11 @@ Generate default config:
 ```bash
 scripts/init_lua_config.sh
 ```
+Patch common Lua config keys quickly:
+```bash
+scripts/set_lua_config.sh surface_mode layer-shell
+scripts/set_lua_config.sh launcher.monitor_name DP-1
+```
 File contract:
 ```lua
 return {
