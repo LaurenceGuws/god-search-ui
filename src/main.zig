@@ -327,6 +327,25 @@ fn applyEnvPlacementOverrides(allocator: std.mem.Allocator, cfg: *god_search_ui.
         defer std.heap.page_allocator.free(raw);
         if (parseMonitorPolicy(raw)) |policy| cfg.placement_policy.notifications.window.monitor.policy = policy;
     }
+
+    applyMarginsEnv("GOD_SEARCH_LAUNCHER_MARGIN_", &cfg.placement_policy.launcher.window.margins);
+    applyMarginsEnv("GOD_SEARCH_NOTIFICATIONS_MARGIN_", &cfg.placement_policy.notifications.window.margins);
+
+    applyIntEnv("GOD_SEARCH_LAUNCHER_WIDTH_PERCENT", &cfg.placement_policy.launcher.width_percent);
+    applyIntEnv("GOD_SEARCH_LAUNCHER_HEIGHT_PERCENT", &cfg.placement_policy.launcher.height_percent);
+    applyIntEnv("GOD_SEARCH_LAUNCHER_MIN_WIDTH_PERCENT", &cfg.placement_policy.launcher.min_width_percent);
+    applyIntEnv("GOD_SEARCH_LAUNCHER_MIN_HEIGHT_PERCENT", &cfg.placement_policy.launcher.min_height_percent);
+    applyIntEnv("GOD_SEARCH_LAUNCHER_MIN_WIDTH_PX", &cfg.placement_policy.launcher.min_width_px);
+    applyIntEnv("GOD_SEARCH_LAUNCHER_MIN_HEIGHT_PX", &cfg.placement_policy.launcher.min_height_px);
+    applyIntEnv("GOD_SEARCH_LAUNCHER_MAX_WIDTH_PX", &cfg.placement_policy.launcher.max_width_px);
+    applyIntEnv("GOD_SEARCH_LAUNCHER_MAX_HEIGHT_PX", &cfg.placement_policy.launcher.max_height_px);
+
+    applyIntEnv("GOD_SEARCH_NOTIFICATIONS_WIDTH_PERCENT", &cfg.placement_policy.notifications.width_percent);
+    applyIntEnv("GOD_SEARCH_NOTIFICATIONS_HEIGHT_PERCENT", &cfg.placement_policy.notifications.height_percent);
+    applyIntEnv("GOD_SEARCH_NOTIFICATIONS_MIN_WIDTH_PX", &cfg.placement_policy.notifications.min_width_px);
+    applyIntEnv("GOD_SEARCH_NOTIFICATIONS_MIN_HEIGHT_PX", &cfg.placement_policy.notifications.min_height_px);
+    applyIntEnv("GOD_SEARCH_NOTIFICATIONS_MAX_WIDTH_PX", &cfg.placement_policy.notifications.max_width_px);
+    applyIntEnv("GOD_SEARCH_NOTIFICATIONS_MAX_HEIGHT_PX", &cfg.placement_policy.notifications.max_height_px);
 }
 
 fn envVarTrimmed(name: []const u8) ?[]u8 {
@@ -362,4 +381,27 @@ fn parseMonitorPolicy(raw: []const u8) ?god_search_ui.wm.adapter.MonitorPolicy {
     if (std.ascii.eqlIgnoreCase(raw, "primary")) return .primary;
     if (std.ascii.eqlIgnoreCase(raw, "by_name") or std.ascii.eqlIgnoreCase(raw, "by-name")) return .by_name;
     return null;
+}
+
+fn applyMarginsEnv(prefix: []const u8, margins: *god_search_ui.ui.placement.Margins) void {
+    var buf: [96]u8 = undefined;
+    if (std.fmt.bufPrint(&buf, "{s}TOP", .{prefix})) |name| {
+        applyIntEnv(name, &margins.top);
+    } else |_| {}
+    if (std.fmt.bufPrint(&buf, "{s}RIGHT", .{prefix})) |name| {
+        applyIntEnv(name, &margins.right);
+    } else |_| {}
+    if (std.fmt.bufPrint(&buf, "{s}BOTTOM", .{prefix})) |name| {
+        applyIntEnv(name, &margins.bottom);
+    } else |_| {}
+    if (std.fmt.bufPrint(&buf, "{s}LEFT", .{prefix})) |name| {
+        applyIntEnv(name, &margins.left);
+    } else |_| {}
+}
+
+fn applyIntEnv(name: []const u8, target: *i32) void {
+    const raw = envVarTrimmed(name) orelse return;
+    defer std.heap.page_allocator.free(raw);
+    const value = std.fmt.parseInt(i32, raw, 10) catch return;
+    target.* = value;
 }
