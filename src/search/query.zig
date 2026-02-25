@@ -8,6 +8,7 @@ pub const Route = enum {
     dirs,
     files,
     grep,
+    notifications,
     run,
     calc,
     web,
@@ -38,6 +39,7 @@ pub fn parse(raw_query: []const u8) Query {
         '~' => .{ .raw = raw, .route = .dirs, .term = rest },
         '%' => .{ .raw = raw, .route = .files, .term = rest },
         '&' => .{ .raw = raw, .route = .grep, .term = rest },
+        '$' => .{ .raw = raw, .route = .notifications, .term = rest },
         '>' => .{ .raw = raw, .route = .run, .term = rest },
         '=' => .{ .raw = raw, .route = .calc, .term = rest },
         '?' => .{ .raw = raw, .route = .web, .term = rest },
@@ -71,6 +73,12 @@ test "parse workspaces route correctly" {
     const q = parse("! 3");
     try std.testing.expectEqual(Route.workspaces, q.route);
     try std.testing.expectEqualStrings("3", q.term);
+}
+
+test "parse notifications route correctly" {
+    const q = parse("$ urgent");
+    try std.testing.expectEqual(Route.notifications, q.route);
+    try std.testing.expectEqualStrings("urgent", q.term);
 }
 
 test "parse non-prefixed query stays blended" {

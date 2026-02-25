@@ -11,6 +11,7 @@ pub const UiKind = enum {
     file,
     grep,
     web,
+    notification,
     hint,
     module,
     dir_option,
@@ -26,6 +27,7 @@ pub fn parse(kind: []const u8) UiKind {
     if (std.mem.eql(u8, kind, "file")) return .file;
     if (std.mem.eql(u8, kind, "grep")) return .grep;
     if (std.mem.eql(u8, kind, "web")) return .web;
+    if (std.mem.eql(u8, kind, "notification")) return .notification;
     if (std.mem.eql(u8, kind, "hint")) return .hint;
     if (std.mem.eql(u8, kind, "module")) return .module;
     if (std.mem.eql(u8, kind, "dir_option")) return .dir_option;
@@ -43,6 +45,7 @@ pub fn tag(kind: UiKind) []const u8 {
         .file => "file",
         .grep => "grep",
         .web => "web",
+        .notification => "notification",
         .hint => "hint",
         .module => "module",
         .dir_option => "dir_option",
@@ -60,6 +63,7 @@ pub fn statusLabel(kind: UiKind) []const u8 {
         .file => "file",
         .grep => "match",
         .web => "web search",
+        .notification => "notification",
         .module => "module filter",
         .action => "action",
         .hint => "hint",
@@ -76,6 +80,7 @@ pub fn fromCandidateKind(kind: search.CandidateKind) UiKind {
         .file => .file,
         .grep => .grep,
         .web => .web,
+        .notification => .notification,
         .action => .action,
         .hint => .hint,
     };

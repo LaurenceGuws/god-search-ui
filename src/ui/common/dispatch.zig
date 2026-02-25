@@ -25,14 +25,14 @@ pub fn shouldRecordSelection(kind: []const u8) bool {
 
 pub fn shouldRecordSelectionKind(kind: kinds.UiKind) bool {
     return switch (kind) {
-        .dir_option, .file_option, .module, .hint => false,
+        .dir_option, .file_option, .module, .notification, .hint => false,
         else => true,
     };
 }
 
 pub fn shouldRecordCandidate(kind: search.CandidateKind) bool {
     return switch (kind) {
-        .dir, .file, .grep, .hint => false,
+        .dir, .file, .grep, .notification, .hint => false,
         else => true,
     };
 }

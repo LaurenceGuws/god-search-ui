@@ -67,6 +67,7 @@ fn matchesRoute(route: query_mod.Route, kind: types.CandidateKind) bool {
         .dirs => kind == .dir,
         .files => kind == .file or kind == .dir,
         .grep => kind == .grep,
+        .notifications => kind == .notification or kind == .action or kind == .hint,
         .run, .calc => true,
         .web => kind == .web,
     };
@@ -123,6 +124,7 @@ fn shortQueryBias(needle_len: usize, kind: types.CandidateKind) i32 {
         .file => -8,
         .grep => -6,
         .web => 0,
+        .notification => 0,
         .hint => 0,
     };
 }
@@ -146,6 +148,7 @@ fn baseWeight(kind: types.CandidateKind) i32 {
         .file => 78,
         .grep => 76,
         .web => 72,
+        .notification => 74,
         .action => 70,
         .hint => 10,
     };

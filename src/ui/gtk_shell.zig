@@ -64,6 +64,7 @@ pub const Shell = struct {
 
         var notifications_daemon: ?*notifications_mod.Daemon = null;
         defer if (notifications_daemon) |daemon| {
+            notifications_mod.runtime.clearCloser(daemon);
             daemon.deinit();
             allocator.destroy(daemon);
         };
@@ -75,6 +76,7 @@ pub const Shell = struct {
             allocator.destroy(popup);
         };
         if (notifications_daemon) |daemon| {
+            notifications_mod.runtime.registerCloser(daemon, closeNotificationViaDaemon);
             const popup = try allocator.create(gtk_shell_notifications_popup.PopupManager);
             popup.* = try gtk_shell_notifications_popup.PopupManager.init(allocator, gtk_app, daemon);
             popup.attach();
@@ -322,6 +324,7 @@ pub const Shell = struct {
             .calc => "Calculator updates as you type (no cache refresh needed)",
             .grep => "Grep runs live with rg (no cache refresh needed)",
             .files => "File search runs live with fd (no cache refresh needed)",
+            .notifications => "Notifications route is live (no cache refresh needed)",
             .run => "Run command executes live (no cache refresh needed)",
             .web => "Web results build from your query (no cache refresh needed)",
             else => null,
@@ -385,5 +388,10 @@ pub const Shell = struct {
         const elapsed_ns: u64 = if (diff_ns <= 0) 0 else @as(u64, @intCast(diff_ns));
         const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
         std.log.info("{s}={d:.2}", .{ metric_name, elapsed_ms });
+    }
+
+    fn closeNotificationViaDaemon(ctx: *anyopaque, id: u32) bool {
+        const daemon: *notifications_mod.Daemon = @ptrCast(@alignCast(ctx));
+        return daemon.closeWithReason(id, 3);
     }
 };

@@ -16,10 +16,11 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-B1: Add notifications daemon MVP (`org.freedesktop.Notifications`: `Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`).
 - [x] DE-B2: Add notification popup renderer + timeout/replaces_id close interactions + `NotificationClosed` reason coverage.
 - [x] DE-B3: Add action buttons/hints wiring and `ActionInvoked` signal flow.
-- [ ] DE-B4: Add persistent notification history + dismiss-all UX.
+- [x] DE-B4: Add persistent notification history + dismiss-all UX.
+- [ ] DE-B5: Add dedicated notification center panel + keyboard focus model.
 
 ## In Progress
-- [ ] DE-B4: notification history + bulk-dismiss slice
+- [ ] DE-B5: notification center panel slice
 
 ## Blocked
 - [ ] (empty)

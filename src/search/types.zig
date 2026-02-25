@@ -8,6 +8,7 @@ pub const CandidateKind = enum {
     file,
     grep,
     web,
+    notification,
     action,
     hint,
 };

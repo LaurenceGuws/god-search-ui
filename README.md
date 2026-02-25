@@ -33,6 +33,7 @@ GTK4 shell (requires GTK4 dev libraries):
 zig build -Denable_gtk=true run -- --ui
 ```
 In GTK mode, use `Ctrl+R` to refresh provider snapshot cache.
+Route prefixes include `@ # ! ~ % & $ > = ?` (`$` = notifications history/dismiss route).
 
 Resident GTK modes (recommended for zero-drop fast summon):
 ```bash

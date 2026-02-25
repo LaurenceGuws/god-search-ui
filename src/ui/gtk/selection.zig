@@ -2,6 +2,7 @@ const std = @import("std");
 const common_actions = @import("../common/actions.zig");
 const common_dispatch = @import("../common/dispatch.zig");
 const common_execute = @import("../common/execute.zig");
+const notifications = @import("../../notifications/mod.zig");
 const gtk_types = @import("types.zig");
 const gtk_actions = @import("actions.zig");
 
@@ -22,6 +23,33 @@ pub const Hooks = struct {
 pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks: Hooks) void {
     const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
     const allocator = allocator_ptr.*;
+
+    if (std.mem.eql(u8, action, "notif-dismiss-all")) {
+        const closed = notifications.runtime.closeAllActive();
+        var msg_buf: [96]u8 = undefined;
+        const msg = std.fmt.bufPrint(&msg_buf, "Dismissed {d} notifications", .{closed}) catch "Dismissed notifications";
+        hooks.set_status(ctx, msg);
+        hooks.emit_telemetry(ctx, "notification", "notif-dismiss-all", "ok", "dismiss-all");
+        refreshCurrentQuery(ctx);
+        return;
+    }
+    if (std.mem.startsWith(u8, action, "notif-dismiss:")) {
+        const id_str = action["notif-dismiss:".len..];
+        const id = std.fmt.parseInt(u32, id_str, 10) catch {
+            hooks.set_status(ctx, "Invalid notification id");
+            hooks.emit_telemetry(ctx, "notification", action, "error", "bad-id");
+            return;
+        };
+        if (notifications.runtime.closeById(id)) {
+            hooks.set_status(ctx, "Notification dismissed");
+            hooks.emit_telemetry(ctx, "notification", action, "ok", "dismiss");
+            refreshCurrentQuery(ctx);
+        } else {
+            hooks.set_status(ctx, "Notification already closed");
+            hooks.emit_telemetry(ctx, "notification", action, "error", "not-found");
+        }
+        return;
+    }
 
     var decision = common_execute.resolveSelectionKind(allocator, kind, action, ctx.pending_power_confirm == gtk_types.GTRUE) catch return;
     defer decision.deinit(allocator);
@@ -82,6 +110,15 @@ pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks:
         },
         .none => return,
     }
+}
+
+fn refreshCurrentQuery(ctx: *UiContext) void {
+    const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+    if (text_ptr == null) return;
+    const text = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
+    const text_z = std.heap.page_allocator.dupeZ(u8, text) catch return;
+    defer std.heap.page_allocator.free(text_z);
+    c.gtk_editable_set_text(@ptrCast(ctx.entry), text_z.ptr);
 }
 
 fn applyModuleFilter(ctx: *UiContext, allocator: std.mem.Allocator, module_action: []const u8, hooks: Hooks) void {

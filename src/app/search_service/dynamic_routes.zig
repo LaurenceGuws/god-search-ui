@@ -1,5 +1,6 @@
 const std = @import("std");
 const providers = @import("../../providers/mod.zig");
+const notifications = @import("../../notifications/mod.zig");
 const search = @import("../../search/mod.zig");
 
 pub const ToolState = struct {
@@ -15,11 +16,12 @@ pub fn collectForRoute(
     out: *search.CandidateList,
 ) !void {
     const term = std.mem.trim(u8, query.term, " \t\r\n");
-    if (term.len == 0) return;
+    if (term.len == 0 and query.route != .notifications) return;
 
     switch (query.route) {
         .files => try collectFdCandidates(tool_state, dynamic_owned, allocator, term, out),
         .grep => try collectRgCandidates(tool_state, dynamic_owned, allocator, term, out),
+        .notifications => try notifications.runtime.appendRouteCandidates(dynamic_owned, allocator, term, out),
         .calc => try collectCalcCandidates(dynamic_owned, allocator, term, out),
         else => {},
     }
@@ -264,6 +266,34 @@ fn keepDynamicString(
     const copy = try allocator.dupe(u8, value);
     try dynamic_owned.append(allocator, copy);
     return copy;
+}
+
+test "collectForRoute returns notifications candidates for notifications route" {
+    const allocator = std.testing.allocator;
+    notifications.runtime.resetForTest(allocator);
+    defer notifications.runtime.resetForTest(allocator);
+
+    try notifications.runtime.recordNotify(
+        allocator,
+        42,
+        "notify-send",
+        "build done",
+        "all green",
+        1,
+        false,
+    );
+
+    var dynamic_owned = std.ArrayListUnmanaged([]u8){};
+    defer {
+        for (dynamic_owned.items) |item| allocator.free(item);
+        dynamic_owned.deinit(allocator);
+    }
+    var out = search.CandidateList.empty;
+    defer out.deinit(allocator);
+    var tool_state = ToolState{};
+
+    try collectForRoute(&tool_state, &dynamic_owned, allocator, search.parseQuery("$ build"), &out);
+    try std.testing.expect(out.items.len >= 1);
 }
 
 fn commandExists(name: []const u8) bool {

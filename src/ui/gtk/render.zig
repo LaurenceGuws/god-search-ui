@@ -51,6 +51,7 @@ pub fn appendGroupedRows(
     rendered_any = appendGroup(ctx, allocator, rows, .file, "Files", rendered_any, highlight_token, hooks) or rendered_any;
     rendered_any = appendGroup(ctx, allocator, rows, .grep, "Code Search", rendered_any, highlight_token, hooks) or rendered_any;
     rendered_any = appendGroup(ctx, allocator, rows, .web, "Web", rendered_any, highlight_token, hooks) or rendered_any;
+    rendered_any = appendGroup(ctx, allocator, rows, .notification, "Notifications", rendered_any, highlight_token, hooks) or rendered_any;
     rendered_any = appendGroup(ctx, allocator, rows, .action, "Actions", rendered_any, highlight_token, hooks) or rendered_any;
     _ = appendGroup(ctx, allocator, rows, .hint, "Hints", rendered_any, highlight_token, hooks);
 }

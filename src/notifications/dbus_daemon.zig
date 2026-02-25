@@ -1,5 +1,6 @@
 const std = @import("std");
 const notifications_state = @import("state.zig");
+const notifications_runtime = @import("runtime.zig");
 
 const log = std.log.scoped(.notifications);
 
@@ -160,6 +161,7 @@ pub const Daemon = struct {
 
     pub fn closeWithReason(self: *Daemon, id: u32, reason: u32) bool {
         if (!self.state.close(id)) return false;
+        notifications_runtime.recordClosed(id, reason);
         emitNotificationClosed(self, id, reason);
         if (self.hooks.on_closed) |on_closed| {
             if (self.hooks.user_data) |user_data| {
@@ -363,6 +365,15 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
             });
         }
     }
+    notifications_runtime.recordNotify(
+        self.allocator,
+        id,
+        std.mem.span(app_name),
+        std.mem.span(summary),
+        std.mem.span(body),
+        parsed_hints.urgency,
+        parsed_hints.transient,
+    ) catch {};
 
     c.g_dbus_method_invocation_return_value(invocation, c.g_variant_new("(u)", id));
 }

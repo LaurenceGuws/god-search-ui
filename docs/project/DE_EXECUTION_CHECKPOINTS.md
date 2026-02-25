@@ -146,3 +146,26 @@ scripts/dev_notifications_takeover.sh takeover
 scripts/dev_notifications_takeover.sh smoke
 # manual: click popup action button and confirm ActionInvoked via dbus-monitor
 ```
+
+## CP-6 Notifications History Route (`$`)
+
+Scope:
+- non-overlapping notifications query prefix route (`$`)
+- in-daemon notifications history surfaced in launcher list
+- keyboard dismiss actions in existing list/textbox UI
+
+Done criteria:
+1. `$` prefix is reserved for notifications route (no overlap with existing prefixes).
+2. Route shows recent notifications with metadata and age.
+3. Route exposes `Dismiss All` and per-row dismiss actions.
+4. Enter on dismiss actions closes notifications via daemon path.
+5. Existing daemon smoke checks still pass.
+
+Verification:
+```bash
+zig build -Doptimize=ReleaseFast -Denable_gtk=true
+zig build test -Denable_gtk=true
+scripts/dev_notifications_takeover.sh takeover
+scripts/dev_notifications_takeover.sh smoke
+# manual: open launcher, type `$`, press Enter on dismiss actions
+```
