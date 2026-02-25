@@ -8,6 +8,7 @@ pub const ui = @import("ui/mod.zig");
 pub const wm = @import("wm/mod.zig");
 pub const ipc = @import("ipc/mod.zig");
 pub const notifications = @import("notifications/mod.zig");
+pub const shell = @import("shell/mod.zig");
 
 pub fn bufferedPrint() !void {
     // Stdout is for the actual output of your application, for example if you

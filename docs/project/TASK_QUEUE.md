@@ -27,7 +27,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-M0: WA-4.1 Slice A - add module trait + registry primitives (`src/shell/module.zig`, `src/shell/registry.zig`).
+- [ ] DE-M1: WA-4.1 Slice B - route launcher startup via module registry adapter.
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -44,6 +44,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P15: Placement config canary fixture + negative validator test cases
 - [x] DE-P16: Placement route docs cleanup (single canonical operator flow)
 - [x] DE-R1: WA-4.1 PR-slice breakdown doc added (`docs/project/WA4_1_MODULE_TRAIT_PR_SLICES.md`)
+- [x] DE-M0: WA-4.1 Slice A module trait + registry primitives (`src/shell/module.zig`, `src/shell/registry.zig`)
 
 ## Blocked
 - [ ] (empty)
