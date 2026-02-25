@@ -36,6 +36,11 @@ pub fn main() !void {
         return;
     }
 
+    if (hasArg(args, "--print-shell-health")) {
+        try god_search_ui.ui.Diagnostics.printShellHealth(allocator);
+        return;
+    }
+
     const ui_mode = hasArg(args, "--ui") or hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
     if (ui_mode) {
         var cfg = god_search_ui.config.load(allocator);

@@ -1,6 +1,7 @@
 const std = @import("std");
 const gtk_types = @import("types.zig");
 const gdk_adapter = @import("gdk_adapter.zig");
+const shell_mod = @import("../../shell/mod.zig");
 
 const c = gtk_types.c;
 
@@ -36,6 +37,27 @@ pub const Diagnostics = struct {
                 "  {{\"name\":\"{s}\",\"x\":{d},\"y\":{d},\"width\":{d},\"height\":{d},\"scale_milli\":{d}}}{s}\n",
                 .{ entry.name, entry.x, entry.y, entry.width, entry.height, entry.scale_milli, comma },
             );
+        }
+        try out.print("]\n", .{});
+        try out.flush();
+    }
+
+    pub fn printShellHealth(allocator: std.mem.Allocator) !void {
+        var stdout_buffer: [2048]u8 = undefined;
+        var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+        const out = &stdout_writer.interface;
+
+        const entries = [_]shell_mod.module.ModuleHealthEntry{
+            .{ .name = "launcher", .health = .{ .status = .unknown, .detail = "diagnostic snapshot (offline)" } },
+            .{ .name = "notifications", .health = .{ .status = .unknown, .detail = "diagnostic snapshot (offline)" } },
+        };
+
+        try out.print("[\n", .{});
+        for (entries, 0..) |entry, idx| {
+            const line = try shell_mod.health.formatEntry(allocator, entry);
+            defer allocator.free(line);
+            const comma = if (idx + 1 < entries.len) "," else "";
+            try out.print("  \"{s}\"{s}\n", .{ line, comma });
         }
         try out.print("]\n", .{});
         try out.flush();

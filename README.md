@@ -91,6 +91,10 @@ Output discovery for monitor pinning:
 ```bash
 god-search-ui --print-outputs
 ```
+Shell module health snapshot:
+```bash
+god-search-ui --print-shell-health
+```
 Placement smoke:
 ```bash
 scripts/placement_smoke.sh
