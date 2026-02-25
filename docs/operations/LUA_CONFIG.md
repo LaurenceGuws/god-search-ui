@@ -89,3 +89,9 @@ Inspect resolved runtime config:
 ```bash
 god-search-ui --print-config
 ```
+
+List available output names:
+
+```bash
+god-search-ui --print-outputs
+```

@@ -115,6 +115,11 @@ Runtime config introspection (prints resolved surface mode + placement policy):
 god-search-ui --print-config
 ```
 
+Output discovery for monitor pinning:
+```bash
+god-search-ui --print-outputs
+```
+
 Optional advanced refresh mode:
 ```bash
 GOD_SEARCH_ASYNC_REFRESH=1 god-search-ui --ui

@@ -23,11 +23,12 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-P6: Placement debug/introspection command (show resolved policy + surface mode)
+- [ ] DE-P7: Placement smoke helper docs for monitor pinning workflow
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
 - [x] DE-P5: Placement monitor targeting by explicit output name (safe owned string path)
+- [x] DE-P6: Placement debug/introspection command (show resolved policy + surface mode)
 
 ## Blocked
 - [ ] (empty)
