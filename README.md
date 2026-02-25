@@ -84,6 +84,7 @@ god-search-ui --ctl version
 god-search-ui --ctl shell_health
 ```
 Reference: `docs/operations/CONTROL_PLANE.md`
+Smoke flow: `docs/operations/CONTROL_PLANE_SMOKE.md`
 
 Runtime config introspection (prints resolved surface mode + placement policy):
 ```bash

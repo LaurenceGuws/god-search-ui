@@ -34,7 +34,9 @@ do
 done
 
 require "$README" 'docs/operations/CONTROL_PLANE.md' 'README control-plane reference'
+require "$README" 'docs/operations/CONTROL_PLANE_SMOKE.md' 'README control-plane smoke reference'
 require "$DOC" '## Exit Codes' 'CONTROL_PLANE exit codes section'
 require "$DOC" '--print-shell-health' 'CONTROL_PLANE health flow reference'
+require "$DOC" 'docs/operations/CONTROL_PLANE_SMOKE.md' 'CONTROL_PLANE smoke reference'
 
 echo "control-plane docs contract checks passed"

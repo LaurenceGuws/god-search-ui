@@ -50,3 +50,4 @@ god-search-ui --ctl shell_health
 
 - Control-plane commands are intended for daemon/resident mode.
 - `shell_health` payload is compact transport text; human-readable formatting is applied by CLI diagnostics.
+- Smoke workflow reference: `docs/operations/CONTROL_PLANE_SMOKE.md`
