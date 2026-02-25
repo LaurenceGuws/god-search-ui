@@ -1,4 +1,5 @@
 pub const types = @import("types.zig");
+pub const adapter = @import("adapter.zig");
 pub const Backend = types.Backend;
 pub const Capability = types.Capability;
 pub const Health = types.Health;

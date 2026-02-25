@@ -62,6 +62,33 @@ Reduce shell command polling and move toward event-capable adapters.
 - Fewer command invocations per summon/query cycle.
 - Adapter contract supports future in-house compositor backend.
 
+## WA-5: Surface Placement + WM Abstraction
+
+### Objective
+Make launcher and notification placement app-controlled, deterministic, and portable across backends.
+
+### Current Status
+- WA-5.1 done
+- WA-5.2 done
+- WA-5.3 done
+- WA-5.4 in progress (GTK bridge active for shared sizing/anchor policy; Wayland toplevel absolute placement still compositor-managed)
+- WA-5.5 pending
+- WA-5.6 pending
+
+### Milestones
+1. WA-5.1 Define explicit WM adapter contract (`active output`, `work area`, `focus hints`).
+2. WA-5.2 Define surface contracts for launcher + notification windows.
+3. WA-5.3 Add pure placement engine (`anchor`, `offset`, `monitor policy`, `stack direction`) with unit tests.
+4. WA-5.4 Implement GTK toplevel surface adapter through placement engine.
+5. WA-5.5 Add layer-shell surface adapter for deterministic Wayland anchoring.
+6. WA-5.6 Add config/env controls for launcher/popup placement.
+
+### Acceptance Criteria
+- Placement is configured in app policy, not compositor-specific window rules.
+- Launcher and notification windows share one placement engine.
+- Hyprland integration stays isolated behind WM adapter boundaries.
+- Toplevel and layer-shell adapters can be selected without changing placement logic.
+
 ## WA-4: Module Boundary Hardening
 
 ### Objective
@@ -82,7 +109,8 @@ Split launcher-centric orchestration into reusable shell modules.
 1. WA-1 Shell control plane.
 2. WA-4 Module boundary hardening (minimal slice).
 3. WA-2 Notifications MVP.
-4. WA-3 Event-driven compositor integration.
+4. WA-5 Surface placement + WM abstraction.
+5. WA-3 Event-driven compositor integration.
 
 ## Tracking Notes
 - Keep each milestone shippable in 1-3 commits.

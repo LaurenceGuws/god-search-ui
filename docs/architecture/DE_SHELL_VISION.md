@@ -8,7 +8,7 @@ Canonical: yes
 This document defines how `god-search-ui` evolves from launcher into a core shell daemon for a full Zig-first desktop stack.
 
 Companion execution plan for weak areas:
-- `docs/DE_WEAK_AREAS_ROADMAP.md`
+- `docs/roadmaps/DE_WEAK_AREAS_ROADMAP.md`
 
 ## North Star
 
@@ -23,6 +23,8 @@ Build a modular shell daemon (`shelld`) that can run independently from the comp
 `god-search-ui` already has:
 - resident/daemon GTK lifecycle (`--ui-resident`, `--ui-daemon`)
 - warm summon path with low startup overhead
+- local control-plane IPC (`ping`, `summon`, `hide`, `toggle`, `version`)
+- freedesktop notifications daemon MVP + popup renderer + actions/history
 - modular provider-driven search pipeline
 - background cache prewarm and async refresh strategy
 - telemetry and release automation discipline
@@ -48,15 +50,14 @@ This is a strong base for shell-daemon work.
 
 ## Weaknesses (Against DE-Shell Goals)
 
-1. No shell control-plane IPC yet.
-   - Current summon model still depends on external process invocation (`god-search-ui --ui`).
-2. Notifications are not first-class.
-   - No `org.freedesktop.Notifications` implementation.
-3. Module boundaries are still launcher-centric.
+1. Module boundaries are still launcher-centric.
    - GTK shell orchestration is large and tightly coupled to launcher flows.
-4. Compositor/session integration is command-driven (`hyprctl`, scripts), not event-driven protocol APIs.
+2. Compositor/session integration is command-driven (`hyprctl`, scripts), not event-driven protocol APIs.
    - `src/wm/hyprland.zig`
    - `src/providers/actions.zig`
+3. Surface placement is partially abstracted but not deterministic on Wayland toplevels yet.
+   - `wm` adapter + `placement` engine + GTK bridge now exist for shared sizing/anchor policy.
+   - Absolute placement remains compositor-managed until a layer-shell/compositor-native surface adapter lands.
 
 ## Target Architecture
 
@@ -74,6 +75,10 @@ This is a strong base for shell-daemon work.
    - Launcher window
    - Notification popups/history
    - OSD overlays
+5. Surface placement stack
+   - `placement` engine (pure geometry policy)
+   - `surface` adapters (`gtk_toplevel`, later `gtk_layer_shell`)
+   - `wm` adapter (`hyprland` now, compositor-native later)
 5. Data/control contracts
    - Shared typed event bus in-process
    - Explicit module API traits for registration and lifecycle
@@ -88,6 +93,7 @@ This is a strong base for shell-daemon work.
 Exit criteria:
 - Summon no longer requires process relaunch semantics.
 - Control endpoint smoke tested from CLI.
+Status: done
 
 ### Phase B: Notifications MVP
 - Implement freedesktop notifications subset.
@@ -97,6 +103,7 @@ Exit criteria:
 Exit criteria:
 - `notify-send` works against shell daemon.
 - Basic popup UX and dismissal are stable.
+Status: done (MVP)
 
 ### Phase C: Shell Module API
 - Refactor launcher/notifications into explicit module interfaces.
@@ -109,9 +116,23 @@ Exit criteria:
 ### Phase D: Compositor Integration Readiness
 - Abstract WM/compositor adapters behind event-capable interfaces.
 - Maintain Hyprland adapter while preparing compositor-native hooks.
+- Add deterministic app-level surface placement controls for launcher + popups.
 
 Exit criteria:
 - Shell can consume either external WM adapter or in-house compositor adapter with minimal conditional code.
+- Surface placement policy is controlled by app config, not WM rules.
+
+### Phase E: Placement + Surface Abstraction
+- Introduce explicit `WmBackend` contract for output/work-area/focus hints.
+- Introduce `LauncherSurface` and `NotificationSurface` contracts.
+- Add pure `placement` engine (anchor + margin + monitor policy).
+- Start with GTK toplevel adapter, then add layer-shell adapter for deterministic Wayland anchoring.
+
+Exit criteria:
+- Launcher and popup placement share one policy engine.
+- Hyprland integration is isolated behind `wm` adapter boundaries.
+- Placement behavior is stable without requiring Hypr window rules.
+Status: in progress (engine/adapters baseline complete; deterministic Wayland anchoring pending layer-shell adapter)
 
 ## Immediate Priority Queue (Recommended)
 
@@ -122,6 +143,10 @@ Exit criteria:
    - summon-to-focus p50/p95
    - first-input acceptance rate
    - popup latency targets
+5. Add placement abstraction baseline:
+   - wm adapter interface
+   - surface adapter interface
+   - placement engine with tests
 
 ## Non-Goals (Current Horizon)
 

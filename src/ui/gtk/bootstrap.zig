@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_mod = @import("../../app/mod.zig");
 const gtk_types = @import("types.zig");
+const placement_bridge = @import("placement_bridge.zig");
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -205,34 +206,5 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
 }
 
 fn configureInitialWindowSize(window: *c.GtkWidget) void {
-    var width: c_int = 900;
-    var height: c_int = 560;
-    var min_width: c_int = 680;
-    var min_height: c_int = 420;
-
-    const display = c.gtk_widget_get_display(window);
-    if (display != null) {
-        const monitors = c.gdk_display_get_monitors(display);
-        if (monitors != null and c.g_list_model_get_n_items(monitors) > 0) {
-            const monitor_obj = c.g_list_model_get_item(monitors, 0);
-            if (monitor_obj != null) {
-                defer c.g_object_unref(monitor_obj);
-                const monitor: *c.GdkMonitor = @ptrCast(@alignCast(monitor_obj));
-                var geometry: c.GdkRectangle = undefined;
-                c.gdk_monitor_get_geometry(monitor, &geometry);
-
-                const sw: c_int = geometry.width;
-                const sh: c_int = geometry.height;
-
-                width = @max(min_width, @min(1100, @divTrunc(sw * 48, 100)));
-                height = @max(min_height, @min(760, @divTrunc(sh * 56, 100)));
-
-                min_width = @max(560, @divTrunc(sw * 32, 100));
-                min_height = @max(360, @divTrunc(sh * 36, 100));
-            }
-        }
-    }
-
-    c.gtk_window_set_default_size(@ptrCast(window), width, height);
-    c.gtk_widget_set_size_request(window, min_width, min_height);
+    placement_bridge.configureLauncherWindow(window);
 }

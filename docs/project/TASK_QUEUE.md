@@ -17,10 +17,14 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-B2: Add notification popup renderer + timeout/replaces_id close interactions + `NotificationClosed` reason coverage.
 - [x] DE-B3: Add action buttons/hints wiring and `ActionInvoked` signal flow.
 - [x] DE-B4: Add persistent notification history + dismiss-all UX.
-- [ ] DE-B5: Add dedicated notification center panel + keyboard focus model.
+- [x] DE-P0: Define WM adapter + surface contracts for placement portability.
+- [x] DE-P1: Add pure placement engine (anchor/offset/monitor policy) with tests.
+- [x] DE-P2: Route launcher + notification popup geometry through placement engine.
+- [ ] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-B5: notification center panel slice
+- [ ] DE-P3: Layer-shell adapter and runtime switch (`toplevel`/`layer-shell`)
+- [ ] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
 
 ## Blocked
 - [ ] (empty)

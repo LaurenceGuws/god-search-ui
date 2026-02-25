@@ -169,3 +169,24 @@ scripts/dev_notifications_takeover.sh takeover
 scripts/dev_notifications_takeover.sh smoke
 # manual: open launcher, type `$`, press Enter on dismiss actions
 ```
+
+## CP-7 Placement Abstraction Baseline
+
+Scope:
+- explicit WM adapter contract (output/work-area/focus hint surface data)
+- explicit surface placement contract for launcher + notification windows
+- pure placement engine (anchor + margins + monitor policy) with tests
+- GTK toplevel bridge routes launcher/popup sizing through placement engine
+
+Done criteria:
+1. Placement engine runs without GTK/WM side effects (pure logic + unit tests).
+2. WM adapter interface is defined independent of Hypr implementation details.
+3. Surface placement contracts are defined for launcher + notifications.
+4. GTK launcher/popup creation paths consume placement policy via adapter bridge.
+5. Limitation is explicit: toplevel Wayland still compositor-placed until layer-shell adapter exists.
+
+Verification:
+```bash
+zig build -Doptimize=ReleaseFast -Denable_gtk=true
+zig build test -Denable_gtk=true
+```

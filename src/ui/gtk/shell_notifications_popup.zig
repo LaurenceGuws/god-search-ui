@@ -1,6 +1,7 @@
 const std = @import("std");
 const gtk_types = @import("types.zig");
 const notifications = @import("../../notifications/mod.zig");
+const placement_bridge = @import("placement_bridge.zig");
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -246,7 +247,7 @@ pub const PopupManager = struct {
 
         const window = c.gtk_application_window_new(self.gtk_app);
         c.gtk_window_set_title(@ptrCast(window), "God Search Notifications");
-        c.gtk_window_set_default_size(@ptrCast(window), 380, 360);
+        placement_bridge.configureNotificationPopupWindow(window);
         c.gtk_window_set_resizable(@ptrCast(window), GFALSE);
         c.gtk_window_set_decorated(@ptrCast(window), GFALSE);
 
