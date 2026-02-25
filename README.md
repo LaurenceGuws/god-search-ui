@@ -86,6 +86,14 @@ god-search-ui --ctl shell_health
 Reference: `docs/operations/CONTROL_PLANE.md`
 Smoke flow: `docs/operations/CONTROL_PLANE_SMOKE.md`
 
+Control-plane quickstart:
+```bash
+god-search-ui --ui-daemon
+god-search-ui --ctl ping
+god-search-ui --ctl summon
+god-search-ui --print-shell-health
+```
+
 Runtime config introspection (prints resolved surface mode + placement policy):
 ```bash
 god-search-ui --print-config
