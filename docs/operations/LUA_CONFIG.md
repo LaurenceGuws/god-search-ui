@@ -95,3 +95,9 @@ List available output names:
 ```bash
 god-search-ui --print-outputs
 ```
+
+Smoke helper:
+
+```bash
+scripts/placement_smoke.sh
+```

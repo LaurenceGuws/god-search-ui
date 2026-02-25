@@ -119,6 +119,10 @@ Output discovery for monitor pinning:
 ```bash
 god-search-ui --print-outputs
 ```
+Placement smoke:
+```bash
+scripts/placement_smoke.sh
+```
 
 Optional advanced refresh mode:
 ```bash
