@@ -100,6 +100,9 @@ Split launcher-centric orchestration into reusable shell modules.
 3. WA-4.3 Add notifications module registration.
 4. WA-4.4 Add shared in-process event bus and typed events.
 
+Implementation slice plan reference:
+- `docs/project/WA4_1_MODULE_TRAIT_PR_SLICES.md`
+
 ### Acceptance Criteria
 - Launcher and notifications compile as independent modules under one daemon.
 - Module startup/shutdown ordering is explicit and testable.
