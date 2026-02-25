@@ -82,6 +82,7 @@ god-search-ui --ctl toggle
 god-search-ui --ctl version
 god-search-ui --ctl shell_health
 ```
+Reference: `docs/operations/CONTROL_PLANE.md`
 
 Runtime config introspection (prints resolved surface mode + placement policy):
 ```bash
