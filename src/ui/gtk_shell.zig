@@ -18,6 +18,9 @@ const gtk_controller = @import("gtk/controller.zig");
 const gtk_results_flow = @import("gtk/results_flow.zig");
 const gtk_widgets = @import("gtk/widgets.zig");
 const ipc_control = @import("../ipc/control.zig");
+const gtk_shell_control = @import("gtk/shell_control.zig");
+const gtk_shell_lifecycle = @import("gtk/shell_lifecycle.zig");
+const gtk_shell_startup = @import("gtk/shell_startup.zig");
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -50,48 +53,9 @@ pub const Shell = struct {
 
         var control_server: ?ipc_control.Server = null;
         defer if (control_server) |*srv| srv.deinit();
-        if (options.resident_mode) {
-            control_server = try ipc_control.Server.init(allocator, onControlCommand, &launch);
-            try control_server.?.start();
-        }
+        control_server = try gtk_shell_control.maybeStart(allocator, options.resident_mode, &launch);
         _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), &launch, null, 0);
         _ = c.g_application_run(@ptrCast(gtk_app), 0, null);
-    }
-
-    const ControlInvokePayload = struct {
-        launch: *LaunchContext,
-        command: ipc_control.Command,
-    };
-
-    fn onControlCommand(command: ipc_control.Command, user_data: *anyopaque) ipc_control.HandlerResult {
-        const launch: *LaunchContext = @ptrCast(@alignCast(user_data));
-        const payload: *ControlInvokePayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(ControlInvokePayload))));
-        payload.* = .{ .launch = launch, .command = command };
-        if (c.g_idle_add(onControlInvokeIdle, payload) == 0) {
-            c.g_free(payload);
-            return .rejected;
-        }
-        return .ok;
-    }
-
-    fn onControlInvokeIdle(user_data: ?*anyopaque) callconv(.c) c.gboolean {
-        if (user_data == null) return GFALSE;
-        const payload: *ControlInvokePayload = @ptrCast(@alignCast(user_data.?));
-        defer c.g_free(payload);
-
-        switch (payload.command) {
-            .summon => c.g_application_activate(@ptrCast(payload.launch.gtk_app)),
-            .hide => if (payload.launch.ctx) |ctx| c.gtk_widget_set_visible(ctx.window, GFALSE),
-            .toggle => if (payload.launch.ctx) |ctx| {
-                if (c.gtk_widget_get_visible(ctx.window) == GTRUE) {
-                    c.gtk_widget_set_visible(ctx.window, GFALSE);
-                } else {
-                    c.g_application_activate(@ptrCast(payload.launch.gtk_app));
-                }
-            } else c.g_application_activate(@ptrCast(payload.launch.gtk_app)),
-            else => {},
-        }
-        return GFALSE;
     }
 
     fn onActivate(app_ptr: ?*anyopaque, user_data: ?*anyopaque) callconv(.c) void {
@@ -104,117 +68,17 @@ pub const Shell = struct {
             .on_row_activated = onRowActivated,
             .on_row_selected = onRowSelected,
             .on_adjustment_changed = onResultsAdjustmentChanged,
-            .on_close_request = onCloseRequest,
-            .on_destroy = onDestroy,
+            .on_close_request = gtk_shell_lifecycle.onCloseRequest,
+            .on_destroy = gtk_shell_lifecycle.onDestroy,
             .install_css = installCss,
             .after_activate = afterActivate,
         });
     }
 
-    fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.gboolean {
-        if (user_data == null) return GFALSE;
-        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        if (ctx.resident_mode == GTRUE) {
-            c.gtk_widget_set_visible(ctx.window, GFALSE);
-            return GTRUE;
-        }
-        return GFALSE;
-    }
-
     fn afterActivate(ctx: *UiContext) void {
-        gtk_controller.updateEntryRouteIcon(ctx, "");
-        ctx.service.kickAsyncStartupPrewarm();
-        gtk_controller.enableStartupKeyQueue(ctx);
-        if (ctx.startup_key_queue_id != 0) {
-            _ = c.g_source_remove(ctx.startup_key_queue_id);
-            ctx.startup_key_queue_id = 0;
-        }
-        ctx.startup_key_queue_id = c.g_timeout_add(220, onStartupKeyQueueTimeout, ctx);
-        if (ctx.focus_ready_logged == GFALSE) {
-            ctx.focus_ready_logged = GTRUE;
-            logStartupMetric(ctx, "startup.focus_ready_ms");
-        }
-        if (ctx.startup_idle_id != 0) {
-            _ = c.g_source_remove(ctx.startup_idle_id);
-            ctx.startup_idle_id = 0;
-        }
-        ctx.startup_idle_id = c.g_idle_add(onStartupReady, ctx);
+        gtk_shell_startup.afterActivate(ctx);
     }
 
-    fn onStartupReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
-        if (user_data == null) return GFALSE;
-        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        ctx.startup_idle_id = 0;
-        populateResults(ctx, "");
-        gtk_nav.updateScrollbarActiveClass(ctx);
-        return GFALSE;
-    }
-
-    fn onStartupKeyQueueTimeout(user_data: ?*anyopaque) callconv(.c) c.gboolean {
-        if (user_data == null) return GFALSE;
-        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        ctx.startup_key_queue_id = 0;
-        gtk_controller.flushAndDisableStartupKeyQueue(ctx);
-        return GFALSE;
-    }
-
-    fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
-        if (user_data == null) return;
-        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        const launch: *LaunchContext = @ptrCast(@alignCast(ctx.launch_ctx));
-        if (launch.ctx == ctx) {
-            launch.ctx = null;
-        }
-        disconnectSignalsByData(@ptrCast(ctx.window), ctx);
-        // Child widgets may already be finalized by the time window destroy runs.
-        // Let GTK tear down child signal handlers naturally to avoid invalid-instance warnings.
-        if (ctx.search_debounce_id != 0) {
-            _ = c.g_source_remove(ctx.search_debounce_id);
-            ctx.search_debounce_id = 0;
-        }
-        if (ctx.status_reset_id != 0) {
-            _ = c.g_source_remove(ctx.status_reset_id);
-            ctx.status_reset_id = 0;
-        }
-        if (ctx.async_spinner_id != 0) {
-            _ = c.g_source_remove(ctx.async_spinner_id);
-            ctx.async_spinner_id = 0;
-        }
-        if (ctx.startup_idle_id != 0) {
-            _ = c.g_source_remove(ctx.startup_idle_id);
-            ctx.startup_idle_id = 0;
-        }
-        if (ctx.startup_key_queue_id != 0) {
-            _ = c.g_source_remove(ctx.startup_key_queue_id);
-            ctx.startup_key_queue_id = 0;
-        }
-        gtk_controller.disableStartupKeyQueue(ctx);
-        gtk_async_coord.beginAsyncShutdown(ctx);
-        const ready_id = gtk_async_coord.takeAsyncReadySourceId(ctx);
-        if (ready_id != 0) {
-            _ = c.g_source_remove(ready_id);
-        }
-        ctx.async_worker_active = GFALSE;
-        gtk_async.freePendingAsyncQuery(ctx);
-        c.g_mutex_clear(&ctx.async_worker_lock);
-        c.g_cond_clear(&ctx.async_worker_cond);
-        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const allocator = allocator_ptr.*;
-        allocator.destroy(allocator_ptr);
-        c.g_free(ctx);
-    }
-
-    fn disconnectSignalsByData(instance: *anyopaque, data: *anyopaque) void {
-        _ = c.g_signal_handlers_disconnect_matched(
-            instance,
-            c.G_SIGNAL_MATCH_DATA,
-            0,
-            0,
-            null,
-            null,
-            data,
-        );
-    }
 
     fn onKeyPressed(
         _: ?*c.GtkEventControllerKey,
