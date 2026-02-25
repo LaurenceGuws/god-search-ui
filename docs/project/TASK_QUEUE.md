@@ -9,12 +9,12 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [ ] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
 - [x] DE-A1.1: Add strict response parsing + client timeout handling per `docs/WA1_CONTROL_PLANE_SPEC.md`.
-- [ ] DE-A1.2: Enforce socket permissions (`0600`) and add stale-socket startup test coverage.
+- [x] DE-A1.2: Enforce socket permissions (`0600`) and add stale-socket startup test coverage.
 - [ ] DE-A2: Split GTK lifecycle/runtime orchestration from launcher module behavior.
 - [ ] DE-B1: Add notifications daemon MVP (`org.freedesktop.Notifications`: `Notify`, `CloseNotification`, `GetCapabilities`, `GetServerInformation`).
 
 ## In Progress
-- [ ] DE-A1.2: socket permission hardening (`0600`) + stale-socket startup tests (checkpoint: `docs/project/DE_EXECUTION_CHECKPOINTS.md` CP-1.1)
+- [ ] DE-A2: split GTK lifecycle/runtime orchestration into shell modules (checkpoint: `docs/project/DE_EXECUTION_CHECKPOINTS.md`)
 
 ## Blocked
 - [ ] (empty)

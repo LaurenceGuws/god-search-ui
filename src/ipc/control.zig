@@ -139,6 +139,7 @@ fn bindListener(socket_path: []const u8) !std.posix.socket_t {
         }
     };
     try std.posix.listen(fd, 32);
+    std.posix.fchmodat(std.posix.AT.FDCWD, socket_path, 0o600, 0) catch {};
     return fd;
 }
 
@@ -247,4 +248,37 @@ fn connectWithRetryTimeout(fd: std.posix.socket_t, sockaddr: *const std.posix.so
         };
         return true;
     }
+}
+
+test "bindListener replaces stale occupied path and binds socket" {
+    const allocator = std.testing.allocator;
+    const pid = std.posix.getpid();
+    const path = try std.fmt.allocPrint(allocator, "/tmp/god-search-ui-stale-{d}.sock", .{pid});
+    defer allocator.free(path);
+    std.posix.unlink(path) catch {};
+    defer std.posix.unlink(path) catch {};
+
+    const file = try std.fs.createFileAbsolute(path, .{});
+    file.close();
+
+    const fd = try bindListener(path);
+    defer std.posix.close(fd);
+
+    const stat = try std.posix.fstatat(std.posix.AT.FDCWD, path, 0);
+    try std.testing.expect(std.posix.S.ISSOCK(stat.mode));
+}
+
+test "bindListener sets user-only socket permissions" {
+    const allocator = std.testing.allocator;
+    const pid = std.posix.getpid();
+    const path = try std.fmt.allocPrint(allocator, "/tmp/god-search-ui-mode-{d}.sock", .{pid});
+    defer allocator.free(path);
+    std.posix.unlink(path) catch {};
+    defer std.posix.unlink(path) catch {};
+
+    const fd = try bindListener(path);
+    defer std.posix.close(fd);
+
+    const stat = try std.posix.fstatat(std.posix.AT.FDCWD, path, 0);
+    try std.testing.expectEqual(@as(u32, 0o600), stat.mode & 0o777);
 }
