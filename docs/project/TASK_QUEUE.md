@@ -20,7 +20,8 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R10: Add control-plane docs contract checker (README <-> CONTROL_PLANE parity).
 - [x] DE-R11: Add control-plane CLI `--ctl --help` usage output and docs parity guard.
 - [x] DE-R12: Add smoke script for control-plane command matrix (`ping/summon/hide/toggle/shell_health`).
-- [ ] DE-R13: Wire control-plane smoke into full release-contract checks (headless-safe skip).
+- [x] DE-R13: Wire control-plane smoke into full release-contract checks (headless-safe skip).
+- [ ] DE-R14: Add control-plane smoke docs page with explicit operator sequence.
 - [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
 - [x] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
@@ -39,7 +40,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-R13: Wire control-plane smoke into full release-contract checks (headless-safe skip).
+- [ ] DE-R14: Add control-plane smoke docs page with explicit operator sequence.
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -71,6 +72,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R10: Added control-plane docs parity checker and wired into release docs contracts
 - [x] DE-R11: Added `--ctl --help` output path and enforced docs parity coverage
 - [x] DE-R12: Added `scripts/control_plane_smoke.sh` command-matrix smoke helper
+- [x] DE-R13: Full release-contract checks now run control-plane smoke helper
 
 ## Blocked
 - [ ] (empty)
