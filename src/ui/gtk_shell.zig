@@ -25,6 +25,7 @@ const gtk_shell_notifications = @import("gtk/shell_notifications.zig");
 const gtk_shell_notifications_popup = @import("gtk/shell_notifications_popup.zig");
 const gtk_shell_startup = @import("gtk/shell_startup.zig");
 const SurfaceMode = @import("surfaces/mod.zig").SurfaceMode;
+const PlacementPolicy = @import("placement/mod.zig").RuntimePolicy;
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
 const GFALSE = gtk_types.GFALSE;
@@ -40,6 +41,7 @@ pub const Shell = struct {
         resident_mode: bool = false,
         start_hidden: bool = false,
         surface_mode: SurfaceMode = .auto,
+        placement_policy: PlacementPolicy = .{},
     };
 
     pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink, options: RunOptions) !void {
@@ -57,6 +59,7 @@ pub const Shell = struct {
             .resident_mode = options.resident_mode,
             .start_hidden = options.start_hidden,
             .surface_mode = options.surface_mode,
+            .placement_policy = options.placement_policy,
             .ctx = null,
             .gtk_app = gtk_app,
         };
@@ -81,7 +84,13 @@ pub const Shell = struct {
         if (notifications_daemon) |daemon| {
             notifications_mod.runtime.registerCloser(daemon, closeNotificationViaDaemon);
             const popup = try allocator.create(gtk_shell_notifications_popup.PopupManager);
-            popup.* = try gtk_shell_notifications_popup.PopupManager.init(allocator, gtk_app, daemon, options.surface_mode);
+            popup.* = try gtk_shell_notifications_popup.PopupManager.init(
+                allocator,
+                gtk_app,
+                daemon,
+                options.surface_mode,
+                options.placement_policy.notifications,
+            );
             popup.attach();
             notifications_popup = popup;
         }

@@ -4,6 +4,7 @@ const gtk_types = @import("types.zig");
 const placement_bridge = @import("placement_bridge.zig");
 const layer_shell = @import("layer_shell.zig");
 const SurfaceMode = @import("../surfaces/mod.zig").SurfaceMode;
+const PlacementPolicy = @import("../placement/mod.zig").RuntimePolicy;
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -16,6 +17,7 @@ pub const LaunchContext = struct {
     resident_mode: bool,
     start_hidden: bool,
     surface_mode: SurfaceMode,
+    placement_policy: PlacementPolicy,
     ctx: ?*UiContext,
     gtk_app: *c.GtkApplication,
 };
@@ -48,7 +50,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
         layer_shell.applyLauncher(window)
     else
         false;
-    configureInitialWindowSize(window);
+    configureInitialWindowSize(window, launch.placement_policy);
     hooks.install_css(window);
 
     const root_box = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 8);
@@ -212,6 +214,6 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     hooks.after_activate(ctx);
 }
 
-fn configureInitialWindowSize(window: *c.GtkWidget) void {
-    placement_bridge.configureLauncherWindow(window);
+fn configureInitialWindowSize(window: *c.GtkWidget, policy: PlacementPolicy) void {
+    placement_bridge.configureLauncherWindow(window, policy.launcher);
 }

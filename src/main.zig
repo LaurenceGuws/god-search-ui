@@ -22,11 +22,21 @@ pub fn main() !void {
         std.process.exit(10);
     }
 
+    if (hasArg(args, "--print-config")) {
+        var cfg = god_search_ui.config.load(allocator);
+        defer cfg.deinit(allocator);
+        const surface_mode = resolveSurfaceMode(args, cfg);
+        try printResolvedConfig(cfg, surface_mode);
+        return;
+    }
+
     const ui_mode = hasArg(args, "--ui") or hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
     if (ui_mode) {
+        var cfg = god_search_ui.config.load(allocator);
+        defer cfg.deinit(allocator);
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
-        const surface_mode = resolveSurfaceMode(args);
+        const surface_mode = resolveSurfaceMode(args, cfg);
         if (resident_mode) {
             const already_running = god_search_ui.ipc.control.trySendCommand(allocator, .ping) catch false;
             if (already_running) {
@@ -52,6 +62,7 @@ pub fn main() !void {
             .resident_mode = resident_mode,
             .start_hidden = start_hidden,
             .surface_mode = surface_mode,
+            .placement_policy = cfg.placement_policy,
         });
         return;
     }
@@ -180,12 +191,96 @@ fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
     return null;
 }
 
-fn resolveSurfaceMode(args: []const []const u8) god_search_ui.ui.surfaces.SurfaceMode {
+fn resolveSurfaceMode(args: []const []const u8, cfg: god_search_ui.config.Settings) god_search_ui.ui.surfaces.SurfaceMode {
     if (argValueAfterFlag(args, "--surface-mode")) |raw| {
         if (god_search_ui.ui.surfaces.SurfaceMode.parse(raw)) |mode| return mode;
     }
-    const env = std.process.getEnvVarOwned(std.heap.page_allocator, "GOD_SEARCH_SURFACE_MODE") catch return .auto;
-    defer std.heap.page_allocator.free(env);
-    const trimmed = std.mem.trim(u8, env, " \t\r\n");
-    return god_search_ui.ui.surfaces.SurfaceMode.parse(trimmed) orelse .auto;
+    const env = std.process.getEnvVarOwned(std.heap.page_allocator, "GOD_SEARCH_SURFACE_MODE") catch null;
+    if (env) |value| {
+        defer std.heap.page_allocator.free(value);
+        const trimmed = std.mem.trim(u8, value, " \t\r\n");
+        if (trimmed.len > 0) {
+            return god_search_ui.ui.surfaces.SurfaceMode.parse(trimmed) orelse .auto;
+        }
+    }
+    return cfg.surface_mode orelse .auto;
+}
+
+fn printResolvedConfig(cfg: god_search_ui.config.Settings, surface_mode: god_search_ui.ui.surfaces.SurfaceMode) !void {
+    var stdout_buffer: [4096]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+    const out = &stdout_writer.interface;
+
+    const launcher = cfg.placement_policy.launcher;
+    const notifications = cfg.placement_policy.notifications;
+    const launcher_monitor_name = launcher.window.monitor.output_name orelse "";
+    const notify_monitor_name = notifications.window.monitor.output_name orelse "";
+
+    try out.print(
+        \\{{
+        \\  "surface_mode": "{s}",
+        \\  "placement": {{
+        \\    "launcher": {{
+        \\      "anchor": "{s}",
+        \\      "monitor_policy": "{s}",
+        \\      "monitor_name": "{s}",
+        \\      "margins": {{"top": {d}, "right": {d}, "bottom": {d}, "left": {d}}},
+        \\      "width_percent": {d},
+        \\      "height_percent": {d},
+        \\      "min_width_percent": {d},
+        \\      "min_height_percent": {d},
+        \\      "min_width_px": {d},
+        \\      "min_height_px": {d},
+        \\      "max_width_px": {d},
+        \\      "max_height_px": {d}
+        \\    }},
+        \\    "notifications": {{
+        \\      "anchor": "{s}",
+        \\      "monitor_policy": "{s}",
+        \\      "monitor_name": "{s}",
+        \\      "margins": {{"top": {d}, "right": {d}, "bottom": {d}, "left": {d}}},
+        \\      "width_percent": {d},
+        \\      "height_percent": {d},
+        \\      "min_width_px": {d},
+        \\      "min_height_px": {d},
+        \\      "max_width_px": {d},
+        \\      "max_height_px": {d}
+        \\    }}
+        \\  }}
+        \\}}
+        \\
+    , .{
+        @tagName(surface_mode),
+        @tagName(launcher.window.anchor),
+        @tagName(launcher.window.monitor.policy),
+        launcher_monitor_name,
+        launcher.window.margins.top,
+        launcher.window.margins.right,
+        launcher.window.margins.bottom,
+        launcher.window.margins.left,
+        launcher.width_percent,
+        launcher.height_percent,
+        launcher.min_width_percent,
+        launcher.min_height_percent,
+        launcher.min_width_px,
+        launcher.min_height_px,
+        launcher.max_width_px,
+        launcher.max_height_px,
+
+        @tagName(notifications.window.anchor),
+        @tagName(notifications.window.monitor.policy),
+        notify_monitor_name,
+        notifications.window.margins.top,
+        notifications.window.margins.right,
+        notifications.window.margins.bottom,
+        notifications.window.margins.left,
+        notifications.width_percent,
+        notifications.height_percent,
+        notifications.min_width_px,
+        notifications.min_height_px,
+        notifications.max_width_px,
+        notifications.max_height_px,
+    });
+
+    try out.flush();
 }

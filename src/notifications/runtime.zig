@@ -221,10 +221,17 @@ pub fn appendRouteCandidates(
         const title = if (row.summary.len > 0) row.summary else row.app_name;
         const age = formatAge(allocator, row.updated_ns) catch continue;
         defer allocator.free(age);
-        const subtitle_buf = if (row.active)
+        const subtitle_base = if (row.active)
             try std.fmt.allocPrint(allocator, "{s} | {s}", .{ row.app_name, age })
         else
             try std.fmt.allocPrint(allocator, "{s} | closed ({d}) | {s}", .{ row.app_name, row.closed_reason, age });
+        defer allocator.free(subtitle_base);
+
+        const subtitle_buf = if (row.body.len > 0) blk: {
+            const snippet = try truncateBody(allocator, row.body, 120);
+            defer allocator.free(snippet);
+            break :blk try std.fmt.allocPrint(allocator, "{s} | {s}", .{ subtitle_base, snippet });
+        } else try allocator.dupe(u8, subtitle_base);
         defer allocator.free(subtitle_buf);
 
         const action_buf = if (row.active)
@@ -243,14 +250,6 @@ pub fn appendRouteCandidates(
             kept_action,
             "preferences-system-notifications-symbolic",
         ));
-
-        if (row.body.len > 0) {
-            const snippet = truncateBody(allocator, row.body, 120) catch continue;
-            defer allocator.free(snippet);
-            const note_title = try keep(dynamic_owned, allocator, "  body");
-            const note_sub = try keep(dynamic_owned, allocator, snippet);
-            try out.append(allocator, search.Candidate.initWithIcon(.hint, note_title, note_sub, "", ""));
-        }
     }
 }
 

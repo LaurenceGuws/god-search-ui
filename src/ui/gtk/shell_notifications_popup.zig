@@ -4,6 +4,7 @@ const notifications = @import("../../notifications/mod.zig");
 const placement_bridge = @import("placement_bridge.zig");
 const layer_shell = @import("layer_shell.zig");
 const SurfaceMode = @import("../surfaces/mod.zig").SurfaceMode;
+const NotificationPolicy = @import("../placement/mod.zig").NotificationPolicy;
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -41,16 +42,24 @@ pub const PopupManager = struct {
     daemon: *notifications.Daemon,
     gtk_app: *c.GtkApplication,
     surface_mode: SurfaceMode,
+    placement_policy: NotificationPolicy,
     window: ?*c.GtkWidget,
     list: ?*c.GtkWidget,
     entries: std.ArrayList(PopupEntry),
 
-    pub fn init(allocator: std.mem.Allocator, gtk_app: *c.GtkApplication, daemon: *notifications.Daemon, surface_mode: SurfaceMode) !PopupManager {
+    pub fn init(
+        allocator: std.mem.Allocator,
+        gtk_app: *c.GtkApplication,
+        daemon: *notifications.Daemon,
+        surface_mode: SurfaceMode,
+        placement_policy: NotificationPolicy,
+    ) !PopupManager {
         const manager = PopupManager{
             .allocator = allocator,
             .daemon = daemon,
             .gtk_app = gtk_app,
             .surface_mode = surface_mode,
+            .placement_policy = placement_policy,
             .window = null,
             .list = null,
             .entries = .empty,
@@ -255,7 +264,7 @@ pub const PopupManager = struct {
             layer_shell.applyNotifications(window)
         else
             false;
-        placement_bridge.configureNotificationPopupWindow(window);
+        placement_bridge.configureNotificationPopupWindow(window, self.placement_policy);
         c.gtk_window_set_resizable(@ptrCast(window), GFALSE);
         c.gtk_window_set_decorated(@ptrCast(window), GFALSE);
 

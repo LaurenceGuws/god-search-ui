@@ -191,3 +191,25 @@ Verification:
 zig build -Doptimize=ReleaseFast -Denable_gtk=true
 zig build test -Denable_gtk=true
 ```
+
+## CP-8 Placement Config Contract
+
+Scope:
+- runtime placement policy is user-configurable
+- Lua config drives launcher/popup placement fields
+- CLI/env override order remains deterministic
+
+Done criteria:
+1. `surface_mode` is configurable from Lua config file.
+2. Launcher/popup anchor, margins, and size policy are configurable from Lua.
+3. Precedence is explicit and documented (`CLI > env > Lua > defaults`).
+4. Builds pass with Lua config both disabled and enabled.
+5. Runtime introspection command prints resolved config (`--print-config`).
+
+Verification:
+```bash
+zig build -Doptimize=ReleaseFast -Denable_gtk=true -Denable_layer_shell=true
+zig build -Doptimize=ReleaseFast -Denable_gtk=true -Denable_layer_shell=true -Denable_lua_config=true
+zig build test -Denable_gtk=true -Denable_layer_shell=true -Denable_lua_config=true
+./zig-out/bin/god_search_ui --print-config
+```

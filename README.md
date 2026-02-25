@@ -44,6 +44,53 @@ GOD_SEARCH_SURFACE_MODE=layer-shell god-search-ui --ui
 ```
 Accepted values: `auto` (default), `toplevel`, `layer-shell`.
 
+Lua config (optional):
+```bash
+zig build -Denable_gtk=true -Denable_lua_config=true
+```
+Config file path defaults to `~/.config/god-search-ui/config.lua` (override with `GOD_SEARCH_CONFIG_LUA`).
+When missing, a default config file is auto-created at startup (Lua-config-enabled build).
+Generate default config:
+```bash
+scripts/init_lua_config.sh
+```
+File contract:
+```lua
+return {
+  surface_mode = "layer-shell", -- auto | toplevel | layer-shell
+  placement = {
+    launcher = {
+      anchor = "center",        -- center | top_left | top_center | top_right | bottom_left | bottom_center | bottom_right
+      monitor_policy = "primary", -- primary | focused
+      -- monitor_name = "DP-1", -- optional: implies by-name monitor targeting
+      margins = { top = 12, right = 12, bottom = 12, left = 12 },
+      width_percent = 48,
+      height_percent = 56,
+      min_width_percent = 32,
+      min_height_percent = 36,
+      min_width_px = 560,
+      min_height_px = 360,
+      max_width_px = 1100,
+      max_height_px = 760,
+    },
+    notifications = {
+      anchor = "top_right",
+      monitor_policy = "primary",
+      -- monitor_name = "DP-1", -- optional: implies by-name monitor targeting
+      margins = { top = 24, right = 24, bottom = 24, left = 24 },
+      width_percent = 26,
+      height_percent = 46,
+      min_width_px = 300,
+      min_height_px = 280,
+      max_width_px = 460,
+      max_height_px = 620,
+    },
+  },
+}
+```
+Precedence: `--surface-mode` > `GOD_SEARCH_SURFACE_MODE` > Lua config > default.
+Reference: `docs/operations/LUA_CONFIG.md`
+
 Resident GTK modes (recommended for zero-drop fast summon):
 ```bash
 # Keep GTK process alive and visible on first launch
@@ -61,6 +108,11 @@ god-search-ui --ctl summon
 god-search-ui --ctl hide
 god-search-ui --ctl toggle
 god-search-ui --ctl version
+```
+
+Runtime config introspection (prints resolved surface mode + placement policy):
+```bash
+god-search-ui --print-config
 ```
 
 Optional advanced refresh mode:

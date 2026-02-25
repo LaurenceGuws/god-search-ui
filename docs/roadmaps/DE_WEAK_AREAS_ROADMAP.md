@@ -71,9 +71,9 @@ Make launcher and notification placement app-controlled, deterministic, and port
 - WA-5.1 done
 - WA-5.2 done
 - WA-5.3 done
-- WA-5.4 in progress (GTK bridge active for shared sizing/anchor policy; Wayland toplevel absolute placement still compositor-managed)
+- WA-5.4 done (GTK bridge active for shared sizing/anchor policy)
 - WA-5.5 done (gtk4-layer-shell adapter + runtime mode switch added)
-- WA-5.6 pending
+- WA-5.6 done (Lua/env placement controls for launcher and notifications)
 
 ### Milestones
 1. WA-5.1 Define explicit WM adapter contract (`active output`, `work area`, `focus hints`).
