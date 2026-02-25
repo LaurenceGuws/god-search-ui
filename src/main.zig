@@ -11,17 +11,22 @@ pub fn main() !void {
     const logger = god_search_ui.app.Logger.init(.info);
     logger.info("god-search-ui starting (mode={s})", .{@tagName(state.mode)});
 
-    if (args.len > 1 and std.mem.eql(u8, args[1], "--ui")) {
+    const ui_mode = hasArg(args, "--ui") or hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
+    if (ui_mode) {
+        const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
+        const start_hidden = hasArg(args, "--ui-daemon");
         var runtime = try setupRuntime(allocator);
         defer runtime.deinit(allocator);
         runtime.rebindProviderContexts();
         try runtime.service.loadHistory(allocator);
-        try runtime.service.prewarmProviders(allocator);
         defer runtime.service.saveHistory(allocator) catch |err| {
             logger.err("failed to save history: {s}", .{@errorName(err)});
         };
         logger.info("runtime ready in {d:.2} ms", .{startup_sw.elapsedMs()});
-        try god_search_ui.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry);
+        try god_search_ui.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry, .{
+            .resident_mode = resident_mode,
+            .start_hidden = start_hidden,
+        });
         return;
     }
 
@@ -121,5 +126,12 @@ fn useAsyncRefresh() bool {
     if (std.mem.eql(u8, trimmed, "1")) return true;
     if (std.ascii.eqlIgnoreCase(trimmed, "true")) return true;
     if (std.ascii.eqlIgnoreCase(trimmed, "yes")) return true;
+    return false;
+}
+
+fn hasArg(args: []const []const u8, needle: []const u8) bool {
+    for (args[1..]) |arg| {
+        if (std.mem.eql(u8, arg, needle)) return true;
+    }
     return false;
 }

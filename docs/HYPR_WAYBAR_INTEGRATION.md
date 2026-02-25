@@ -16,8 +16,12 @@ god-search-ui --ui
 Add to your Hypr keymap module:
 
 ```ini
-# Super+Space: God Search
+# Preferred: warm resident launcher (best first-key reliability)
+exec-once = god-search-ui --ui-daemon
 bind = $mainMod, SPACE, exec, god-search-ui --ui
+
+# Cold launch fallback (higher chance of first-key loss)
+# bind = $mainMod, SPACE, exec, god-search-ui --ui
 ```
 
 Suggested fallback (if GTK mode is unavailable) is to keep your existing shell launcher binding on another key.
@@ -54,7 +58,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/god-search-ui --ui
+ExecStart=/usr/bin/god-search-ui --ui-daemon
 Restart=on-failure
 RestartSec=1
 
@@ -70,9 +74,11 @@ systemctl --user enable --now god-search-ui.service
 
 ## 5. Validation
 
-1. Press `Super+Space` and verify window appears.
-2. Search for an app and hit Enter.
-3. Verify telemetry output file updates:
+1. Start daemon once (`exec-once` or systemd user service).
+2. Press `Super+Space` and verify window appears instantly.
+3. Type immediately and verify the first character is not dropped.
+4. Search for an app and hit Enter.
+5. Verify telemetry output file updates:
    - `~/.local/state/god-search-ui/telemetry.log`
 
 ## Notes

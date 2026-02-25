@@ -193,6 +193,22 @@ pub const SearchService = struct {
         self.cache_snapshot_had_provider_runtime_failure = report.had_runtime_failure;
     }
 
+    pub fn kickAsyncStartupPrewarm(self: *SearchService) void {
+        self.cache_mu.lock();
+        defer self.cache_mu.unlock();
+
+        self.reapFinishedRefreshThreadLocked();
+        if (self.cache_ready) return;
+        if (self.refresh_thread_running or self.refresh_thread != null) return;
+
+        self.refresh_requested = true;
+        refresh_worker.markRunning(&self.refresh_thread_running);
+        self.refresh_thread = std.Thread.spawn(.{}, refreshWorkerMain, .{self}) catch {
+            refresh_worker.markStopped(&self.refresh_thread_running);
+            return;
+        };
+    }
+
     pub fn invalidateSnapshot(self: *SearchService) void {
         self.cache_mu.lock();
         defer self.cache_mu.unlock();

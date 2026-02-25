@@ -34,6 +34,16 @@ zig build -Denable_gtk=true run -- --ui
 ```
 In GTK mode, use `Ctrl+R` to refresh provider snapshot cache.
 
+Resident GTK modes (recommended for zero-drop fast summon):
+```bash
+# Keep GTK process alive and visible on first launch
+god-search-ui --ui-resident
+
+# Keep GTK process alive and hidden until summon
+god-search-ui --ui-daemon
+```
+With `--ui-daemon`, bind your launcher key to `god-search-ui --ui` so each press re-activates the warm instance.
+
 Optional advanced refresh mode:
 ```bash
 GOD_SEARCH_ASYNC_REFRESH=1 god-search-ui --ui

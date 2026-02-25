@@ -10,6 +10,9 @@ pub const LaunchContext = struct {
     allocator: std.mem.Allocator,
     service: *app_mod.SearchService,
     telemetry: *app_mod.TelemetrySink,
+    resident_mode: bool,
+    start_hidden: bool,
+    ctx: ?*UiContext,
 };
 
 pub const ActivateHooks = struct {
@@ -19,12 +22,21 @@ pub const ActivateHooks = struct {
     on_row_activated: *const fn (?*c.GtkListBox, ?*c.GtkListBoxRow, ?*anyopaque) callconv(.c) void,
     on_row_selected: *const fn (?*c.GtkListBox, ?*c.GtkListBoxRow, ?*anyopaque) callconv(.c) void,
     on_adjustment_changed: *const fn (?*c.GtkAdjustment, ?*anyopaque) callconv(.c) void,
+    on_close_request: *const fn (?*c.GtkWindow, ?*anyopaque) callconv(.c) c.gboolean,
     on_destroy: *const fn (?*c.GtkWidget, ?*anyopaque) callconv(.c) void,
     install_css: *const fn (*c.GtkWidget) void,
     after_activate: *const fn (*UiContext) void,
 };
 
 pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: ActivateHooks) void {
+    if (launch.ctx) |existing_ctx| {
+        c.gtk_window_present(@ptrCast(existing_ctx.window));
+        _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(existing_ctx.entry)));
+        hooks.after_activate(existing_ctx);
+        return;
+    }
+
+    const launch_start_ns = std.time.nanoTimestamp();
     const window = c.gtk_application_window_new(gtk_app);
     c.gtk_window_set_title(@ptrCast(window), "God Search");
     configureInitialWindowSize(window);
@@ -115,6 +127,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
         return;
     };
     allocator_box.* = launch.allocator;
+    ctx.launch_ctx = @ptrCast(launch);
     ctx.window = @ptrCast(window);
     ctx.entry = @ptrCast(entry);
     ctx.status = @ptrCast(status);
@@ -127,6 +140,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.allocator = @ptrCast(allocator_box);
     ctx.service = launch.service;
     ctx.telemetry = launch.telemetry;
+    ctx.resident_mode = if (launch.resident_mode) gtk_types.GTRUE else gtk_types.GFALSE;
     ctx.pending_power_confirm = gtk_types.GFALSE;
     ctx.search_debounce_id = 0;
     ctx.status_reset_id = 0;
@@ -138,6 +152,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.async_search_generation = 0;
     ctx.async_spinner_id = 0;
     ctx.async_ready_id = 0;
+    ctx.startup_idle_id = 0;
     ctx.async_spinner_phase = 0;
     ctx.async_inflight = gtk_types.GFALSE;
     ctx.async_worker_active = gtk_types.GFALSE;
@@ -145,6 +160,14 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.async_pending_query_len = 0;
     ctx.async_shutdown = gtk_types.GFALSE;
     ctx.async_worker_count = 0;
+    ctx.launch_start_ns = launch_start_ns;
+    ctx.focus_ready_logged = gtk_types.GFALSE;
+    ctx.first_keypress_logged = gtk_types.GFALSE;
+    ctx.first_input_logged = gtk_types.GFALSE;
+    ctx.startup_key_queue_id = 0;
+    ctx.startup_key_queue_active = gtk_types.GFALSE;
+    ctx.startup_key_queue_len = 0;
+    ctx.startup_key_queue = [_]u32{0} ** 24;
     c.g_mutex_init(&ctx.async_worker_lock);
     c.g_cond_init(&ctx.async_worker_cond);
 
@@ -160,13 +183,22 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
         _ = c.g_signal_connect_data(vadj, "changed", c.G_CALLBACK(hooks.on_adjustment_changed), ctx, null, 0);
         _ = c.g_signal_connect_data(vadj, "value-changed", c.G_CALLBACK(hooks.on_adjustment_changed), ctx, null, 0);
     }
+    _ = c.g_signal_connect_data(window, "close-request", c.G_CALLBACK(hooks.on_close_request), ctx, null, 0);
     _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(hooks.on_destroy), ctx, null, 0);
 
     c.gtk_box_append(@ptrCast(root_box), entry);
     c.gtk_box_append(@ptrCast(root_box), status);
     c.gtk_box_append(@ptrCast(root_box), content_pane);
     c.gtk_window_set_child(@ptrCast(window), root_box);
+    launch.ctx = ctx;
+    if (launch.start_hidden) {
+        launch.start_hidden = false;
+        c.gtk_widget_set_visible(window, gtk_types.GFALSE);
+        return;
+    }
+
     c.gtk_window_present(@ptrCast(window));
+    _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(entry)));
 
     hooks.after_activate(ctx);
 }

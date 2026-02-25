@@ -22,9 +22,19 @@ pub const StatusHooks = struct {
 };
 
 pub fn handleKeyPressed(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierType, hooks: InputHooks) c.gboolean {
+    if (captureStartupKey(ctx, keyval, state)) {
+        return GTRUE;
+    }
+    if (redirectPrintableKeyToEntry(ctx, keyval, state)) {
+        return GTRUE;
+    }
     switch (keyval) {
         c.GDK_KEY_Escape => {
-            c.gtk_window_close(@ptrCast(ctx.window));
+            if (ctx.resident_mode == GTRUE) {
+                c.gtk_widget_set_visible(ctx.window, GFALSE);
+            } else {
+                c.gtk_window_close(@ptrCast(ctx.window));
+            }
             return GTRUE;
         },
         c.GDK_KEY_l, c.GDK_KEY_L => {
@@ -79,6 +89,104 @@ pub fn handleKeyPressed(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierTy
         },
         else => return GFALSE,
     }
+}
+
+pub fn enableStartupKeyQueue(ctx: *UiContext) void {
+    ctx.startup_key_queue_active = GTRUE;
+    ctx.startup_key_queue_len = 0;
+}
+
+pub fn flushAndDisableStartupKeyQueue(ctx: *UiContext) void {
+    if (ctx.startup_key_queue_len > 0) {
+        _ = c.gtk_widget_grab_focus(@ptrCast(@alignCast(ctx.entry)));
+        var idx: usize = 0;
+        const queued_len: usize = @intCast(ctx.startup_key_queue_len);
+        while (idx < queued_len) : (idx += 1) {
+            const codepoint: u21 = @intCast(ctx.startup_key_queue[idx]);
+            insertCodepointIntoEntry(ctx, codepoint);
+        }
+    }
+    disableStartupKeyQueue(ctx);
+}
+
+pub fn disableStartupKeyQueue(ctx: *UiContext) void {
+    ctx.startup_key_queue_active = GFALSE;
+    ctx.startup_key_queue_len = 0;
+}
+
+fn captureStartupKey(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierType) bool {
+    if (ctx.startup_key_queue_active == GFALSE) return false;
+    const codepoint = printableCodepointFromKeyForStartup(keyval, state) orelse return false;
+
+    if (isEntryFocused(ctx)) {
+        flushAndDisableStartupKeyQueue(ctx);
+        return false;
+    }
+
+    queueStartupCodepoint(ctx, codepoint);
+    _ = c.gtk_widget_grab_focus(@ptrCast(@alignCast(ctx.entry)));
+    return true;
+}
+
+fn queueStartupCodepoint(ctx: *UiContext, codepoint: u21) void {
+    if (ctx.startup_key_queue_len < @as(u8, @intCast(ctx.startup_key_queue.len))) {
+        const queue_idx: usize = @intCast(ctx.startup_key_queue_len);
+        ctx.startup_key_queue[queue_idx] = codepoint;
+        ctx.startup_key_queue_len += 1;
+        return;
+    }
+
+    insertCodepointIntoEntry(ctx, codepoint);
+}
+
+fn redirectPrintableKeyToEntry(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierType) bool {
+    if (ctx.startup_key_queue_active == GTRUE) return false;
+    const codepoint = printableCodepointFromKey(keyval, state) orelse return false;
+    if (isEntryFocused(ctx)) return false;
+
+    insertCodepointIntoEntry(ctx, codepoint);
+    _ = c.gtk_widget_grab_focus(@ptrCast(@alignCast(ctx.entry)));
+    return true;
+}
+
+fn printableCodepointFromKey(keyval: c.guint, state: c.GdkModifierType) ?u21 {
+    const disallowed = c.GDK_CONTROL_MASK | c.GDK_ALT_MASK | c.GDK_META_MASK | c.GDK_SUPER_MASK;
+    return printableCodepointFromKeyWithMask(keyval, state, disallowed);
+}
+
+fn printableCodepointFromKeyForStartup(keyval: c.guint, state: c.GdkModifierType) ?u21 {
+    // During immediate post-launch typing, some compositors may still report SUPER/META
+    // on the first printable key right after the launcher chord is released.
+    const disallowed = c.GDK_CONTROL_MASK | c.GDK_ALT_MASK;
+    return printableCodepointFromKeyWithMask(keyval, state, disallowed);
+}
+
+fn printableCodepointFromKeyWithMask(keyval: c.guint, state: c.GdkModifierType, disallowed: c.GdkModifierType) ?u21 {
+    if ((state & disallowed) != 0) return null;
+
+    const codepoint: u21 = @intCast(c.gdk_keyval_to_unicode(keyval));
+    if (codepoint == 0) return null;
+    if (c.g_unichar_isprint(codepoint) == 0) return null;
+    if (!std.unicode.utf8ValidCodepoint(codepoint)) return null;
+    return codepoint;
+}
+
+fn isEntryFocused(ctx: *UiContext) bool {
+    const focused = c.gtk_window_get_focus(@ptrCast(ctx.window));
+    return focused != null and focused == @as(*c.GtkWidget, @ptrCast(@alignCast(ctx.entry)));
+}
+
+fn insertCodepointIntoEntry(ctx: *UiContext, codepoint: u21) void {
+    var utf8_buf: [4]u8 = undefined;
+    const encoded_len = std.unicode.utf8Encode(codepoint, &utf8_buf) catch return;
+    const editable: *c.GtkEditable = @ptrCast(@alignCast(ctx.entry));
+    var cursor_pos: c_int = -1;
+    c.gtk_editable_insert_text(
+        editable,
+        utf8_buf[0..encoded_len].ptr,
+        @as(c_int, @intCast(encoded_len)),
+        &cursor_pos,
+    );
 }
 
 pub fn handleEntryActivate(ctx: *UiContext) void {

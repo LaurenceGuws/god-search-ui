@@ -10,6 +10,7 @@ pub const GTRUE: c.gboolean = 1;
 pub const GFALSE: c.gboolean = 0;
 
 pub const UiContext = extern struct {
+    launch_ctx: *anyopaque,
     window: *c.GtkWidget,
     entry: *c.GtkEntry,
     status: *c.GtkLabel,
@@ -22,6 +23,7 @@ pub const UiContext = extern struct {
     allocator: *anyopaque,
     service: *app_mod.SearchService,
     telemetry: *app_mod.TelemetrySink,
+    resident_mode: c.gboolean,
     pending_power_confirm: c.gboolean,
     search_debounce_id: c.guint,
     status_reset_id: c.guint,
@@ -33,6 +35,7 @@ pub const UiContext = extern struct {
     async_search_generation: u64,
     async_spinner_id: c.guint,
     async_ready_id: c.guint,
+    startup_idle_id: c.guint,
     async_spinner_phase: u8,
     async_inflight: c.gboolean,
     async_worker_active: c.gboolean,
@@ -40,6 +43,14 @@ pub const UiContext = extern struct {
     async_pending_query_len: usize,
     async_shutdown: c.gboolean,
     async_worker_count: c.guint,
+    launch_start_ns: i128,
+    focus_ready_logged: c.gboolean,
+    first_keypress_logged: c.gboolean,
+    first_input_logged: c.gboolean,
+    startup_key_queue_id: c.guint,
+    startup_key_queue_active: c.gboolean,
+    startup_key_queue_len: u8,
+    startup_key_queue: [24]u32,
     async_worker_lock: c.GMutex,
     async_worker_cond: c.GCond,
 };

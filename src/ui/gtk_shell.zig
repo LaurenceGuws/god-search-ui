@@ -28,7 +28,12 @@ const AsyncSearchResult = gtk_async.AsyncSearchResult;
 const ScoredCandidate = @import("../search/mod.zig").ScoredCandidate;
 
 pub const Shell = struct {
-    pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink) !void {
+    pub const RunOptions = struct {
+        resident_mode: bool = false,
+        start_hidden: bool = false,
+    };
+
+    pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink, options: RunOptions) !void {
         const gtk_app = c.gtk_application_new("io.god.search.ui", c.G_APPLICATION_DEFAULT_FLAGS);
         defer c.g_object_unref(gtk_app);
 
@@ -36,6 +41,9 @@ pub const Shell = struct {
             .allocator = allocator,
             .service = service,
             .telemetry = telemetry,
+            .resident_mode = options.resident_mode,
+            .start_hidden = options.start_hidden,
+            .ctx = null,
         };
         _ = c.g_signal_connect_data(gtk_app, "activate", c.G_CALLBACK(onActivate), &launch, null, 0);
         _ = c.g_application_run(@ptrCast(gtk_app), 0, null);
@@ -51,21 +59,67 @@ pub const Shell = struct {
             .on_row_activated = onRowActivated,
             .on_row_selected = onRowSelected,
             .on_adjustment_changed = onResultsAdjustmentChanged,
+            .on_close_request = onCloseRequest,
             .on_destroy = onDestroy,
             .install_css = installCss,
             .after_activate = afterActivate,
         });
     }
 
+    fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        if (ctx.resident_mode == GTRUE) {
+            c.gtk_widget_set_visible(ctx.window, GFALSE);
+            return GTRUE;
+        }
+        return GFALSE;
+    }
+
     fn afterActivate(ctx: *UiContext) void {
         gtk_controller.updateEntryRouteIcon(ctx, "");
+        ctx.service.kickAsyncStartupPrewarm();
+        gtk_controller.enableStartupKeyQueue(ctx);
+        if (ctx.startup_key_queue_id != 0) {
+            _ = c.g_source_remove(ctx.startup_key_queue_id);
+            ctx.startup_key_queue_id = 0;
+        }
+        ctx.startup_key_queue_id = c.g_timeout_add(220, onStartupKeyQueueTimeout, ctx);
+        if (ctx.focus_ready_logged == GFALSE) {
+            ctx.focus_ready_logged = GTRUE;
+            logStartupMetric(ctx, "startup.focus_ready_ms");
+        }
+        if (ctx.startup_idle_id != 0) {
+            _ = c.g_source_remove(ctx.startup_idle_id);
+            ctx.startup_idle_id = 0;
+        }
+        ctx.startup_idle_id = c.g_idle_add(onStartupReady, ctx);
+    }
+
+    fn onStartupReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        ctx.startup_idle_id = 0;
         populateResults(ctx, "");
         gtk_nav.updateScrollbarActiveClass(ctx);
+        return GFALSE;
+    }
+
+    fn onStartupKeyQueueTimeout(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        ctx.startup_key_queue_id = 0;
+        gtk_controller.flushAndDisableStartupKeyQueue(ctx);
+        return GFALSE;
     }
 
     fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        const launch: *LaunchContext = @ptrCast(@alignCast(ctx.launch_ctx));
+        if (launch.ctx == ctx) {
+            launch.ctx = null;
+        }
         disconnectSignalsByData(@ptrCast(ctx.window), ctx);
         // Child widgets may already be finalized by the time window destroy runs.
         // Let GTK tear down child signal handlers naturally to avoid invalid-instance warnings.
@@ -81,6 +135,15 @@ pub const Shell = struct {
             _ = c.g_source_remove(ctx.async_spinner_id);
             ctx.async_spinner_id = 0;
         }
+        if (ctx.startup_idle_id != 0) {
+            _ = c.g_source_remove(ctx.startup_idle_id);
+            ctx.startup_idle_id = 0;
+        }
+        if (ctx.startup_key_queue_id != 0) {
+            _ = c.g_source_remove(ctx.startup_key_queue_id);
+            ctx.startup_key_queue_id = 0;
+        }
+        gtk_controller.disableStartupKeyQueue(ctx);
         gtk_async_coord.beginAsyncShutdown(ctx);
         const ready_id = gtk_async_coord.takeAsyncReadySourceId(ctx);
         if (ready_id != 0) {
@@ -117,6 +180,10 @@ pub const Shell = struct {
     ) callconv(.c) c.gboolean {
         if (user_data == null) return GFALSE;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        if (ctx.first_keypress_logged == GFALSE) {
+            ctx.first_keypress_logged = GTRUE;
+            logStartupMetric(ctx, "startup.first_keypress_ms");
+        }
         return gtk_controller.handleKeyPressed(ctx, keyval, state, .{
             .refresh_snapshot = refreshSnapshot,
             .toggle_preview = togglePreview,
@@ -142,6 +209,17 @@ pub const Shell = struct {
         }
         const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
         const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        if (ctx.first_input_logged == GFALSE and query.len > 0) {
+            ctx.first_input_logged = GTRUE;
+            logStartupMetric(ctx, "startup.first_input_ms");
+        }
+        if (query.len > 0 and ctx.startup_key_queue_active == GTRUE) {
+            if (ctx.startup_key_queue_id != 0) {
+                _ = c.g_source_remove(ctx.startup_key_queue_id);
+                ctx.startup_key_queue_id = 0;
+            }
+            gtk_controller.flushAndDisableStartupKeyQueue(ctx);
+        }
         gtk_controller.updateEntryRouteIcon(ctx, query);
         if (std.mem.trim(u8, query, " \t\r\n").len == 0) {
             cancelAsyncRouteSearch(ctx);
@@ -364,5 +442,13 @@ pub const Shell = struct {
             std.log.warn("telemetry write failed: {s}", .{@errorName(err)});
             setStatus(ctx, "Telemetry write failed");
         };
+    }
+
+    fn logStartupMetric(ctx: *UiContext, metric_name: []const u8) void {
+        const now_ns = std.time.nanoTimestamp();
+        const diff_ns = now_ns - ctx.launch_start_ns;
+        const elapsed_ns: u64 = if (diff_ns <= 0) 0 else @as(u64, @intCast(diff_ns));
+        const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
+        std.log.info("{s}={d:.2}", .{ metric_name, elapsed_ms });
     }
 };
