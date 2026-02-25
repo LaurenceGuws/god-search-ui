@@ -3,6 +3,7 @@ const std = @import("std");
 pub const Event = union(enum) {
     summon,
     hide,
+    toggle,
     refresh,
     custom: []const u8,
 };

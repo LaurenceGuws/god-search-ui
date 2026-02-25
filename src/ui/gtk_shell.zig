@@ -66,9 +66,12 @@ pub const Shell = struct {
             .gtk_app = gtk_app,
         };
 
+        var event_bus = shell_mod.EventBus.init(allocator);
+        defer event_bus.deinit();
+
         var control_server: ?ipc_control.Server = null;
         defer if (control_server) |*srv| srv.deinit();
-        control_server = try gtk_shell_control.maybeStart(allocator, options.resident_mode, &launch);
+        control_server = try gtk_shell_control.maybeStart(allocator, options.resident_mode, &event_bus);
 
         var module_registry = shell_mod.Registry.init(allocator);
         defer module_registry.deinit();
@@ -82,6 +85,7 @@ pub const Shell = struct {
         var launcher_ctx = LauncherModule.Context{
             .gtk_app = gtk_app,
             .launch = &launch,
+            .event_bus = &event_bus,
         };
         try module_registry.register(NotificationsModule.factory(&notifications_ctx));
         try module_registry.register(LauncherModule.factory(&launcher_ctx));
@@ -496,6 +500,7 @@ pub const Shell = struct {
         const Context = struct {
             gtk_app: *c.GtkApplication,
             launch: *LaunchContext,
+            event_bus: *shell_mod.EventBus,
         };
 
         const State = struct {
@@ -530,6 +535,10 @@ pub const Shell = struct {
 
         fn start(state_ptr: *anyopaque) !void {
             const state: *State = @ptrCast(@alignCast(state_ptr));
+            try state.ctx.event_bus.subscribe(.{
+                .context = state,
+                .on_event = onBusEvent,
+            });
             _ = c.g_signal_connect_data(state.ctx.gtk_app, "activate", c.G_CALLBACK(onActivate), state.ctx.launch, null, 0);
             _ = c.g_application_run(@ptrCast(state.ctx.gtk_app), 0, null);
             state.started = true;
@@ -537,7 +546,10 @@ pub const Shell = struct {
 
         fn stop(_: *anyopaque) void {}
 
-        fn handleEvent(_: *anyopaque, _: shell_mod.module.Event) void {}
+        fn handleEvent(state_ptr: *anyopaque, event: shell_mod.module.Event) void {
+            const state: *State = @ptrCast(@alignCast(state_ptr));
+            applyControlEvent(state, event);
+        }
 
         fn health(state_ptr: *anyopaque) shell_mod.module.ModuleHealth {
             const state: *State = @ptrCast(@alignCast(state_ptr));
@@ -550,6 +562,26 @@ pub const Shell = struct {
         fn deinit(allocator: std.mem.Allocator, state_ptr: *anyopaque) void {
             const state: *State = @ptrCast(@alignCast(state_ptr));
             allocator.destroy(state);
+        }
+
+        fn onBusEvent(ctx: *anyopaque, event: shell_mod.module.Event) void {
+            const state: *State = @ptrCast(@alignCast(ctx));
+            applyControlEvent(state, event);
+        }
+
+        fn applyControlEvent(state: *State, event: shell_mod.module.Event) void {
+            switch (event) {
+                .summon => c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
+                .hide => if (state.ctx.launch.ctx) |ui_ctx| c.gtk_widget_set_visible(ui_ctx.window, GFALSE),
+                .toggle => if (state.ctx.launch.ctx) |ui_ctx| {
+                    if (c.gtk_widget_get_visible(ui_ctx.window) == GTRUE) {
+                        c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
+                    } else {
+                        c.g_application_activate(@ptrCast(state.ctx.gtk_app));
+                    }
+                } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
+                else => {},
+            }
         }
     };
 
