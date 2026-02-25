@@ -29,14 +29,14 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-results-scroll scrollbar separator { min-width: 0; min-height: 0; background: transparent; }\n" ++
         ".gs-results-scroll scrollbar trough { background: transparent; border: none; box-shadow: none; border-radius: 0; margin: 0; padding: 0; }\n" ++
         ".gs-results-scroll scrollbar slider { min-width: 4px; min-height: 20px; background: rgba(140, 170, 235, 0.20); border: none; box-shadow: none; border-radius: 3px; margin: 0; }\n" ++
-        ".gs-results > row { background: transparent; background-color: transparent; background-image: none; border: none; padding: 4px 8px; border-radius: 8px; }\n" ++
+        ".gs-results > row { background: transparent; background-color: transparent; background-image: none; border: none; padding: 1px 4px; border-radius: 10px; }\n" ++
         ".gs-results > row:selected,\n" ++
         ".gs-results > row:selected:focus,\n" ++
         ".gs-results > row:selected:backdrop,\n" ++
         ".gs-results > row:hover,\n" ++
         ".gs-results > row:focus,\n" ++
         ".gs-results > row:active { background: transparent; background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; }\n" ++
-        ".gs-results > row > box { border-radius: 8px; }\n" ++
+        ".gs-results > row > box { border-radius: 10px; padding: 8px 10px; }\n" ++
         ".gs-results.gs-scroll-active > row > box { margin-right: 4px; }\n" ++
         ".gs-results.gs-scroll-active .gs-kind-icon { margin-left: -2px; }\n" ++
         ".gs-results > row.gs-actionable-row { transition: background-color 130ms ease, border-color 130ms ease, opacity 120ms ease; }\n" ++
@@ -48,7 +48,7 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-results > row.gs-actionable-row:active > box {\n" ++
         "  background: rgba(140, 170, 235, 0.20);\n" ++
         "  border: 1px solid rgba(164, 192, 255, 0.55);\n" ++
-        "  border-radius: 8px;\n" ++
+        "  border-radius: 10px;\n" ++
         "  outline: none;\n" ++
         "  box-shadow: none;\n" ++
         "}\n" ++
