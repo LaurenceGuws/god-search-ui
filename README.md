@@ -49,7 +49,7 @@ Lua config (optional):
 zig build -Denable_gtk=true -Denable_lua_config=true
 ```
 Config file path defaults to `~/.config/god-search-ui/config.lua` (override with `GOD_SEARCH_CONFIG_LUA`).
-When missing, a default config file is auto-created at startup (Lua-config-enabled build).
+When missing, a default config file is auto-created on app startup paths that load runtime config.
 Generate default config:
 ```bash
 scripts/init_lua_config.sh

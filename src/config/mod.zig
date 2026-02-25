@@ -33,7 +33,8 @@ const impl = if (build_options.enable_lua_config)
     @import("lua_config.zig")
 else
     struct {
-        pub fn load(_: @import("std").mem.Allocator) Settings {
+        pub fn load(allocator: @import("std").mem.Allocator) Settings {
+            _ = @import("default_lua.zig").ensureDefaultConfig(allocator) catch false;
             return .{};
         }
     };

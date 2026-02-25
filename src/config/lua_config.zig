@@ -1,5 +1,6 @@
 const std = @import("std");
 const config = @import("mod.zig");
+const default_lua = @import("default_lua.zig");
 const SurfaceMode = @import("../ui/surfaces/mod.zig").SurfaceMode;
 const placement = @import("../ui/placement/mod.zig");
 const wm_adapter = @import("../wm/adapter.zig");
@@ -13,12 +14,12 @@ const c = @cImport({
 const log = std.log.scoped(.config);
 
 pub fn load(allocator: std.mem.Allocator) config.Settings {
-    const path = resolvePath(allocator) catch return .{};
+    const path = default_lua.resolvePath(allocator) catch return .{};
     defer allocator.free(path);
 
     std.fs.cwd().access(path, .{}) catch |err| switch (err) {
         error.FileNotFound => {
-            bootstrapDefaultConfig(path) catch |write_err| {
+            default_lua.ensureDefaultConfigAtPath(path) catch |write_err| {
                 log.warn("lua config missing and default bootstrap failed ({s}): {s}", .{ path, @errorName(write_err) });
                 return .{};
             };
@@ -60,22 +61,6 @@ pub fn load(allocator: std.mem.Allocator) config.Settings {
     settings.applyPlacementOverrides();
     c.lua_settop(lua, 0);
     return settings;
-}
-
-fn resolvePath(allocator: std.mem.Allocator) ![]u8 {
-    const env = std.process.getEnvVarOwned(allocator, "GOD_SEARCH_CONFIG_LUA") catch null;
-    if (env) |value| {
-        const trimmed = std.mem.trim(u8, value, " \t\r\n");
-        if (trimmed.len == 0) {
-            allocator.free(value);
-        } else {
-            return value;
-        }
-    }
-
-    const home = try std.process.getEnvVarOwned(allocator, "HOME");
-    defer allocator.free(home);
-    return std.fmt.allocPrint(allocator, "{s}/.config/god-search-ui/config.lua", .{home});
 }
 
 fn parseSettingsFromTop(lua: *c.lua_State, allocator: std.mem.Allocator, initial: config.Settings) config.Settings {
@@ -249,47 +234,3 @@ fn readLuaString(lua: *c.lua_State, idx: c_int) ?[]const u8 {
     const ptr = c.lua_tolstring(lua, idx, &len) orelse return null;
     return ptr[0..@intCast(len)];
 }
-
-fn bootstrapDefaultConfig(path: []const u8) !void {
-    if (std.fs.path.dirname(path)) |dir_path| {
-        try std.fs.cwd().makePath(dir_path);
-    }
-    var file = try std.fs.cwd().createFile(path, .{ .truncate = true });
-    defer file.close();
-    try file.writeAll(default_config_lua);
-}
-
-const default_config_lua =
-    \\return {
-    \\  surface_mode = "auto", -- auto | toplevel | layer-shell
-    \\  placement = {
-    \\    launcher = {
-    \\      anchor = "center",
-    \\      monitor_policy = "primary", -- primary | focused
-    \\      -- monitor_name = "DP-1",   -- optional: sets policy to by_name
-    \\      margins = { top = 12, right = 12, bottom = 12, left = 12 },
-    \\      width_percent = 48,
-    \\      height_percent = 56,
-    \\      min_width_percent = 32,
-    \\      min_height_percent = 36,
-    \\      min_width_px = 560,
-    \\      min_height_px = 360,
-    \\      max_width_px = 1100,
-    \\      max_height_px = 760,
-    \\    },
-    \\    notifications = {
-    \\      anchor = "top_right",
-    \\      monitor_policy = "primary", -- primary | focused
-    \\      -- monitor_name = "DP-1",   -- optional: sets policy to by_name
-    \\      margins = { top = 24, right = 24, bottom = 24, left = 24 },
-    \\      width_percent = 26,
-    \\      height_percent = 46,
-    \\      min_width_px = 300,
-    \\      min_height_px = 280,
-    \\      max_width_px = 460,
-    \\      max_height_px = 620,
-    \\    },
-    \\  },
-    \\}
-    \\
-;

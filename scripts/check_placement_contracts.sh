@@ -15,9 +15,9 @@ require_pattern() {
   fi
 }
 
-# Default config template parity (init script + lua bootstrap fallback)
+# Default config template parity (init script + app bootstrap fallback)
 require_pattern scripts/init_lua_config.sh 'surface_mode = "auto"' "init default surface mode"
-require_pattern src/config/lua_config.zig 'surface_mode = "auto"' "lua bootstrap default surface mode"
+require_pattern src/config/default_lua.zig 'surface_mode = "auto"' "lua bootstrap default surface mode"
 
 for key in \
   'anchor = "center"' \
@@ -30,7 +30,7 @@ for key in \
   'height_percent = 46'
 do
   require_pattern scripts/init_lua_config.sh "$key" "init template key"
-  require_pattern src/config/lua_config.zig "$key" "lua bootstrap template key"
+  require_pattern src/config/default_lua.zig "$key" "lua bootstrap template key"
 done
 
 # Operator docs parity for diagnostics and smoke workflows.
