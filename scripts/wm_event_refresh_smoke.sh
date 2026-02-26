@@ -79,6 +79,20 @@ if [[ "$stats" == *"events=0"* ]]; then
   exit 5
 fi
 
+events_n="$(printf '%s\n' "$stats" | rg -o 'events=[0-9]+' | cut -d= -f2 || true)"
+scheduled_n="$(printf '%s\n' "$stats" | rg -o 'scheduled=[0-9]+' | cut -d= -f2 || true)"
+skipped_n="$(printf '%s\n' "$stats" | rg -o 'skipped=[0-9]+' | cut -d= -f2 || true)"
+if [[ -z "$events_n" || -z "$scheduled_n" || -z "$skipped_n" ]]; then
+  echo "wm event smoke failed: unable to parse numeric wm_event_stats fields: $stats" >&2
+  tail -n 80 "$log_file" >&2 || true
+  exit 6
+fi
+if (( scheduled_n + skipped_n <= 0 )); then
+  echo "wm event smoke failed: expected scheduled+skipped > 0, got scheduled=${scheduled_n} skipped=${skipped_n} stats=${stats}" >&2
+  tail -n 80 "$log_file" >&2 || true
+  exit 7
+fi
+
 echo "wm event refresh smoke passed"
 echo "wm_event_stats: $stats"
 tail -n 20 "$log_file"
