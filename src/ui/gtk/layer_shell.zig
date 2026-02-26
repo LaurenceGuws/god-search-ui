@@ -59,11 +59,6 @@ const enabled = struct {
         c.gtk_layer_set_anchor(win, c.GTK_LAYER_SHELL_EDGE_LEFT, 0);
         c.gtk_layer_set_anchor(win, c.GTK_LAYER_SHELL_EDGE_RIGHT, 0);
         c.gtk_layer_set_margin(win, c.GTK_LAYER_SHELL_EDGE_TOP, 36);
-        if (primaryMonitorObject(window)) |monitor_obj| {
-            defer c.g_object_unref(monitor_obj);
-            const monitor: *c.GdkMonitor = @ptrCast(@alignCast(monitor_obj));
-            c.gtk_layer_set_monitor(win, monitor);
-        }
         return true;
     }
 
@@ -80,11 +75,6 @@ const enabled = struct {
         c.gtk_layer_set_anchor(win, c.GTK_LAYER_SHELL_EDGE_LEFT, 0);
         c.gtk_layer_set_margin(win, c.GTK_LAYER_SHELL_EDGE_TOP, 24);
         c.gtk_layer_set_margin(win, c.GTK_LAYER_SHELL_EDGE_RIGHT, 24);
-        if (primaryMonitorObject(window)) |monitor_obj| {
-            defer c.g_object_unref(monitor_obj);
-            const monitor: *c.GdkMonitor = @ptrCast(@alignCast(monitor_obj));
-            c.gtk_layer_set_monitor(win, monitor);
-        }
         return true;
     }
 
@@ -92,10 +82,4 @@ const enabled = struct {
         return c.gtk_layer_is_supported() != 0;
     }
 
-    fn primaryMonitorObject(window: *gtk_types.c.GtkWidget) ?*anyopaque {
-        const display = gtk_types.c.gtk_widget_get_display(window) orelse return null;
-        const monitors = gtk_types.c.gdk_display_get_monitors(display) orelse return null;
-        if (gtk_types.c.g_list_model_get_n_items(monitors) == 0) return null;
-        return gtk_types.c.g_list_model_get_item(monitors, 0);
-    }
 };
