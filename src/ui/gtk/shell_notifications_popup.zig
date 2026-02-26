@@ -108,7 +108,7 @@ pub const PopupManager = struct {
         if (idx) |existing_idx| {
             const entry = &self.entries.items[existing_idx];
             c.gtk_label_set_text(entry.summary_label, toCStr(event.summary));
-            c.gtk_label_set_text(entry.body_label, toCStr(event.body));
+            setBodyLabel(entry.body_label, event.body);
             updateActions(self, entry.actions_box, event.id, event.actions);
             rescheduleTimeout(self, entry, event.expire_timeout);
         } else {
@@ -210,6 +210,8 @@ pub const PopupManager = struct {
         const body_label = c.gtk_label_new(toCStr(body));
         c.gtk_label_set_xalign(@ptrCast(body_label), 0.0);
         c.gtk_label_set_wrap(@ptrCast(body_label), GTRUE);
+        c.gtk_label_set_use_markup(@ptrCast(body_label), GTRUE);
+        setBodyLabel(@ptrCast(body_label), body);
         c.gtk_widget_add_css_class(body_label, "gs-notify-body");
 
         const actions_box = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 6);
@@ -329,5 +331,15 @@ fn clearChildren(box: *c.GtkWidget) void {
         const next = c.gtk_widget_get_next_sibling(child);
         c.gtk_box_remove(@ptrCast(box), child);
         child = next;
+    }
+}
+
+fn setBodyLabel(label: *c.GtkLabel, body: []const u8) void {
+    // Basic heuristic: treat body as markup only when it contains tag-like delimiters.
+    // Otherwise keep plain text behavior to avoid accidental markup parsing errors.
+    if (std.mem.indexOfScalar(u8, body, '<') != null and std.mem.indexOfScalar(u8, body, '>') != null) {
+        c.gtk_label_set_markup(label, toCStr(body));
+    } else {
+        c.gtk_label_set_text(label, toCStr(body));
     }
 }
