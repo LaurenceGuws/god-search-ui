@@ -97,7 +97,7 @@ fn sendCommand(allocator: std.mem.Allocator, cmd: Command) !std.json.Parsed(Resp
     const socket_path = try defaultSocketPathAlloc(allocator);
     defer allocator.free(socket_path);
 
-    const fd = std.posix.socket(std.posix.AF.UNIX, std.posix.SOCK.STREAM | std.posix.SOCK.CLOEXEC, 0) catch |err| {
+    const fd = std.posix.socket(std.posix.AF.UNIX, std.posix.SOCK.STREAM | std.posix.SOCK.CLOEXEC | std.posix.SOCK.NONBLOCK, 0) catch |err| {
         if (err == error.AddressFamilyNotSupported) return error.NoSocketSupport;
         return err;
     };
@@ -283,7 +283,7 @@ fn connectWithRetryTimeout(fd: std.posix.socket_t, sockaddr: *const std.posix.so
 
     while (true) {
         std.posix.connect(fd, sockaddr, socklen) catch |err| switch (err) {
-            error.FileNotFound, error.ConnectionRefused, error.ConnectionResetByPeer, error.NetworkUnreachable, error.AddressNotAvailable => {
+            error.WouldBlock, error.FileNotFound, error.ConnectionRefused, error.ConnectionResetByPeer, error.NetworkUnreachable, error.AddressNotAvailable => {
                 const now_ns = std.time.nanoTimestamp();
                 if (now_ns - start_ns >= @as(i128, @intCast(timeout_ns))) return false;
                 std.Thread.sleep(5 * std.time.ns_per_ms);
