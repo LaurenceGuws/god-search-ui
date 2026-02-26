@@ -150,7 +150,7 @@ const Runtime = struct {
         fn onWmEvent(ctx: *anyopaque, _: god_search_ui.wm.Event) void {
             const self: *WmEventBridge = @ptrCast(@alignCast(ctx));
             const service = self.service orelse return;
-            service.invalidateSnapshot();
+            service.scheduleRefreshFromEvent();
             _ = self.event_count.fetchAdd(1, .monotonic);
         }
     };

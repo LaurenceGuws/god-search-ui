@@ -215,6 +215,22 @@ pub const SearchService = struct {
         cache_coordinator.invalidateLocked(&self.cache_ready, &self.cache_last_refresh_ns, &self.refresh_requested);
     }
 
+    pub fn scheduleRefreshFromEvent(self: *SearchService) void {
+        self.cache_mu.lock();
+        defer self.cache_mu.unlock();
+
+        self.reapFinishedRefreshThreadLocked();
+        if (self.refresh_thread_running or self.refresh_thread != null) return;
+
+        self.refresh_requested = true;
+        refresh_worker.markRunning(&self.refresh_thread_running);
+        self.refresh_thread = std.Thread.spawn(.{}, refreshWorkerMain, .{self}) catch {
+            self.refresh_requested = false;
+            refresh_worker.markStopped(&self.refresh_thread_running);
+            return;
+        };
+    }
+
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {
         self.cache_mu.lock();
         const requested = self.refresh_requested;
