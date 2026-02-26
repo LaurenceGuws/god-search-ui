@@ -260,7 +260,9 @@ pub const PopupManager = struct {
 
         const window = c.gtk_application_window_new(self.gtk_app);
         c.gtk_window_set_title(@ptrCast(window), "God Search Notifications");
-        _ = if (layer_shell.shouldUseLayerShell(self.surface_mode))
+        // Keep notifications anchored by layer-shell whenever runtime support exists,
+        // independent from launcher surface mode.
+        _ = if (layer_shell.shouldUseLayerShell(.auto))
             layer_shell.applyNotifications(window)
         else
             false;
@@ -273,7 +275,8 @@ pub const PopupManager = struct {
 
         const scroller = c.gtk_scrolled_window_new();
         c.gtk_scrolled_window_set_policy(@ptrCast(scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
-        c.gtk_widget_set_vexpand(scroller, GTRUE);
+        c.gtk_widget_set_vexpand(scroller, GFALSE);
+        c.gtk_scrolled_window_set_max_content_height(@ptrCast(scroller), self.placement_policy.max_height_px);
 
         const list = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 8);
         c.gtk_widget_set_margin_top(list, 10);

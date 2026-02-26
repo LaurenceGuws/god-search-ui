@@ -67,7 +67,9 @@ pub fn configureNotificationPopupWindow(window: *c.GtkWidget, policy: placement_
         .monitor = policy.window.monitor,
     }) catch placement.Geometry{ .x = 0, .y = 0, .width = width, .height = height };
 
-    c.gtk_window_set_default_size(@ptrCast(window), geometry.width, geometry.height);
+    const compact_height = @max(96, @min(policy.min_height_px, geometry.height));
+    c.gtk_window_set_default_size(@ptrCast(window), geometry.width, compact_height);
+    c.gtk_widget_set_size_request(window, policy.min_width_px, -1);
 }
 
 fn scaledPercent(value: i32, pct: i32) i32 {
