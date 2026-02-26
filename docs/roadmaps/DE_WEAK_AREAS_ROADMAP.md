@@ -53,6 +53,9 @@ Implement first-party notifications service compatible with desktop clients.
 ### Objective
 Reduce shell command polling and move toward event-capable adapters.
 
+### Current Status
+- WA-3.1 done (WM backend event hook contract added; baseline adapters remain command-snapshot driven)
+
 ### Milestones
 1. WA-3.1 Introduce WM adapter interface with explicit event hooks.
 2. WA-3.2 Keep Hyprland command adapter as baseline implementation.

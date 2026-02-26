@@ -119,6 +119,7 @@ pub const HyprlandBackend = struct {
             .workspaces = true,
             .focus_window = true,
             .switch_workspace = true,
+            .event_stream = false,
         };
     }
 };

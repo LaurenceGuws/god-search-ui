@@ -5,6 +5,7 @@ pub const Capability = struct {
     workspaces: bool = false,
     focus_window: bool = false,
     switch_workspace: bool = false,
+    event_stream: bool = false,
 };
 
 pub const Health = enum {
@@ -61,6 +62,23 @@ pub const WorkspaceSnapshot = struct {
     }
 };
 
+pub const EventKind = enum {
+    windows_changed,
+    workspaces_changed,
+    focus_window_changed,
+    workspace_switched,
+};
+
+pub const Event = struct {
+    kind: EventKind,
+};
+
+pub const EventHandler = *const fn (context: *anyopaque, event: Event) void;
+
+pub const EventSubscription = struct {
+    token: usize = 0,
+};
+
 pub const Backend = struct {
     name: []const u8,
     context: *anyopaque,
@@ -71,6 +89,17 @@ pub const Backend = struct {
         list_workspaces: *const fn (context: *anyopaque, allocator: std.mem.Allocator) anyerror!WorkspaceSnapshot,
         health: *const fn (context: *anyopaque) Health,
         capabilities: *const fn (context: *anyopaque) Capability,
+        subscribe_events: *const fn (
+            context: *anyopaque,
+            allocator: std.mem.Allocator,
+            handler_context: *anyopaque,
+            handler: EventHandler,
+        ) anyerror!?EventSubscription = defaultSubscribeEvents,
+        unsubscribe_events: *const fn (
+            context: *anyopaque,
+            allocator: std.mem.Allocator,
+            subscription: EventSubscription,
+        ) void = defaultUnsubscribeEvents,
     };
 
     pub fn listWindows(self: Backend, allocator: std.mem.Allocator) !WindowSnapshot {
@@ -88,4 +117,70 @@ pub const Backend = struct {
     pub fn capabilities(self: Backend) Capability {
         return self.vtable.capabilities(self.context);
     }
+
+    pub fn supportsEventStream(self: Backend) bool {
+        return self.capabilities().event_stream;
+    }
+
+    pub fn subscribeEvents(
+        self: Backend,
+        allocator: std.mem.Allocator,
+        handler_context: *anyopaque,
+        handler: EventHandler,
+    ) !?EventSubscription {
+        return self.vtable.subscribe_events(self.context, allocator, handler_context, handler);
+    }
+
+    pub fn unsubscribeEvents(self: Backend, allocator: std.mem.Allocator, subscription: EventSubscription) void {
+        self.vtable.unsubscribe_events(self.context, allocator, subscription);
+    }
 };
+
+fn defaultSubscribeEvents(
+    _: *anyopaque,
+    _: std.mem.Allocator,
+    _: *anyopaque,
+    _: EventHandler,
+) anyerror!?EventSubscription {
+    return null;
+}
+
+fn defaultUnsubscribeEvents(_: *anyopaque, _: std.mem.Allocator, _: EventSubscription) void {}
+
+fn testStubListWindows(_: *anyopaque, allocator: std.mem.Allocator) !WindowSnapshot {
+    _ = allocator;
+    return .{ .items = &.{} };
+}
+
+fn testStubListWorkspaces(_: *anyopaque, allocator: std.mem.Allocator) !WorkspaceSnapshot {
+    _ = allocator;
+    return .{ .items = &.{} };
+}
+
+fn testStubHealth(_: *anyopaque) Health {
+    return .ready;
+}
+
+fn testStubCapabilities(_: *anyopaque) Capability {
+    return .{ .windows = true, .workspaces = true };
+}
+
+fn testEventHandler(_: *anyopaque, _: Event) void {}
+
+test "backend event subscription defaults to unsupported/null" {
+    var fake_ctx: u8 = 0;
+    const backend = Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = testStubListWindows,
+            .list_workspaces = testStubListWorkspaces,
+            .health = testStubHealth,
+            .capabilities = testStubCapabilities,
+        },
+    };
+
+    try std.testing.expect(!backend.supportsEventStream());
+    const sub = try backend.subscribeEvents(std.testing.allocator, &fake_ctx, testEventHandler);
+    try std.testing.expect(sub == null);
+}
