@@ -49,7 +49,10 @@ pub const Shell = struct {
     };
 
     pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink, options: RunOptions) !void {
-        const gtk_app = c.gtk_application_new("io.god.search.ui", c.G_APPLICATION_DEFAULT_FLAGS);
+        // We use our own local control socket for single-instance/summon semantics.
+        // Keep GtkApplication non-unique to avoid session-bus registration timeouts
+        // breaking launcher summon on some systems.
+        const gtk_app = c.gtk_application_new(null, c.G_APPLICATION_NON_UNIQUE);
         defer c.g_object_unref(gtk_app);
         if (options.resident_mode) {
             c.g_application_hold(@ptrCast(gtk_app));
