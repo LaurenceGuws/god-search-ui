@@ -68,8 +68,9 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-chip-grep { color: #b8a6ff; background: rgba(184, 166, 255, 0.16); }\n" ++
         ".gs-chip-action { color: #f18cb6; background: rgba(241, 140, 182, 0.16); }\n" ++
         ".gs-chip-hint { color: #9aa1b5; background: rgba(154, 161, 181, 0.16); }\n" ++
+        ".gs-notify-window, .gs-notify-window > widget, .gs-notify-window > box, .gs-notify-window > frame { background: transparent; background-image: none; box-shadow: none; }\n" ++
         ".gs-notify-frame { background: transparent; border: none; box-shadow: none; }\n" ++
-        ".gs-notify-list { background: transparent; }\n" ++
+        ".gs-notify-list, .gs-notify-list > viewport, .gs-notify-list row { background: transparent; background-image: none; box-shadow: none; }\n" ++
         ".gs-notify-row { background: rgba(30, 38, 56, 0.82); border: 1px solid rgba(132, 160, 228, 0.20); border-radius: 8px; padding: 10px; }\n" ++
         ".gs-notify-summary { color: #e8ecf7; font-weight: 700; }\n" ++
         ".gs-notify-body { color: #bec9df; }\n" ++

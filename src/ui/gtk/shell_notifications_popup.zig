@@ -260,6 +260,7 @@ pub const PopupManager = struct {
 
         const window = c.gtk_application_window_new(self.gtk_app);
         c.gtk_window_set_title(@ptrCast(window), "God Search Notifications");
+        c.gtk_widget_add_css_class(window, "gs-notify-window");
         // Keep notifications anchored by layer-shell whenever runtime support exists,
         // independent from launcher surface mode.
         _ = if (layer_shell.shouldUseLayerShell(.auto))
