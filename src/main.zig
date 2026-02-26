@@ -125,13 +125,24 @@ const Runtime = struct {
         backend: ?god_search_ui.wm.Backend = null,
         subscription: ?god_search_ui.wm.EventSubscription = null,
         service: ?*god_search_ui.app.SearchService = null,
+        windows: ?*god_search_ui.providers.WindowsProvider = null,
+        workspaces: ?*god_search_ui.providers.WorkspacesProvider = null,
         event_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
         refresh_scheduled_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
         refresh_skipped_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
         refresh_failed_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
 
-        fn start(self: *WmEventBridge, allocator: std.mem.Allocator, service: *god_search_ui.app.SearchService, backend: god_search_ui.wm.Backend) void {
+        fn start(
+            self: *WmEventBridge,
+            allocator: std.mem.Allocator,
+            service: *god_search_ui.app.SearchService,
+            windows: *god_search_ui.providers.WindowsProvider,
+            workspaces: *god_search_ui.providers.WorkspacesProvider,
+            backend: god_search_ui.wm.Backend,
+        ) void {
             self.service = service;
+            self.windows = windows;
+            self.workspaces = workspaces;
             self.backend = backend;
             if (!backend.supportsEventStream()) return;
 
@@ -150,9 +161,19 @@ const Runtime = struct {
             self.subscription = null;
         }
 
-        fn onWmEvent(ctx: *anyopaque, _: god_search_ui.wm.Event) void {
+        fn onWmEvent(ctx: *anyopaque, event: god_search_ui.wm.Event) void {
             const self: *WmEventBridge = @ptrCast(@alignCast(ctx));
             const service = self.service orelse return;
+            const allocator = std.heap.page_allocator;
+
+            switch (event.kind) {
+                .windows_changed, .focus_window_changed => {
+                    if (self.windows) |windows| _ = windows.refreshSnapshot(allocator) catch {};
+                },
+                .workspaces_changed, .workspace_switched => {
+                    if (self.workspaces) |workspaces| _ = workspaces.refreshSnapshot(allocator) catch {};
+                },
+            }
             const result = service.scheduleRefreshFromEvent();
             switch (result) {
                 .scheduled => _ = self.refresh_scheduled_count.fetchAdd(1, .monotonic),
@@ -217,7 +238,13 @@ const Runtime = struct {
     }
 
     fn startWmEventBridge(self: *Runtime, allocator: std.mem.Allocator) void {
-        self.wm_event_bridge.start(allocator, &self.service, self.windows.hyprland_backend.backend());
+        self.wm_event_bridge.start(
+            allocator,
+            &self.service,
+            &self.windows,
+            &self.workspaces,
+            self.windows.hyprland_backend.backend(),
+        );
     }
 };
 

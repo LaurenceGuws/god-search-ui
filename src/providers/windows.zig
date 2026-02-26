@@ -5,6 +5,9 @@ const wm_mod = @import("../wm/mod.zig");
 pub const WindowsProvider = struct {
     owned_strings_current: std.ArrayListUnmanaged([]u8) = .{},
     owned_strings_previous: std.ArrayListUnmanaged([]u8) = .{},
+    snapshot_mu: std.Thread.Mutex = .{},
+    snapshot_items: []wm_mod.WindowInfo = &.{},
+    snapshot_ready: bool = false,
     hyprland_backend: wm_mod.HyprlandBackend = .{},
     backend_override: ?wm_mod.Backend = null,
 
@@ -13,6 +16,7 @@ pub const WindowsProvider = struct {
         self.freeOwnedStrings(allocator, &self.owned_strings_previous);
         self.owned_strings_current.deinit(allocator);
         self.owned_strings_previous.deinit(allocator);
+        self.clearSnapshot(allocator);
     }
 
     pub fn provider(self: *WindowsProvider) search.Provider {
@@ -34,14 +38,21 @@ pub const WindowsProvider = struct {
         }
         if (wm_backend.health() == .unavailable) return;
 
-        var snapshot = wm_backend.listWindows(allocator) catch |err| {
-            std.log.warn("windows provider query failed: {s}", .{@errorName(err)});
-            return;
-        };
-        defer snapshot.deinit(allocator);
+        self.snapshot_mu.lock();
+        const has_snapshot = self.snapshot_ready;
+        self.snapshot_mu.unlock();
+        if (!has_snapshot) {
+            self.refreshSnapshot(allocator) catch |err| {
+                std.log.warn("windows provider query failed: {s}", .{@errorName(err)});
+                return;
+            };
+        }
+
         self.rotateOwnedStringsForCollect(allocator);
 
-        for (snapshot.items) |row| {
+        self.snapshot_mu.lock();
+        defer self.snapshot_mu.unlock();
+        for (self.snapshot_items) |row| {
             const kept_title = try self.keepString(allocator, row.title);
             const kept_class = try self.keepString(allocator, row.class_name);
             const kept_address = try self.keepString(allocator, row.id);
@@ -82,6 +93,31 @@ pub const WindowsProvider = struct {
 
     fn backend(self: *WindowsProvider) wm_mod.Backend {
         return self.backend_override orelse self.hyprland_backend.backend();
+    }
+
+    pub fn refreshSnapshot(self: *WindowsProvider, allocator: std.mem.Allocator) !void {
+        var fresh = try self.backend().listWindows(allocator);
+        errdefer fresh.deinit(allocator);
+
+        self.snapshot_mu.lock();
+        defer self.snapshot_mu.unlock();
+        self.clearSnapshotLocked(allocator);
+        self.snapshot_items = fresh.items;
+        self.snapshot_ready = true;
+        fresh.items = &.{};
+    }
+
+    fn clearSnapshot(self: *WindowsProvider, allocator: std.mem.Allocator) void {
+        self.snapshot_mu.lock();
+        defer self.snapshot_mu.unlock();
+        self.clearSnapshotLocked(allocator);
+    }
+
+    fn clearSnapshotLocked(self: *WindowsProvider, allocator: std.mem.Allocator) void {
+        for (self.snapshot_items) |*row| row.deinit(allocator);
+        if (self.snapshot_items.len > 0) allocator.free(self.snapshot_items);
+        self.snapshot_items = &.{};
+        self.snapshot_ready = false;
     }
 };
 
