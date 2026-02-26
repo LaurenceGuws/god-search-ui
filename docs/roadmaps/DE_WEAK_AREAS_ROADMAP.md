@@ -56,6 +56,7 @@ Reduce shell command polling and move toward event-capable adapters.
 ### Current Status
 - WA-3.1 done (WM backend event hook contract added; baseline adapters remain command-snapshot driven)
 - WA-3.3 done (Hyprland socket2 event subscription path added; event consumers pending WA-3.4)
+- WA-3.4 in progress (runtime now invalidates search snapshots from WM events; provider-side event-fed snapshots still pending)
 
 ### Milestones
 1. WA-3.1 Introduce WM adapter interface with explicit event hooks.

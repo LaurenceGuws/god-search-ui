@@ -87,6 +87,7 @@ pub fn main() !void {
         var runtime = try setupRuntime(allocator);
         defer runtime.deinit(allocator);
         runtime.rebindProviderContexts();
+        runtime.startWmEventBridge(allocator);
         try runtime.service.loadHistory(allocator);
         defer runtime.service.saveHistory(allocator) catch |err| {
             logger.err("failed to save history: {s}", .{@errorName(err)});
@@ -120,6 +121,40 @@ fn printCtlUsage() !void {
 }
 
 const Runtime = struct {
+    const WmEventBridge = struct {
+        backend: ?god_search_ui.wm.Backend = null,
+        subscription: ?god_search_ui.wm.EventSubscription = null,
+        service: ?*god_search_ui.app.SearchService = null,
+        event_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
+
+        fn start(self: *WmEventBridge, allocator: std.mem.Allocator, service: *god_search_ui.app.SearchService, backend: god_search_ui.wm.Backend) void {
+            self.service = service;
+            self.backend = backend;
+            if (!backend.supportsEventStream()) return;
+
+            const maybe_sub = backend.subscribeEvents(allocator, self, onWmEvent) catch return;
+            if (maybe_sub) |sub| {
+                self.subscription = sub;
+                // Event-driven invalidation mode to reduce periodic refresh churn.
+                service.cache_ttl_ns = 24 * 60 * 60 * std.time.ns_per_s;
+            }
+        }
+
+        fn stop(self: *WmEventBridge, allocator: std.mem.Allocator) void {
+            const backend = self.backend orelse return;
+            const sub = self.subscription orelse return;
+            backend.unsubscribeEvents(allocator, sub);
+            self.subscription = null;
+        }
+
+        fn onWmEvent(ctx: *anyopaque, _: god_search_ui.wm.Event) void {
+            const self: *WmEventBridge = @ptrCast(@alignCast(ctx));
+            const service = self.service orelse return;
+            service.invalidateSnapshot();
+            _ = self.event_count.fetchAdd(1, .monotonic);
+        }
+    };
+
     app_cache_path: []u8,
     history_path: []u8,
     telemetry_path: []u8,
@@ -131,8 +166,10 @@ const Runtime = struct {
     provider_list: [5]god_search_ui.search.Provider,
     service: god_search_ui.app.SearchService,
     telemetry: god_search_ui.app.TelemetrySink,
+    wm_event_bridge: WmEventBridge = .{},
 
     fn deinit(self: *Runtime, allocator: std.mem.Allocator) void {
+        self.wm_event_bridge.stop(allocator);
         self.apps.deinit(allocator);
         self.windows.deinit(allocator);
         self.workspaces.deinit(allocator);
@@ -157,6 +194,10 @@ const Runtime = struct {
         self.service.cache_ttl_ns = 30 * std.time.ns_per_s;
         self.service.enable_async_refresh = useAsyncRefresh();
         self.telemetry = god_search_ui.app.TelemetrySink.init(self.telemetry_path);
+    }
+
+    fn startWmEventBridge(self: *Runtime, allocator: std.mem.Allocator) void {
+        self.wm_event_bridge.start(allocator, &self.service, self.windows.hyprland_backend.backend());
     }
 };
 
