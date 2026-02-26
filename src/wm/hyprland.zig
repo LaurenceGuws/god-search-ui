@@ -3,10 +3,23 @@ const tool_check = @import("../providers/tool_check.zig");
 const wm = @import("types.zig");
 
 pub const HyprlandBackend = struct {
+    const EventRuntime = struct {
+        allocator: std.mem.Allocator,
+        stop: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
+        socket_fd: std.posix.fd_t,
+        thread: ?std.Thread = null,
+        handler_context: *anyopaque,
+        handler: wm.EventHandler,
+        subscription: wm.EventSubscription,
+    };
+
     list_windows_json_fn: *const fn (allocator: std.mem.Allocator) anyerror![]u8 = listWindowsJsonWithSystemTools,
     list_workspaces_json_fn: *const fn (allocator: std.mem.Allocator) anyerror![]u8 = listWorkspacesJsonWithSystemTools,
     has_tools_fn: *const fn () bool = hasSystemTools,
     had_runtime_failure: bool = false,
+    event_runtime: ?*EventRuntime = null,
+    event_lock: std.Thread.Mutex = .{},
+    next_subscription_token: usize = 1,
 
     pub fn backend(self: *HyprlandBackend) wm.Backend {
         return .{
@@ -17,6 +30,8 @@ pub const HyprlandBackend = struct {
                 .list_workspaces = listWorkspaces,
                 .health = health,
                 .capabilities = capabilities,
+                .subscribe_events = subscribeEvents,
+                .unsubscribe_events = unsubscribeEvents,
             },
         };
     }
@@ -119,10 +134,151 @@ pub const HyprlandBackend = struct {
             .workspaces = true,
             .focus_window = true,
             .switch_workspace = true,
-            .event_stream = false,
+            .event_stream = true,
         };
     }
+
+    fn subscribeEvents(
+        context: *anyopaque,
+        allocator: std.mem.Allocator,
+        handler_context: *anyopaque,
+        handler: wm.EventHandler,
+    ) !?wm.EventSubscription {
+        const self: *HyprlandBackend = @ptrCast(@alignCast(context));
+        if (!self.has_tools_fn()) return error.ToolsUnavailable;
+
+        self.event_lock.lock();
+        defer self.event_lock.unlock();
+        if (self.event_runtime != null) return error.AlreadySubscribed;
+
+        const socket_path = try resolveHyprlandEventSocketPath(allocator);
+        defer allocator.free(socket_path);
+        const socket_fd = try connectUnixStream(socket_path);
+
+        const runtime = try allocator.create(EventRuntime);
+        errdefer allocator.destroy(runtime);
+        runtime.* = .{
+            .allocator = allocator,
+            .socket_fd = socket_fd,
+            .handler_context = handler_context,
+            .handler = handler,
+            .subscription = .{ .token = self.next_subscription_token },
+        };
+        errdefer std.posix.close(runtime.socket_fd);
+        self.next_subscription_token += 1;
+
+        runtime.thread = try std.Thread.spawn(.{}, eventLoopThread, .{runtime});
+        self.event_runtime = runtime;
+        return runtime.subscription;
+    }
+
+    fn unsubscribeEvents(
+        context: *anyopaque,
+        allocator: std.mem.Allocator,
+        subscription: wm.EventSubscription,
+    ) void {
+        _ = allocator;
+        const self: *HyprlandBackend = @ptrCast(@alignCast(context));
+
+        self.event_lock.lock();
+        const runtime = self.event_runtime orelse {
+            self.event_lock.unlock();
+            return;
+        };
+        if (runtime.subscription.token != subscription.token) {
+            self.event_lock.unlock();
+            return;
+        }
+        self.event_runtime = null;
+        self.event_lock.unlock();
+
+        runtime.stop.store(true, .release);
+        std.posix.close(runtime.socket_fd);
+        if (runtime.thread) |thread| thread.join();
+        runtime.allocator.destroy(runtime);
+    }
 };
+
+fn eventLoopThread(runtime: *HyprlandBackend.EventRuntime) void {
+    var buffer: [4096]u8 = undefined;
+    var line_buf = std.ArrayList(u8).empty;
+    defer line_buf.deinit(runtime.allocator);
+
+    while (!runtime.stop.load(.acquire)) {
+        const read_len = std.posix.read(runtime.socket_fd, &buffer) catch break;
+        if (read_len == 0) break;
+
+        line_buf.appendSlice(runtime.allocator, buffer[0..read_len]) catch break;
+        while (std.mem.indexOfScalar(u8, line_buf.items, '\n')) |idx| {
+            const line = line_buf.items[0..idx];
+            if (parseEventKind(line)) |kind| {
+                runtime.handler(runtime.handler_context, .{ .kind = kind });
+            }
+            const next_start = idx + 1;
+            if (next_start >= line_buf.items.len) {
+                line_buf.clearRetainingCapacity();
+                break;
+            }
+            _ = line_buf.replaceRange(runtime.allocator, 0, next_start, &.{}) catch {
+                line_buf.clearRetainingCapacity();
+                break;
+            };
+        }
+    }
+}
+
+fn parseEventKind(line: []const u8) ?wm.EventKind {
+    const prefix_end = std.mem.indexOf(u8, line, ">>") orelse return null;
+    const name = line[0..prefix_end];
+
+    if (std.mem.eql(u8, name, "workspace") or
+        std.mem.eql(u8, name, "workspacev2"))
+        return .workspace_switched;
+
+    if (std.mem.eql(u8, name, "createworkspace") or
+        std.mem.eql(u8, name, "createworkspacev2") or
+        std.mem.eql(u8, name, "destroyworkspace") or
+        std.mem.eql(u8, name, "destroyworkspacev2") or
+        std.mem.eql(u8, name, "moveworkspace") or
+        std.mem.eql(u8, name, "moveworkspacev2") or
+        std.mem.eql(u8, name, "renameworkspace") or
+        std.mem.eql(u8, name, "activespecial") or
+        std.mem.eql(u8, name, "focusedmon"))
+        return .workspaces_changed;
+
+    if (std.mem.eql(u8, name, "activewindow") or
+        std.mem.eql(u8, name, "activewindowv2"))
+        return .focus_window_changed;
+
+    if (std.mem.eql(u8, name, "openwindow") or
+        std.mem.eql(u8, name, "closewindow") or
+        std.mem.eql(u8, name, "movewindow") or
+        std.mem.eql(u8, name, "windowtitle") or
+        std.mem.eql(u8, name, "fullscreen") or
+        std.mem.eql(u8, name, "changefloatingmode") or
+        std.mem.eql(u8, name, "pin"))
+        return .windows_changed;
+
+    return null;
+}
+
+fn resolveHyprlandEventSocketPath(allocator: std.mem.Allocator) ![]u8 {
+    const sig = try std.process.getEnvVarOwned(allocator, "HYPRLAND_INSTANCE_SIGNATURE");
+    defer allocator.free(sig);
+    const runtime_dir = std.process.getEnvVarOwned(allocator, "XDG_RUNTIME_DIR") catch
+        try std.fmt.allocPrint(allocator, "/run/user/{d}", .{std.posix.getuid()});
+    defer allocator.free(runtime_dir);
+
+    return std.fmt.allocPrint(allocator, "{s}/hypr/{s}/.socket2.sock", .{ runtime_dir, sig });
+}
+
+fn connectUnixStream(path: []const u8) !std.posix.fd_t {
+    const address = try std.net.Address.initUnix(path);
+    const fd = try std.posix.socket(std.posix.AF.UNIX, std.posix.SOCK.STREAM | std.posix.SOCK.CLOEXEC, 0);
+    errdefer std.posix.close(fd);
+    try std.posix.connect(fd, &address.any, address.getOsSockLen());
+    return fd;
+}
 
 fn hasSystemTools() bool {
     return tool_check.commandExistsCached("hyprctl");
@@ -468,4 +624,12 @@ test "annotateWorkspaceWindowTitlePreviews groups client titles by workspace" {
 
     try std.testing.expectEqualStrings("Terminal, Editor, Docs (+1)", snapshot.items[0].window_titles_preview.?);
     try std.testing.expectEqualStrings("Browser", snapshot.items[1].window_titles_preview.?);
+}
+
+test "parseEventKind maps hyprland socket2 events to wm event kinds" {
+    try std.testing.expectEqual(wm.EventKind.workspace_switched, parseEventKind("workspace>>2").?);
+    try std.testing.expectEqual(wm.EventKind.workspaces_changed, parseEventKind("createworkspacev2>>3").?);
+    try std.testing.expectEqual(wm.EventKind.focus_window_changed, parseEventKind("activewindowv2>>0xabc").?);
+    try std.testing.expectEqual(wm.EventKind.windows_changed, parseEventKind("openwindow>>0xabc,2,kitty,Terminal").?);
+    try std.testing.expect(parseEventKind("submap>>resize") == null);
 }

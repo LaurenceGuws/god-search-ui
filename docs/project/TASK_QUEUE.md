@@ -51,6 +51,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-B4: Add persistent notification history + dismiss-all UX.
 - [x] DE-B5: Add Lua-configurable notification action policy (`notifications.actions`) with documented defaults and smoke coverage.
 - [x] DE-E0: WA-3.1 add WM backend event hook contract (`subscribe_events`/`unsubscribe_events`) and `event_stream` capability flag with default no-op behavior.
+- [x] DE-E1: WA-3.3 add Hyprland socket2 event subscription implementation (`subscribeEvents`/`unsubscribeEvents`) emitting typed WM events.
 - [x] DE-P0: Define WM adapter + surface contracts for placement portability.
 - [x] DE-P1: Add pure placement engine (anchor/offset/monitor policy) with tests.
 - [x] DE-P2: Route launcher + notification popup geometry through placement engine.
@@ -108,6 +109,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R29: Added compact release-contract troubleshooting pointer to control-plane docs
 - [x] DE-B5: Added Lua-configurable notification action policy (`notifications.actions`) and smoke/docs coverage
 - [x] DE-E0: Added WM backend event hook contract and default unsupported event-stream behavior
+- [x] DE-E1: Added Hyprland socket2 event subscription path emitting typed WM events
 
 ## Blocked
 - [ ] (empty)
