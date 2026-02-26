@@ -1,6 +1,7 @@
 const std = @import("std");
 const gtk_types = @import("types.zig");
 const gdk_adapter = @import("gdk_adapter.zig");
+const wm_adapter = @import("../../wm/adapter.zig");
 const placement = @import("../placement/engine.zig");
 const placement_policy = @import("../placement/mod.zig");
 
@@ -54,10 +55,11 @@ pub fn configureNotificationPopupWindow(window: *c.GtkWidget, policy: placement_
         return;
     }
 
-    const target = outputs[0];
+    const focus_hint = adapter.focusHint(allocator) catch null;
+    const target_idx = wm_adapter.selectOutput(outputs, focus_hint, policy.window.monitor) orelse 0;
+    const target = outputs[target_idx];
     const width = @max(policy.min_width_px, @min(policy.max_width_px, scaledPercent(target.width, policy.width_percent)));
     const height = @max(policy.min_height_px, @min(policy.max_height_px, scaledPercent(target.height, policy.height_percent)));
-    const focus_hint = adapter.focusHint(allocator) catch null;
     const area = adapter.workArea(allocator, target.name) catch null;
     const geometry = placement.resolve(outputs, focus_hint, area, .{
         .anchor = policy.window.anchor,
@@ -67,8 +69,7 @@ pub fn configureNotificationPopupWindow(window: *c.GtkWidget, policy: placement_
         .monitor = policy.window.monitor,
     }) catch placement.Geometry{ .x = 0, .y = 0, .width = width, .height = height };
 
-    const compact_height = @max(96, @min(policy.min_height_px, geometry.height));
-    c.gtk_window_set_default_size(@ptrCast(window), geometry.width, compact_height);
+    c.gtk_window_set_default_size(@ptrCast(window), geometry.width, -1);
     c.gtk_widget_set_size_request(window, policy.min_width_px, -1);
 }
 

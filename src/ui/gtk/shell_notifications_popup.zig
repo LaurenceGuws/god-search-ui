@@ -271,22 +271,19 @@ pub const PopupManager = struct {
         const window = c.gtk_application_window_new(self.gtk_app);
         c.gtk_window_set_title(@ptrCast(window), "God Search Notifications");
         c.gtk_widget_add_css_class(window, "gs-notify-window");
-        // Keep notifications anchored by layer-shell whenever runtime support exists,
-        // independent from launcher surface mode.
-        _ = if (layer_shell.shouldUseLayerShell(.auto))
-            layer_shell.applyNotifications(window)
+        _ = if (layer_shell.shouldUseLayerShell(self.surface_mode))
+            layer_shell.applyNotifications(window, self.placement_policy)
         else
             false;
         placement_bridge.configureNotificationPopupWindow(window, self.placement_policy);
         c.gtk_window_set_resizable(@ptrCast(window), GFALSE);
         c.gtk_window_set_decorated(@ptrCast(window), GFALSE);
 
-        const frame = c.gtk_frame_new(null);
-        c.gtk_widget_add_css_class(frame, "gs-notify-frame");
-
         const scroller = c.gtk_scrolled_window_new();
         c.gtk_scrolled_window_set_policy(@ptrCast(scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
         c.gtk_widget_set_vexpand(scroller, GFALSE);
+        c.gtk_scrolled_window_set_propagate_natural_height(@ptrCast(scroller), GTRUE);
+        c.gtk_scrolled_window_set_min_content_height(@ptrCast(scroller), 1);
         c.gtk_scrolled_window_set_max_content_height(@ptrCast(scroller), self.placement_policy.max_height_px);
 
         const list = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 8);
@@ -297,8 +294,7 @@ pub const PopupManager = struct {
         c.gtk_widget_add_css_class(list, "gs-notify-list");
 
         c.gtk_scrolled_window_set_child(@ptrCast(scroller), list);
-        c.gtk_frame_set_child(@ptrCast(frame), scroller);
-        c.gtk_window_set_child(@ptrCast(window), frame);
+        c.gtk_window_set_child(@ptrCast(window), scroller);
         c.gtk_widget_set_visible(window, GFALSE);
 
         self.window = @ptrCast(window);
