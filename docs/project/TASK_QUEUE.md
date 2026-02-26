@@ -50,6 +50,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-B3: Add action buttons/hints wiring and `ActionInvoked` signal flow.
 - [x] DE-B4: Add persistent notification history + dismiss-all UX.
 - [x] DE-B5: Add Lua-configurable notification action policy (`notifications.actions`) with documented defaults and smoke coverage.
+- [x] DE-B6: Fix GTK notification popup text/markup updates to use NUL-safe string paths.
 - [x] DE-E0: WA-3.1 add WM backend event hook contract (`subscribe_events`/`unsubscribe_events`) and `event_stream` capability flag with default no-op behavior.
 - [x] DE-E1: WA-3.3 add Hyprland socket2 event subscription implementation (`subscribeEvents`/`unsubscribeEvents`) emitting typed WM events.
 - [x] DE-E2: WA-3.4 wire WM event stream to search snapshot invalidation (event-driven cache invalidation in runtime).
@@ -117,6 +118,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R28: Added release-contract docs checker assertions for runtime-smoke rows in release matrix
 - [x] DE-R29: Added compact release-contract troubleshooting pointer to control-plane docs
 - [x] DE-B5: Added Lua-configurable notification action policy (`notifications.actions`) and smoke/docs coverage
+- [x] DE-B6: Fixed notification popup label/button updates to avoid non-NUL slice pointers (restores reliable markup/text rendering)
 - [x] DE-E0: Added WM backend event hook contract and default unsupported event-stream behavior
 - [x] DE-E1: Added Hyprland socket2 event subscription path emitting typed WM events
 - [x] DE-E2: Wired WM events to `SearchService.invalidateSnapshot()` for event-driven static-route cache invalidation

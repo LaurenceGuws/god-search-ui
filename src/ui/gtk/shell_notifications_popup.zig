@@ -113,7 +113,7 @@ pub const PopupManager = struct {
         const idx = self.findIndex(event.id);
         if (idx) |existing_idx| {
             const entry = &self.entries.items[existing_idx];
-            c.gtk_label_set_text(entry.summary_label, toCStr(event.summary));
+            setLabelText(entry.summary_label, event.summary);
             setBodyLabel(entry.body_label, event.body);
             updateActions(self, entry.actions_box, event.id, event.actions);
             rescheduleTimeout(self, entry, event.expire_timeout);
@@ -198,7 +198,8 @@ pub const PopupManager = struct {
 
         const header = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
 
-        const summary_label = c.gtk_label_new(toCStr(summary));
+        const summary_label = c.gtk_label_new("");
+        setLabelText(@ptrCast(summary_label), summary);
         c.gtk_label_set_xalign(@ptrCast(summary_label), 0.0);
         c.gtk_label_set_wrap(@ptrCast(summary_label), GTRUE);
         c.gtk_widget_add_css_class(summary_label, "gs-notify-summary");
@@ -214,7 +215,7 @@ pub const PopupManager = struct {
             c.gtk_box_append(@ptrCast(header), close_btn);
         }
 
-        const body_label = c.gtk_label_new(toCStr(body));
+        const body_label = c.gtk_label_new("");
         c.gtk_label_set_xalign(@ptrCast(body_label), 0.0);
         c.gtk_label_set_wrap(@ptrCast(body_label), GTRUE);
         c.gtk_label_set_use_markup(@ptrCast(body_label), GTRUE);
@@ -312,7 +313,8 @@ pub const PopupManager = struct {
             return;
         }
         for (actions) |action| {
-            const button = c.gtk_button_new_with_label(toCStr(action.label));
+            const button = c.gtk_button_new_with_label("");
+            setButtonLabel(button, action.label);
             c.gtk_widget_add_css_class(button, "gs-notify-action-btn");
             const payload: *ActionPayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(ActionPayload))));
             payload.* = .{
@@ -327,11 +329,6 @@ pub const PopupManager = struct {
     }
 };
 
-fn toCStr(value: []const u8) [*:0]const u8 {
-    if (value.len == 0) return "";
-    return @ptrCast(value.ptr);
-}
-
 fn clearChildren(box: *c.GtkWidget) void {
     var child = c.gtk_widget_get_first_child(box);
     while (child != null) {
@@ -345,8 +342,38 @@ fn setBodyLabel(label: *c.GtkLabel, body: []const u8) void {
     // Basic heuristic: treat body as markup only when it contains tag-like delimiters.
     // Otherwise keep plain text behavior to avoid accidental markup parsing errors.
     if (std.mem.indexOfScalar(u8, body, '<') != null and std.mem.indexOfScalar(u8, body, '>') != null) {
-        c.gtk_label_set_markup(label, toCStr(body));
+        setLabelMarkup(label, body);
     } else {
-        c.gtk_label_set_text(label, toCStr(body));
+        setLabelText(label, body);
     }
+}
+
+fn setLabelText(label: *c.GtkLabel, value: []const u8) void {
+    if (value.len == 0) {
+        c.gtk_label_set_text(label, "");
+        return;
+    }
+    const value_z = c.g_strndup(value.ptr, @intCast(value.len)) orelse return;
+    defer c.g_free(value_z);
+    c.gtk_label_set_text(label, value_z);
+}
+
+fn setLabelMarkup(label: *c.GtkLabel, value: []const u8) void {
+    if (value.len == 0) {
+        c.gtk_label_set_markup(label, "");
+        return;
+    }
+    const value_z = c.g_strndup(value.ptr, @intCast(value.len)) orelse return;
+    defer c.g_free(value_z);
+    c.gtk_label_set_markup(label, value_z);
+}
+
+fn setButtonLabel(button: *c.GtkWidget, value: []const u8) void {
+    if (value.len == 0) {
+        c.gtk_button_set_label(@ptrCast(button), "");
+        return;
+    }
+    const value_z = c.g_strndup(value.ptr, @intCast(value.len)) orelse return;
+    defer c.g_free(value_z);
+    c.gtk_button_set_label(@ptrCast(button), value_z);
 }
