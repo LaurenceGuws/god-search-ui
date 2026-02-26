@@ -130,6 +130,7 @@ scripts/dev.sh check
 scripts/dev.sh fmt
 scripts/dev.sh build
 scripts/dev.sh test
+scripts/dev_notif_start.sh start --mask-swaync
 scripts/dev_notifications_takeover.sh takeover
 scripts/dev_notifications_takeover.sh smoke
 scripts/wm_event_refresh_smoke.sh
