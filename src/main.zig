@@ -100,7 +100,9 @@ pub fn main() !void {
         var runtime = try setupRuntime(allocator);
         defer runtime.deinit(allocator);
         runtime.rebindProviderContexts();
-        runtime.startWmEventBridge(allocator);
+        if (resident_mode) {
+            runtime.startWmEventBridge(allocator);
+        }
         try runtime.service.loadHistory(allocator);
         defer runtime.service.saveHistory(allocator) catch |err| {
             logger.err("failed to save history: {s}", .{@errorName(err)});
