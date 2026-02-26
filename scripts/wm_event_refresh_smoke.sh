@@ -39,7 +39,7 @@ trap cleanup EXIT
 
 pkill -x god_search_ui 2>/dev/null || true
 
-GOD_SEARCH_WM_EVENT_LOG_EVERY=1 "$BIN" --ui-daemon >"$log_file" 2>&1 &
+GOD_SEARCH_WM_EVENT_BRIDGE=1 GOD_SEARCH_WM_EVENT_LOG_EVERY=1 "$BIN" --ui-daemon >"$log_file" 2>&1 &
 i=0
 quick_ping() {
   ( timeout 0.35s "$BIN" --ctl ping >/dev/null 2>&1 ) 2>/dev/null

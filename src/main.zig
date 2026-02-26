@@ -100,7 +100,7 @@ pub fn main() !void {
         var runtime = try setupRuntime(allocator);
         defer runtime.deinit(allocator);
         runtime.rebindProviderContexts();
-        if (resident_mode) {
+        if (resident_mode and envFlagEnabled("GOD_SEARCH_WM_EVENT_BRIDGE")) {
             runtime.startWmEventBridge(allocator);
         }
         try runtime.service.loadHistory(allocator);
