@@ -16,6 +16,7 @@ Notes:
   Full mode runs GUI-dependent runtime checks:
     - scripts/check_shell_health_contract.sh
     - scripts/control_plane_smoke.sh
+    - scripts/wm_event_refresh_smoke.sh
   These checks may self-skip when no usable display session is available.
 EOF
 }
@@ -39,6 +40,7 @@ if [[ $DOCS_ONLY -eq 0 ]]; then
   scripts/check_release_validate_ci.sh
   scripts/check_shell_health_contract.sh
   scripts/control_plane_smoke.sh
+  scripts/wm_event_refresh_smoke.sh
 fi
 
 echo "release contract checks passed"

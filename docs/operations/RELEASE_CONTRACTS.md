@@ -27,6 +27,8 @@ Release contracts are guard scripts that keep release automation CLI/docs behavi
   - `scripts/check_shell_health_contract.sh`
 - Control-plane command smoke:
   - `scripts/control_plane_smoke.sh`
+- WM event refresh smoke:
+  - `scripts/wm_event_refresh_smoke.sh`
 - Control-plane docs parity contract:
   - `scripts/check_control_plane_docs_contract.sh`
 
@@ -49,9 +51,7 @@ Release-validate contract summary:
 
 This is included by default in `scripts/check_release_contracts.sh` (unless `--docs-only` is used).
 Runtime contract note:
-- `scripts/check_shell_health_contract.sh` and `scripts/control_plane_smoke.sh` need an active GUI session (`WAYLAND_DISPLAY` or `DISPLAY`); they self-skip when unavailable.
-Troubleshooting pointer:
-- If control-plane checks fail, follow `docs/operations/CONTROL_PLANE.md` (manual smoke + command semantics) before rerunning release contracts.
+- `scripts/check_shell_health_contract.sh`, `scripts/control_plane_smoke.sh`, and `scripts/wm_event_refresh_smoke.sh` need an active GUI session (`WAYLAND_DISPLAY` or `DISPLAY`); they self-skip when unavailable.
 Troubleshooting pointer:
 - If control-plane checks fail, follow `docs/operations/CONTROL_PLANE.md` (manual smoke + command semantics) before rerunning release contracts.
 

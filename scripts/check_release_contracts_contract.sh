@@ -16,6 +16,7 @@ printf '%s\n' "$HELP" | rg -q -- '--help'
 printf '%s\n' "$HELP" | rg -q -- 'Full mode runs GUI-dependent runtime checks:'
 printf '%s\n' "$HELP" | rg -q -- 'scripts/check_shell_health_contract.sh'
 printf '%s\n' "$HELP" | rg -q -- 'scripts/control_plane_smoke.sh'
+printf '%s\n' "$HELP" | rg -q -- 'scripts/wm_event_refresh_smoke.sh'
 printf '%s\n' "$HELP" | rg -q -- 'may self-skip when no usable display session is available'
 
 rg -q --fixed-strings 'scripts/check_release_contracts.sh --docs-only' "$README"
