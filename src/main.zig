@@ -131,6 +131,7 @@ const Runtime = struct {
         refresh_scheduled_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
         refresh_skipped_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
         refresh_failed_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
+        log_every_event: bool = false,
 
         fn start(
             self: *WmEventBridge,
@@ -144,6 +145,7 @@ const Runtime = struct {
             self.windows = windows;
             self.workspaces = workspaces;
             self.backend = backend;
+            self.log_every_event = envFlagEnabled("GOD_SEARCH_WM_EVENT_LOG_EVERY");
             if (!backend.supportsEventStream()) return;
 
             const maybe_sub = backend.subscribeEvents(allocator, self, onWmEvent) catch return;
@@ -182,6 +184,19 @@ const Runtime = struct {
             }
 
             const events = self.event_count.fetchAdd(1, .monotonic) + 1;
+            if (self.log_every_event) {
+                std.log.info(
+                    "wm-event refresh: kind={s} result={s} events={d} scheduled={d} skipped={d} failed={d}",
+                    .{
+                        @tagName(event.kind),
+                        eventRefreshResultLabel(result),
+                        events,
+                        self.refresh_scheduled_count.load(.monotonic),
+                        self.refresh_skipped_count.load(.monotonic),
+                        self.refresh_failed_count.load(.monotonic),
+                    },
+                );
+            }
             if (events % 32 == 0 or result == .failed_spawn) {
                 std.log.info(
                     "wm-event refresh stats: events={d} scheduled={d} skipped={d} failed={d}",
@@ -247,6 +262,26 @@ const Runtime = struct {
         );
     }
 };
+
+fn eventRefreshResultLabel(result: god_search_ui.app.SearchService.EventRefreshResult) []const u8 {
+    return switch (result) {
+        .scheduled => "scheduled",
+        .skipped_running => "skipped_running",
+        .failed_spawn => "failed_spawn",
+    };
+}
+
+fn envFlagEnabled(name: []const u8) bool {
+    const raw = std.process.getEnvVarOwned(std.heap.page_allocator, name) catch return false;
+    defer std.heap.page_allocator.free(raw);
+    const trimmed = std.mem.trim(u8, raw, " \t\r\n");
+    if (trimmed.len == 0) return false;
+    if (std.mem.eql(u8, trimmed, "1")) return true;
+    if (std.ascii.eqlIgnoreCase(trimmed, "true")) return true;
+    if (std.ascii.eqlIgnoreCase(trimmed, "yes")) return true;
+    if (std.ascii.eqlIgnoreCase(trimmed, "on")) return true;
+    return false;
+}
 
 fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
     const home = try std.process.getEnvVarOwned(allocator, "HOME");

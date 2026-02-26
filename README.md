@@ -131,6 +131,7 @@ scripts/dev.sh build
 scripts/dev.sh test
 scripts/dev_notifications_takeover.sh takeover
 scripts/dev_notifications_takeover.sh smoke
+scripts/wm_event_refresh_smoke.sh
 scripts/check_shell_health_contract.sh
 scripts/control_plane_smoke.sh
 ```
