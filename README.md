@@ -82,6 +82,7 @@ god-search-ui --ctl hide
 god-search-ui --ctl toggle
 god-search-ui --ctl version
 god-search-ui --ctl shell_health
+god-search-ui --ctl wm_event_stats
 ```
 Reference: `docs/operations/CONTROL_PLANE.md`
 Smoke flow: `docs/operations/CONTROL_PLANE_SMOKE.md`

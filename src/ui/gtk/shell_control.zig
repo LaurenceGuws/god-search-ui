@@ -2,6 +2,7 @@ const std = @import("std");
 const gtk_types = @import("types.zig");
 const ipc_control = @import("../../ipc/control.zig");
 const shell_mod = @import("../../shell/mod.zig");
+const wm_mod = @import("../../wm/mod.zig");
 
 const c = gtk_types.c;
 const GFALSE = gtk_types.GFALSE;
@@ -76,6 +77,7 @@ fn onControlQuery(allocator: std.mem.Allocator, command: ipc_control.Command, us
     const control_ctx: *ControlContext = @ptrCast(@alignCast(user_data));
     return switch (command) {
         .shell_health => try control_ctx.health_store.snapshotAlloc(allocator),
+        .wm_event_stats => try wm_mod.event_stats.snapshotAlloc(allocator),
         else => null,
     };
 }

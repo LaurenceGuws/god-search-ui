@@ -23,6 +23,19 @@ pub fn main() !void {
         const cmd = parseControlCommand(raw_cmd) orelse {
             std.process.exit(13);
         };
+        if (cmd == .shell_health or cmd == .wm_event_stats) {
+            const msg = god_search_ui.ipc.control.queryCommandMessage(allocator, cmd) catch null;
+            if (msg) |payload| {
+                defer allocator.free(payload);
+                var stdout_buffer: [4096]u8 = undefined;
+                var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+                const out = &stdout_writer.interface;
+                try out.print("{s}\n", .{payload});
+                try out.flush();
+                std.process.exit(0);
+            }
+            std.process.exit(10);
+        }
         const ok = god_search_ui.ipc.control.trySendCommand(allocator, cmd) catch false;
         if (ok) {
             std.process.exit(0);
@@ -114,7 +127,7 @@ fn printCtlUsage() !void {
     const out = &stdout_writer.interface;
     try out.print(
         \\Usage: god-search-ui --ctl <command>
-        \\Commands: ping, summon, hide, toggle, version, shell_health
+        \\Commands: ping, summon, hide, toggle, version, shell_health, wm_event_stats
         \\
     , .{});
     try out.flush();
@@ -177,6 +190,11 @@ const Runtime = struct {
                 },
             }
             const result = service.scheduleRefreshFromEvent();
+            god_search_ui.wm.event_stats.record(switch (result) {
+                .scheduled => .scheduled,
+                .skipped_running => .skipped_running,
+                .failed_spawn => .failed_spawn,
+            });
             switch (result) {
                 .scheduled => _ = self.refresh_scheduled_count.fetchAdd(1, .monotonic),
                 .skipped_running => _ = self.refresh_skipped_count.fetchAdd(1, .monotonic),
@@ -360,6 +378,7 @@ fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
     if (std.mem.eql(u8, value, "toggle")) return .toggle;
     if (std.mem.eql(u8, value, "version")) return .version;
     if (std.mem.eql(u8, value, "shell_health")) return .shell_health;
+    if (std.mem.eql(u8, value, "wm_event_stats")) return .wm_event_stats;
     return null;
 }
 

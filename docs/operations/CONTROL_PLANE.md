@@ -23,6 +23,7 @@ god-search-ui --ctl hide
 god-search-ui --ctl toggle
 god-search-ui --ctl version
 god-search-ui --ctl shell_health
+god-search-ui --ctl wm_event_stats
 ```
 
 ## Semantics
@@ -33,6 +34,7 @@ god-search-ui --ctl shell_health
 - `toggle`: show/hide launcher surface.
 - `version`: daemon version string.
 - `shell_health`: compact live module-health payload used by `--print-shell-health`.
+- `wm_event_stats`: compact WM event-refresh counters (`events/scheduled/skipped/failed`).
 
 ## Exit Codes
 

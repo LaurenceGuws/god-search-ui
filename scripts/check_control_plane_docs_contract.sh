@@ -29,7 +29,8 @@ for cmd in \
   'god-search-ui --ctl hide' \
   'god-search-ui --ctl toggle' \
   'god-search-ui --ctl version' \
-  'god-search-ui --ctl shell_health'
+  'god-search-ui --ctl shell_health' \
+  'god-search-ui --ctl wm_event_stats'
 do
   require "$README" "$cmd" "README ctl command"
   require "$DOC" "$cmd" "CONTROL_PLANE ctl command"

@@ -30,7 +30,8 @@ scripts/control_plane_smoke.sh
 3. checks `--ctl summon`
 4. checks `--ctl hide`
 5. checks `--ctl toggle`
-6. verifies `--print-shell-health` includes launcher/notifications module lines
+6. checks `--ctl wm_event_stats`
+7. verifies `--print-shell-health` includes launcher/notifications module lines
 
 ## Expected Result
 

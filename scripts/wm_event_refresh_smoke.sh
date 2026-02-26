@@ -62,16 +62,23 @@ sleep 0.25
 timeout 2s hyprctl dispatch workspace -1 >/dev/null 2>&1 || true
 sleep 0.5
 
-if ! rg -q "wm-event refresh:" "$log_file"; then
-  echo "wm event smoke failed: no wm-event refresh logs found" >&2
+stats="$("$BIN" --ctl wm_event_stats 2>/dev/null || true)"
+if [[ -z "$stats" ]]; then
+  echo "wm event smoke failed: wm_event_stats query returned empty output" >&2
   tail -n 80 "$log_file" >&2 || true
   exit 3
 fi
-if ! rg -q "result=scheduled|result=skipped_running" "$log_file"; then
-  echo "wm event smoke failed: no scheduled/skipped refresh outcomes found" >&2
+if [[ "$stats" != *"events="* || "$stats" != *"scheduled="* ]]; then
+  echo "wm event smoke failed: unexpected wm_event_stats output: $stats" >&2
   tail -n 80 "$log_file" >&2 || true
   exit 4
 fi
+if [[ "$stats" == *"events=0"* ]]; then
+  echo "wm event smoke failed: wm_event_stats shows zero events: $stats" >&2
+  tail -n 80 "$log_file" >&2 || true
+  exit 5
+fi
 
 echo "wm event refresh smoke passed"
+echo "wm_event_stats: $stats"
 tail -n 20 "$log_file"

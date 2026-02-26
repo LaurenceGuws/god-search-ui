@@ -57,6 +57,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-E4: Add lightweight WM event refresh telemetry counters/log lines (scheduled/skipped/failed outcomes).
 - [x] DE-E5: Add provider-level retained snapshots for windows/workspaces and refresh them directly from WM events.
 - [x] DE-E6: Add WM event refresh smoke helper script (`scripts/wm_event_refresh_smoke.sh`) and README dev-loop command.
+- [x] DE-E7: Expose WM event refresh stats through control plane (`--ctl wm_event_stats`) for scriptable assertions.
 - [x] DE-P0: Define WM adapter + surface contracts for placement portability.
 - [x] DE-P1: Add pure placement engine (anchor/offset/monitor policy) with tests.
 - [x] DE-P2: Route launcher + notification popup geometry through placement engine.
@@ -120,6 +121,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-E4: Added WM event refresh outcome counters and periodic runtime stats logging
 - [x] DE-E5: Windows/workspaces providers now keep retained snapshots and are refreshed directly on WM events
 - [x] DE-E6: Added WM event refresh smoke script using Hypr workspace switch events and log assertions
+- [x] DE-E7: Added `--ctl wm_event_stats` query path and updated docs/contracts
 
 ## Blocked
 - [ ] (empty)

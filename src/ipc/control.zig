@@ -7,6 +7,7 @@ pub const Command = enum {
     toggle,
     version,
     shell_health,
+    wm_event_stats,
 };
 
 pub const HandlerResult = struct {
@@ -219,6 +220,22 @@ fn handleClient(server: *Server, client_fd: std.posix.socket_t) void {
         .ping => writeResponse(client_fd, true, "ok", "pong"),
         .version => writeResponse(client_fd, true, "ok", "dev"),
         .shell_health => {
+            const query = server.query_handler orelse {
+                writeResponse(client_fd, false, "rejected", "No query handler");
+                return;
+            };
+            const msg_opt = query(server.allocator, cmd, server.user_data) catch {
+                writeResponse(client_fd, false, "rejected", "Query failed");
+                return;
+            };
+            if (msg_opt) |msg| {
+                defer server.allocator.free(msg);
+                writeResponse(client_fd, true, "ok", msg);
+            } else {
+                writeResponse(client_fd, false, "rejected", "No data");
+            }
+        },
+        .wm_event_stats => {
             const query = server.query_handler orelse {
                 writeResponse(client_fd, false, "rejected", "No query handler");
                 return;

@@ -48,6 +48,9 @@ for cmd in summon hide toggle; do
     echo "control plane smoke note: --ctl ${cmd} not accepted in current session"
   fi
 done
+if ! "$BIN" --ctl wm_event_stats >/dev/null 2>&1; then
+  echo "control plane smoke note: --ctl wm_event_stats not accepted in current session"
+fi
 
 health_out="$($BIN --print-shell-health)"
 if [[ "$health_out" != *"module=launcher"* ]]; then
