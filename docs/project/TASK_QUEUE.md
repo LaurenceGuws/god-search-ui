@@ -36,7 +36,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R26: Add release-contract docs row for control-plane docs parity checker in script matrix.
 - [x] DE-R27: Add release-contracts docs row for shell/control runtime smoke helpers in script matrix.
 - [x] DE-R28: Add release-contract docs contract checker assertions for matrix runtime smoke rows.
-- [ ] DE-R29: Add compact release-contract troubleshooting pointer to control-plane docs.
+- [x] DE-R29: Add compact release-contract troubleshooting pointer to control-plane docs.
 - [x] DE-B0: Fetch full notifications spec pages from `docs/vendor/notifications/SOURCES.txt` and lock method/signal signatures from `notification-protocol.html`.
 - [x] DE-B0.1: Validate `docs/NOTIFICATIONS_PROTOCOL_LOCK.md` against generated `notification-protocol.txt` and freeze MVP defer list.
 - [x] DE-A1: Add shell control-plane MVP (`ping`, `summon`, `hide`) over a local Unix socket.
@@ -49,13 +49,14 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-B2: Add notification popup renderer + timeout/replaces_id close interactions + `NotificationClosed` reason coverage.
 - [x] DE-B3: Add action buttons/hints wiring and `ActionInvoked` signal flow.
 - [x] DE-B4: Add persistent notification history + dismiss-all UX.
+- [x] DE-B5: Add Lua-configurable notification action policy (`notifications.actions`) with documented defaults and smoke coverage.
 - [x] DE-P0: Define WM adapter + surface contracts for placement portability.
 - [x] DE-P1: Add pure placement engine (anchor/offset/monitor policy) with tests.
 - [x] DE-P2: Route launcher + notification popup geometry through placement engine.
 - [x] DE-P3: Add layer-shell adapter and runtime switch (`toplevel`/`layer-shell`).
 
 ## In Progress
-- [ ] DE-R29: Add compact release-contract troubleshooting pointer to control-plane docs.
+- [ ] (none)
 
 ## Done
 - [x] DE-P4: Placement config/env contract (launcher anchor, popup anchor, monitor policy)
@@ -103,6 +104,8 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-R26: Added control-plane docs contract checker row to release script matrix + matrix guard
 - [x] DE-R27: Added runtime smoke helper rows (`check_shell_health_contract`/`control_plane_smoke`) to release script matrix
 - [x] DE-R28: Added release-contract docs checker assertions for runtime-smoke rows in release matrix
+- [x] DE-R29: Added compact release-contract troubleshooting pointer to control-plane docs
+- [x] DE-B5: Added Lua-configurable notification action policy (`notifications.actions`) and smoke/docs coverage
 
 ## Blocked
 - [ ] (empty)

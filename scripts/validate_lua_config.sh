@@ -68,6 +68,7 @@ end
 check_unknown("root", conf, {
   surface_mode = true,
   placement = true,
+  notifications = true,
 })
 
 check_enum("surface_mode", conf.surface_mode, {
@@ -156,6 +157,28 @@ if conf.placement and type(conf.placement) == "table" then
   end
   if conf.placement.notifications ~= nil then
     validate_window_policy("placement.notifications", conf.placement.notifications, false)
+  end
+end
+
+if conf.notifications ~= nil then
+  if expect_table("notifications", conf.notifications) then
+    check_unknown("notifications", conf.notifications, {
+      actions = true,
+    })
+    if conf.notifications.actions ~= nil then
+      if expect_table("notifications.actions", conf.notifications.actions) then
+        check_unknown("notifications.actions", conf.notifications.actions, {
+          show_close_button = true,
+          show_dbus_actions = true,
+        })
+        if conf.notifications.actions.show_close_button ~= nil and type(conf.notifications.actions.show_close_button) ~= "boolean" then
+          err("notifications.actions.show_close_button must be a boolean")
+        end
+        if conf.notifications.actions.show_dbus_actions ~= nil and type(conf.notifications.actions.show_dbus_actions) ~= "boolean" then
+          err("notifications.actions.show_dbus_actions must be a boolean")
+        end
+      end
+    end
   end
 end
 

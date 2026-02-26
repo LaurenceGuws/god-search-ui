@@ -50,6 +50,10 @@ Release-validate contract summary:
 This is included by default in `scripts/check_release_contracts.sh` (unless `--docs-only` is used).
 Runtime contract note:
 - `scripts/check_shell_health_contract.sh` and `scripts/control_plane_smoke.sh` need an active GUI session (`WAYLAND_DISPLAY` or `DISPLAY`); they self-skip when unavailable.
+Troubleshooting pointer:
+- If control-plane checks fail, follow `docs/operations/CONTROL_PLANE.md` (manual smoke + command semantics) before rerunning release contracts.
+Troubleshooting pointer:
+- If control-plane checks fail, follow `docs/operations/CONTROL_PLANE.md` (manual smoke + command semantics) before rerunning release contracts.
 
 ## Operator Quick Order
 

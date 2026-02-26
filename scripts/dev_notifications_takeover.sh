@@ -89,6 +89,11 @@ case "$MODE" in
             echo "[dev-notify] current owner: ${INFO:-<none>}"
             exit 3
         fi
+        CFG_OUT="$("$BIN" --print-config 2>/dev/null || true)"
+        if [[ "$CFG_OUT" != *"show_close_button"* || "$CFG_OUT" != *"show_dbus_actions"* ]]; then
+            echo "[dev-notify] ERROR: print-config missing notifications action policy fields"
+            exit 10
+        fi
 
         CAPS="$(gdbus call --session \
             --dest org.freedesktop.Notifications \

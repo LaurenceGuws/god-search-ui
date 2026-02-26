@@ -43,6 +43,8 @@ pub const PopupManager = struct {
     gtk_app: *c.GtkApplication,
     surface_mode: SurfaceMode,
     placement_policy: NotificationPolicy,
+    show_close_button: bool,
+    show_dbus_actions: bool,
     window: ?*c.GtkWidget,
     list: ?*c.GtkWidget,
     entries: std.ArrayList(PopupEntry),
@@ -53,6 +55,8 @@ pub const PopupManager = struct {
         daemon: *notifications.Daemon,
         surface_mode: SurfaceMode,
         placement_policy: NotificationPolicy,
+        show_close_button: bool,
+        show_dbus_actions: bool,
     ) !PopupManager {
         const manager = PopupManager{
             .allocator = allocator,
@@ -60,6 +64,8 @@ pub const PopupManager = struct {
             .gtk_app = gtk_app,
             .surface_mode = surface_mode,
             .placement_policy = placement_policy,
+            .show_close_button = show_close_button,
+            .show_dbus_actions = show_dbus_actions,
             .window = null,
             .list = null,
             .entries = .empty,
@@ -198,14 +204,15 @@ pub const PopupManager = struct {
         c.gtk_widget_add_css_class(summary_label, "gs-notify-summary");
         c.gtk_widget_set_hexpand(summary_label, GTRUE);
 
-        const close_btn = c.gtk_button_new_with_label("x");
-        c.gtk_widget_add_css_class(close_btn, "gs-notify-close");
-        const payload: *DismissPayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(DismissPayload))));
-        payload.* = .{ .manager = self, .id = id };
-        _ = c.g_signal_connect_data(close_btn, "clicked", c.G_CALLBACK(onDismissClicked), payload, onDismissPayloadDestroyed, 0);
-
         c.gtk_box_append(@ptrCast(header), summary_label);
-        c.gtk_box_append(@ptrCast(header), close_btn);
+        if (self.show_close_button) {
+            const close_btn = c.gtk_button_new_with_label("x");
+            c.gtk_widget_add_css_class(close_btn, "gs-notify-close");
+            const payload: *DismissPayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(DismissPayload))));
+            payload.* = .{ .manager = self, .id = id };
+            _ = c.g_signal_connect_data(close_btn, "clicked", c.G_CALLBACK(onDismissClicked), payload, onDismissPayloadDestroyed, 0);
+            c.gtk_box_append(@ptrCast(header), close_btn);
+        }
 
         const body_label = c.gtk_label_new(toCStr(body));
         c.gtk_label_set_xalign(@ptrCast(body_label), 0.0);
@@ -300,7 +307,7 @@ pub const PopupManager = struct {
 
     fn updateActions(self: *PopupManager, actions_box: *c.GtkWidget, id: u32, actions: []const notifications.Daemon.Action) void {
         clearChildren(actions_box);
-        if (actions.len == 0) {
+        if (!self.show_dbus_actions or actions.len == 0) {
             c.gtk_widget_set_visible(actions_box, GFALSE);
             return;
         }

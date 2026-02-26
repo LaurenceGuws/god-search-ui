@@ -40,6 +40,8 @@ Patch common keys from CLI:
 scripts/set_lua_config.sh surface_mode layer-shell
 scripts/set_lua_config.sh launcher.monitor_name DP-1
 scripts/set_lua_config.sh notifications.anchor top_right
+scripts/set_lua_config.sh notifications.actions.show_close_button true
+scripts/set_lua_config.sh notifications.actions.show_dbus_actions true
 ```
 
 ## Contract
@@ -75,6 +77,12 @@ return {
       max_height_px = 620,
     },
   },
+  notifications = {
+    actions = {
+      show_close_button = true,
+      show_dbus_actions = true,
+    },
+  },
 }
 ```
 
@@ -82,6 +90,10 @@ Supported anchors:
 - `center`
 - `top_left`, `top_center`, `top_right`
 - `bottom_left`, `bottom_center`, `bottom_right`
+
+Notification action policy:
+- `notifications.actions.show_close_button`: show/hide the popup header close button (`x`).
+- `notifications.actions.show_dbus_actions`: show/hide D-Bus-provided action buttons.
 
 ## Precedence
 

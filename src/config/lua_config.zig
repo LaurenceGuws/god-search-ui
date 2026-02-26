@@ -19,7 +19,7 @@ pub fn load(allocator: std.mem.Allocator) config.Settings {
 
     std.fs.cwd().access(path, .{}) catch |err| switch (err) {
         error.FileNotFound => {
-            default_lua.ensureDefaultConfigAtPath(path) catch |write_err| {
+            _ = default_lua.ensureDefaultConfigAtPath(path) catch |write_err| {
                 log.warn("lua config missing and default bootstrap failed ({s}): {s}", .{ path, @errorName(write_err) });
                 return .{};
             };
@@ -84,6 +84,27 @@ fn parseSettingsFromTop(lua: *c.lua_State, allocator: std.mem.Allocator, initial
     }
     c.lua_pop(lua, 1);
 
+    _ = c.lua_getfield(lua, -1, "notifications");
+    if (c.lua_istable(lua, -1)) {
+        out.notification_actions = parseNotificationsTable(lua, -1, out.notification_actions);
+    }
+    c.lua_pop(lua, 1);
+
+    return out;
+}
+
+fn parseNotificationsTable(
+    lua: *c.lua_State,
+    idx: c_int,
+    initial: config.Settings.NotificationActionsPolicy,
+) config.Settings.NotificationActionsPolicy {
+    var out = initial;
+    _ = c.lua_getfield(lua, idx, "actions");
+    if (c.lua_istable(lua, -1)) {
+        maybeBoolField(lua, -1, "show_close_button", &out.show_close_button);
+        maybeBoolField(lua, -1, "show_dbus_actions", &out.show_dbus_actions);
+    }
+    c.lua_pop(lua, 1);
     return out;
 }
 
@@ -210,6 +231,13 @@ fn maybeIntField(lua: *c.lua_State, idx: c_int, field: [*:0]const u8, out: *i32)
     const v = c.lua_tointegerx(lua, -1, null);
     const int_v: i64 = @intCast(v);
     out.* = std.math.cast(i32, int_v) orelse out.*;
+}
+
+fn maybeBoolField(lua: *c.lua_State, idx: c_int, field: [*:0]const u8, out: *bool) void {
+    _ = c.lua_getfield(lua, idx, field);
+    defer c.lua_settop(lua, -2);
+    if (c.lua_type(lua, -1) != c.LUA_TBOOLEAN) return;
+    out.* = c.lua_toboolean(lua, -1) != 0;
 }
 
 fn parseAnchor(raw: []const u8) ?placement.Anchor {

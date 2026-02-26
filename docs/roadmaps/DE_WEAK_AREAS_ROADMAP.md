@@ -38,6 +38,7 @@ Implement first-party notifications service compatible with desktop clients.
 5. WA-2.4 Popup stack rendering + timeout + close interactions; honor `replaces_id`.
 6. WA-2.5 Apply markup/hints/urgency behavior according to fetched spec sections (MVP subset explicitly documented).
 7. WA-2.6 History buffer + dismiss-all behavior.
+8. WA-2.7 Add policy-level config for notification action button behavior (documented defaults + smoke coverage).
 
 ### Acceptance Criteria
 - `notify-send` works end-to-end against daemon.
@@ -45,6 +46,7 @@ Implement first-party notifications service compatible with desktop clients.
 - Replacing an existing ID updates in place.
 - Method and signal signatures match `protocol.html` exactly.
 - Implemented hint/markup behavior is documented as either "implemented" or "deferred" against vendor sections.
+- Notification action button policy is configurable and documented with deterministic defaults.
 
 ## WA-3: Event-Driven Compositor/Session Integration
 

@@ -97,6 +97,8 @@ pub fn main() !void {
             .start_hidden = start_hidden,
             .surface_mode = surface_mode,
             .placement_policy = cfg.placement_policy,
+            .notifications_show_close_button = cfg.notification_actions.show_close_button,
+            .notifications_show_dbus_actions = cfg.notification_actions.show_dbus_actions,
         });
         return;
     }
@@ -293,6 +295,12 @@ fn printResolvedConfig(cfg: god_search_ui.config.Settings, surface_mode: god_sea
         \\      "max_width_px": {d},
         \\      "max_height_px": {d}
         \\    }}
+        \\  }},
+        \\  "notifications": {{
+        \\    "actions": {{
+        \\      "show_close_button": {s},
+        \\      "show_dbus_actions": {s}
+        \\    }}
         \\  }}
         \\}}
         \\
@@ -327,6 +335,8 @@ fn printResolvedConfig(cfg: god_search_ui.config.Settings, surface_mode: god_sea
         notifications.min_height_px,
         notifications.max_width_px,
         notifications.max_height_px,
+        if (cfg.notification_actions.show_close_button) "true" else "false",
+        if (cfg.notification_actions.show_dbus_actions) "true" else "false",
     });
 
     try out.flush();

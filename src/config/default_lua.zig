@@ -69,6 +69,12 @@ pub const template =
     \\      max_height_px = 620,
     \\    },
     \\  },
+    \\  notifications = {
+    \\    actions = {
+    \\      show_close_button = true,
+    \\      show_dbus_actions = true,
+    \\    },
+    \\  },
     \\}
     \\
 ;

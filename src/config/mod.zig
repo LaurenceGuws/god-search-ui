@@ -2,8 +2,14 @@ const build_options = @import("build_options");
 const std = @import("std");
 
 pub const Settings = struct {
+    pub const NotificationActionsPolicy = struct {
+        show_close_button: bool = true,
+        show_dbus_actions: bool = true,
+    };
+
     surface_mode: ?@import("../ui/surfaces/mod.zig").SurfaceMode = null,
     placement_policy: @import("../ui/placement/mod.zig").RuntimePolicy = .{},
+    notification_actions: NotificationActionsPolicy = .{},
     launcher_monitor_name: ?[]u8 = null,
     notifications_monitor_name: ?[]u8 = null,
 

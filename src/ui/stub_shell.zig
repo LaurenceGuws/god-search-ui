@@ -10,6 +10,8 @@ pub const Shell = struct {
         start_hidden: bool = false,
         surface_mode: SurfaceMode = .auto,
         placement_policy: PlacementPolicy = .{},
+        notifications_show_close_button: bool = true,
+        notifications_show_dbus_actions: bool = true,
     };
 
     pub fn run(allocator: std.mem.Allocator, service: *app.SearchService, _: *app.TelemetrySink, options: RunOptions) !void {

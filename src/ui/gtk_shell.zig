@@ -44,6 +44,8 @@ pub const Shell = struct {
         start_hidden: bool = false,
         surface_mode: SurfaceMode = .auto,
         placement_policy: PlacementPolicy = .{},
+        notifications_show_close_button: bool = true,
+        notifications_show_dbus_actions: bool = true,
     };
 
     pub fn run(allocator: std.mem.Allocator, service: *app_mod.SearchService, telemetry: *app_mod.TelemetrySink, options: RunOptions) !void {
@@ -86,6 +88,8 @@ pub const Shell = struct {
             .resident_mode = options.resident_mode,
             .surface_mode = options.surface_mode,
             .placement_policy = options.placement_policy.notifications,
+            .show_close_button = options.notifications_show_close_button,
+            .show_dbus_actions = options.notifications_show_dbus_actions,
             .health_store = &health_store,
         };
         var launcher_ctx = LauncherModule.Context{
@@ -409,6 +413,8 @@ pub const Shell = struct {
             resident_mode: bool,
             surface_mode: SurfaceMode,
             placement_policy: NotificationPolicy,
+            show_close_button: bool,
+            show_dbus_actions: bool,
             health_store: *gtk_shell_control.HealthStore,
         };
 
@@ -456,6 +462,8 @@ pub const Shell = struct {
                     daemon,
                     state.ctx.surface_mode,
                     state.ctx.placement_policy,
+                    state.ctx.show_close_button,
+                    state.ctx.show_dbus_actions,
                 );
                 popup.attach();
                 state.popup = popup;
