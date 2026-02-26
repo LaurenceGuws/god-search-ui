@@ -134,7 +134,8 @@ scripts/dev_notifications_takeover.sh smoke
 scripts/check_shell_health_contract.sh
 scripts/control_plane_smoke.sh
 ```
-`smoke` also sends an action-capable notification; click its action button while running `dbus-monitor` to observe `ActionInvoked`.
+`smoke` validates replace-id behavior, `body-markup` capability, persistent close (`reason=3`), and timeout close (`reason=1`).  
+It also sends an action-capable notification; click its action button while running `dbus-monitor` to observe `ActionInvoked`.
 
 Draft release notes from latest commits:
 ```bash
