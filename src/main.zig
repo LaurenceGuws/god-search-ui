@@ -126,6 +126,9 @@ const Runtime = struct {
         subscription: ?god_search_ui.wm.EventSubscription = null,
         service: ?*god_search_ui.app.SearchService = null,
         event_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
+        refresh_scheduled_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
+        refresh_skipped_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
+        refresh_failed_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
 
         fn start(self: *WmEventBridge, allocator: std.mem.Allocator, service: *god_search_ui.app.SearchService, backend: god_search_ui.wm.Backend) void {
             self.service = service;
@@ -150,8 +153,25 @@ const Runtime = struct {
         fn onWmEvent(ctx: *anyopaque, _: god_search_ui.wm.Event) void {
             const self: *WmEventBridge = @ptrCast(@alignCast(ctx));
             const service = self.service orelse return;
-            service.scheduleRefreshFromEvent();
-            _ = self.event_count.fetchAdd(1, .monotonic);
+            const result = service.scheduleRefreshFromEvent();
+            switch (result) {
+                .scheduled => _ = self.refresh_scheduled_count.fetchAdd(1, .monotonic),
+                .skipped_running => _ = self.refresh_skipped_count.fetchAdd(1, .monotonic),
+                .failed_spawn => _ = self.refresh_failed_count.fetchAdd(1, .monotonic),
+            }
+
+            const events = self.event_count.fetchAdd(1, .monotonic) + 1;
+            if (events % 32 == 0 or result == .failed_spawn) {
+                std.log.info(
+                    "wm-event refresh stats: events={d} scheduled={d} skipped={d} failed={d}",
+                    .{
+                        events,
+                        self.refresh_scheduled_count.load(.monotonic),
+                        self.refresh_skipped_count.load(.monotonic),
+                        self.refresh_failed_count.load(.monotonic),
+                    },
+                );
+            }
         }
     };
 

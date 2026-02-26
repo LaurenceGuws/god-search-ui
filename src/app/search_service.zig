@@ -17,6 +17,11 @@ const refresh_worker = @import("search_service/refresh_worker.zig");
 
 pub const SearchService = struct {
     pub const QueryFlagsSnapshot = query_metrics_access.QueryFlagsSnapshot;
+    pub const EventRefreshResult = enum {
+        scheduled,
+        skipped_running,
+        failed_spawn,
+    };
 
     registry: providers.ProviderRegistry,
     query_mu: std.Thread.Mutex = .{},
@@ -215,20 +220,21 @@ pub const SearchService = struct {
         cache_coordinator.invalidateLocked(&self.cache_ready, &self.cache_last_refresh_ns, &self.refresh_requested);
     }
 
-    pub fn scheduleRefreshFromEvent(self: *SearchService) void {
+    pub fn scheduleRefreshFromEvent(self: *SearchService) EventRefreshResult {
         self.cache_mu.lock();
         defer self.cache_mu.unlock();
 
         self.reapFinishedRefreshThreadLocked();
-        if (self.refresh_thread_running or self.refresh_thread != null) return;
+        if (self.refresh_thread_running or self.refresh_thread != null) return .skipped_running;
 
         self.refresh_requested = true;
         refresh_worker.markRunning(&self.refresh_thread_running);
         self.refresh_thread = std.Thread.spawn(.{}, refreshWorkerMain, .{self}) catch {
             self.refresh_requested = false;
             refresh_worker.markStopped(&self.refresh_thread_running);
-            return;
+            return .failed_spawn;
         };
+        return .scheduled;
     }
 
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {

@@ -54,6 +54,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-E1: WA-3.3 add Hyprland socket2 event subscription implementation (`subscribeEvents`/`unsubscribeEvents`) emitting typed WM events.
 - [x] DE-E2: WA-3.4 wire WM event stream to search snapshot invalidation (event-driven cache invalidation in runtime).
 - [x] DE-E3: WA-3.4 switch WM event handling from invalidate-only to background refresh scheduling (`SearchService.scheduleRefreshFromEvent`).
+- [x] DE-E4: Add lightweight WM event refresh telemetry counters/log lines (scheduled/skipped/failed outcomes).
 - [x] DE-P0: Define WM adapter + surface contracts for placement portability.
 - [x] DE-P1: Add pure placement engine (anchor/offset/monitor policy) with tests.
 - [x] DE-P2: Route launcher + notification popup geometry through placement engine.
@@ -114,6 +115,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-E1: Added Hyprland socket2 event subscription path emitting typed WM events
 - [x] DE-E2: Wired WM events to `SearchService.invalidateSnapshot()` for event-driven static-route cache invalidation
 - [x] DE-E3: WM events now trigger background cache refresh scheduling, reducing query-path recollection
+- [x] DE-E4: Added WM event refresh outcome counters and periodic runtime stats logging
 
 ## Blocked
 - [ ] (empty)
