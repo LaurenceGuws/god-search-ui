@@ -60,6 +60,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-E7: Expose WM event refresh stats through control plane (`--ctl wm_event_stats`) for scriptable assertions.
 - [x] DE-E8: Tighten WM event smoke assertions to require parsed numeric stats and `scheduled+skipped > 0`.
 - [x] DE-E9: Wire WM event refresh smoke into release contracts alias/docs/matrix checks.
+- [x] DE-E10: Switch CI workflow release guard step to unified `scripts/check_release_contracts.sh` entrypoint.
 - [x] DE-P0: Define WM adapter + surface contracts for placement portability.
 - [x] DE-P1: Add pure placement engine (anchor/offset/monitor policy) with tests.
 - [x] DE-P2: Route launcher + notification popup geometry through placement engine.
@@ -126,6 +127,7 @@ Use this as the authoritative queue for autonomous agent cycles.
 - [x] DE-E7: Added `--ctl wm_event_stats` query path and updated docs/contracts
 - [x] DE-E8: WM event smoke now parses numeric stats fields and enforces `scheduled+skipped > 0` when runnable
 - [x] DE-E9: Added WM event smoke to release-contract runtime checks and release docs/matrix parity guards
+- [x] DE-E10: CI now runs unified release contracts entrypoint instead of standalone release-validate guard
 
 ## Blocked
 - [ ] (empty)

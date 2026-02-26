@@ -25,5 +25,5 @@ jobs:
       - name: Test
         run: zig build test
 
-      - name: Release Validate CI Guard
-        run: scripts/check_release_validate_ci.sh
+      - name: Release Contracts
+        run: scripts/check_release_contracts.sh
