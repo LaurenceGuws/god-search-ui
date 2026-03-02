@@ -4,16 +4,19 @@ const c = gtk_types.c;
 pub fn installCss(window: *c.GtkWidget) void {
     const css =
         ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
+        ".gs-help-btn { min-width: 28px; min-height: 28px; padding: 0 10px; border-radius: 8px; }\n" ++
+        ".gs-help-popover, .gs-help-popover > contents { background: rgba(20, 26, 39, 0.96); border: 1px solid rgba(132, 160, 228, 0.25); border-radius: 8px; }\n" ++
+        ".gs-help-line { color: #c7d0e3; font-size: 0.90em; }\n" ++
         ".gs-status-info { color: #80a6d8; }\n" ++
         ".gs-status-success { color: #87c97f; }\n" ++
         ".gs-status-failure { color: #e58a8a; }\n" ++
         ".gs-status-searching { color: #c6e0ff; font-size: 1.02em; font-weight: 700; }\n" ++
         ".gs-preview-panel, .gs-preview-panel > box, .gs-preview-panel > widget { background: transparent; border: none; box-shadow: none; border-radius: 0; }\n" ++
-        ".gs-preview-scroll, .gs-preview-scroll > viewport { background: rgba(30, 38, 56, 0.82); border: 1px solid rgba(132, 160, 228, 0.20); border-radius: 8px; box-shadow: none; }\n" ++
+        ".gs-preview-scroll, .gs-preview-scroll > viewport { background: transparent; border: none; box-shadow: none; border-radius: 0; }\n" ++
         ".gs-preview-inner { padding: 12px; }\n" ++
         ".gs-preview-title { color: #8b93a8; font-weight: 700; }\n" ++
-        ".gs-preview-body { color: #d5ddf1; line-height: 1.25; }\n" ++
-        ".gs-preview-text-scroll, .gs-preview-text-scroll > viewport { background: rgba(20, 26, 39, 0.68); border: 1px solid rgba(132, 160, 228, 0.20); border-radius: 8px; box-shadow: none; }\n" ++
+        ".gs-preview-body { color: #9aa1b5; line-height: 1.25; }\n" ++
+        ".gs-preview-text-scroll, .gs-preview-text-scroll > viewport { background: transparent; border: none; border-radius: 0; box-shadow: none; }\n" ++
         ".gs-preview-text-scroll scrollbar slider { min-width: 4px; min-height: 20px; }\n" ++
         ".gs-preview-text { background: transparent; color: #dce6ff; padding: 8px; font-family: monospace; font-size: 12px; }\n" ++
         ".gs-preview-text text { background: transparent; color: #dce6ff; }\n" ++

@@ -289,6 +289,10 @@ pub const SearchService = struct {
         try history_access.recordLocked(&self.history, self.max_history, allocator, action);
     }
 
+    pub fn historySnapshotNewestFirstOwned(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {
+        return self.historySnapshotNewestFirstOwnedInternal(allocator);
+    }
+
     pub fn loadHistory(self: *SearchService, allocator: std.mem.Allocator) !void {
         self.query_mu.lock();
         defer self.query_mu.unlock();
@@ -310,7 +314,7 @@ pub const SearchService = struct {
         );
     }
 
-    fn historySnapshotNewestFirstOwned(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {
+    fn historySnapshotNewestFirstOwnedInternal(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {
         self.query_mu.lock();
         defer self.query_mu.unlock();
         return history_access.snapshotNewestFirstOwnedLocked(self.history.items, allocator);

@@ -66,6 +66,36 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
 
     const entry = c.gtk_entry_new();
     c.gtk_entry_set_placeholder_text(@ptrCast(entry), "Type to search...");
+
+    const help_button = c.gtk_button_new_with_label("?");
+    c.gtk_widget_add_css_class(help_button, "gs-help-btn");
+    c.gtk_widget_set_tooltip_text(help_button, "Search routes and shortcuts");
+
+    const help_popover = c.gtk_popover_new();
+    c.gtk_widget_add_css_class(help_popover, "gs-help-popover");
+    c.gtk_widget_set_halign(help_popover, c.GTK_ALIGN_END);
+    c.gtk_widget_set_parent(help_popover, help_button);
+
+    const help_box = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 4);
+    c.gtk_widget_set_margin_top(help_box, 8);
+    c.gtk_widget_set_margin_bottom(help_box, 8);
+    c.gtk_widget_set_margin_start(help_box, 10);
+    c.gtk_widget_set_margin_end(help_box, 10);
+
+    appendHelpLine(help_box, "Routes: @ apps  ~ dirs  # windows  ! workspaces");
+    appendHelpLine(help_box, "Routes: % files  & grep  $ notifications");
+    appendHelpLine(help_box, "Commands: > run  = calc  ? web");
+    appendHelpLine(help_box, "Hotkeys: Ctrl+P preview, Ctrl+R refresh, Esc close");
+    c.gtk_popover_set_child(@ptrCast(help_popover), help_box);
+    _ = c.g_signal_connect_data(help_button, "clicked", c.G_CALLBACK(onHelpClicked), help_popover, null, 0);
+
+    const entry_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+    c.gtk_widget_set_hexpand(entry_row, GTRUE);
+    c.gtk_widget_set_vexpand(entry_row, GFALSE);
+    c.gtk_widget_set_hexpand(entry, GTRUE);
+    c.gtk_box_append(@ptrCast(entry_row), entry);
+    c.gtk_box_append(@ptrCast(entry_row), help_button);
+
     const status = c.gtk_label_new("Esc to close, Ctrl+R to refresh");
     c.gtk_label_set_xalign(@ptrCast(status), 0.0);
     c.gtk_label_set_single_line_mode(@ptrCast(status), GTRUE);
@@ -124,6 +154,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     const preview_scroller = c.gtk_scrolled_window_new();
     c.gtk_scrolled_window_set_policy(@ptrCast(preview_scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
     c.gtk_widget_set_vexpand(preview_scroller, GTRUE);
+    // Reuse results-pane surface styling to keep both split panes visually consistent.
+    c.gtk_widget_add_css_class(preview_scroller, "gs-results-scroll");
     c.gtk_widget_add_css_class(preview_scroller, "gs-preview-scroll");
     c.gtk_scrolled_window_set_child(@ptrCast(preview_scroller), preview_inner);
 
@@ -209,7 +241,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     _ = c.g_signal_connect_data(window, "close-request", c.G_CALLBACK(hooks.on_close_request), ctx, null, 0);
     _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(hooks.on_destroy), ctx, null, 0);
 
-    c.gtk_box_append(@ptrCast(root_box), entry);
+    c.gtk_box_append(@ptrCast(root_box), entry_row);
     c.gtk_box_append(@ptrCast(root_box), status);
     c.gtk_box_append(@ptrCast(root_box), content_pane);
     c.gtk_window_set_child(@ptrCast(window), root_box);
@@ -228,4 +260,20 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
 
 fn configureInitialWindowSize(window: *c.GtkWidget, policy: PlacementPolicy) void {
     placement_bridge.configureLauncherWindow(window, policy.launcher);
+}
+
+fn onHelpClicked(_: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c) void {
+    if (user_data == null) return;
+    c.gtk_popover_popup(@ptrCast(@alignCast(user_data.?)));
+}
+
+fn appendHelpLine(box: *c.GtkWidget, line: []const u8) void {
+    const label = c.gtk_label_new(null);
+    c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+    c.gtk_label_set_wrap(@ptrCast(label), GTRUE);
+    c.gtk_widget_add_css_class(label, "gs-help-line");
+    const line_z = std.heap.page_allocator.dupeZ(u8, line) catch return;
+    defer std.heap.page_allocator.free(line_z);
+    c.gtk_label_set_text(@ptrCast(label), line_z.ptr);
+    c.gtk_box_append(@ptrCast(box), label);
 }
