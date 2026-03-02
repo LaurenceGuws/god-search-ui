@@ -98,6 +98,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 .telemetry_ok_detail = "option-command",
                 .error_message = "Directory action failed",
                 .close_on_success = true,
+                .detach_command = true,
             };
         },
         .file_option => {
@@ -107,6 +108,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 .telemetry_ok_detail = "option-command",
                 .error_message = "File action failed",
                 .close_on_success = true,
+                .detach_command = true,
             };
         },
         .app => {
