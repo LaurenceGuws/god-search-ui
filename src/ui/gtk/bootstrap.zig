@@ -127,10 +127,10 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_widget_add_css_class(preview_scroller, "gs-preview-scroll");
     c.gtk_scrolled_window_set_child(@ptrCast(preview_scroller), preview_inner);
 
-    const preview_panel = c.gtk_frame_new(null);
+    const preview_panel = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 0);
     c.gtk_widget_add_css_class(preview_panel, "gs-preview-panel");
     c.gtk_widget_set_size_request(preview_panel, 300, -1);
-    c.gtk_frame_set_child(@ptrCast(preview_panel), preview_scroller);
+    c.gtk_box_append(@ptrCast(preview_panel), preview_scroller);
     c.gtk_widget_set_visible(preview_panel, gtk_types.GFALSE);
 
     const content_pane = c.gtk_paned_new(c.GTK_ORIENTATION_HORIZONTAL);
