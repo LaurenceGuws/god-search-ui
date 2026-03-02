@@ -37,6 +37,9 @@ pub const ActivateHooks = struct {
 
 pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: ActivateHooks) void {
     if (launch.ctx) |existing_ctx| {
+        // Resident daemon reuses one UI context across summons; reset query each summon.
+        c.gtk_editable_set_text(@ptrCast(existing_ctx.entry), "");
+        c.gtk_editable_set_position(@ptrCast(existing_ctx.entry), -1);
         c.gtk_window_present(@ptrCast(existing_ctx.window));
         _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(existing_ctx.entry)));
         hooks.after_activate(existing_ctx);

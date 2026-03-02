@@ -83,6 +83,10 @@ pub fn main() !void {
         try applyEnvPlacementOverrides(allocator, &cfg);
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
+        if (!god_search_ui.ui.gtk_enabled and resident_mode) {
+            std.log.err("--ui-daemon/--ui-resident requires GTK build; run: zig build -Denable_gtk=true", .{});
+            std.process.exit(2);
+        }
         const surface_mode = resolveSurfaceMode(args, cfg);
         if (resident_mode) {
             const already_running = god_search_ui.ipc.control.trySendCommand(allocator, .ping) catch false;

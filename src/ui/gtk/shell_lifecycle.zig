@@ -15,6 +15,8 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
     if (user_data == null) return GFALSE;
     const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
     if (ctx.resident_mode == GTRUE) {
+        c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
+        c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
         c.gtk_widget_set_visible(ctx.window, GFALSE);
         return GTRUE;
     }

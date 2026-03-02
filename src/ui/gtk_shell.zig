@@ -591,17 +591,26 @@ pub const Shell = struct {
 
         fn applyControlEvent(state: *State, event: shell_mod.module.Event) void {
             switch (event) {
-                .summon => c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
+                .summon => if (state.ctx.launch.ctx) |ui_ctx| {
+                    summonExistingUi(ui_ctx);
+                } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
                 .hide => if (state.ctx.launch.ctx) |ui_ctx| c.gtk_widget_set_visible(ui_ctx.window, GFALSE),
                 .toggle => if (state.ctx.launch.ctx) |ui_ctx| {
                     if (c.gtk_widget_get_visible(ui_ctx.window) == GTRUE) {
                         c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
                     } else {
-                        c.g_application_activate(@ptrCast(state.ctx.gtk_app));
+                        summonExistingUi(ui_ctx);
                     }
                 } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
                 else => {},
             }
+        }
+
+        fn summonExistingUi(ui_ctx: *UiContext) void {
+            c.gtk_editable_set_text(@ptrCast(ui_ctx.entry), "");
+            c.gtk_editable_set_position(@ptrCast(ui_ctx.entry), -1);
+            c.gtk_window_present(@ptrCast(ui_ctx.window));
+            _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(ui_ctx.entry)));
         }
     };
 
