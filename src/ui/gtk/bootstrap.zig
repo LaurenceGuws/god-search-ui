@@ -8,6 +8,7 @@ const PlacementPolicy = @import("../placement/mod.zig").RuntimePolicy;
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
+const GFALSE = gtk_types.GFALSE;
 const UiContext = gtk_types.UiContext;
 
 pub const LaunchContext = struct {
@@ -78,6 +79,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_list_box_set_selection_mode(@ptrCast(list), c.GTK_SELECTION_SINGLE);
     const scroller = c.gtk_scrolled_window_new();
     c.gtk_widget_set_vexpand(scroller, GTRUE);
+    c.gtk_widget_set_hexpand(scroller, GTRUE);
+    c.gtk_widget_set_size_request(scroller, 420, -1);
     c.gtk_widget_add_css_class(scroller, "gs-results-scroll");
     c.gtk_scrolled_window_set_policy(@ptrCast(scroller), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
     c.gtk_scrolled_window_set_overlay_scrolling(@ptrCast(scroller), GTRUE);
@@ -132,9 +135,14 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
 
     const content_pane = c.gtk_paned_new(c.GTK_ORIENTATION_HORIZONTAL);
     c.gtk_widget_set_vexpand(content_pane, GTRUE);
+    c.gtk_widget_set_hexpand(content_pane, GTRUE);
     c.gtk_paned_set_position(@ptrCast(content_pane), 620);
     c.gtk_paned_set_start_child(@ptrCast(content_pane), scroller);
     c.gtk_paned_set_end_child(@ptrCast(content_pane), preview_panel);
+    c.gtk_paned_set_resize_start_child(@ptrCast(content_pane), GTRUE);
+    c.gtk_paned_set_shrink_start_child(@ptrCast(content_pane), GFALSE);
+    c.gtk_paned_set_resize_end_child(@ptrCast(content_pane), GFALSE);
+    c.gtk_paned_set_shrink_end_child(@ptrCast(content_pane), GFALSE);
 
     const ctx: *UiContext = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(UiContext))));
     const allocator_box = launch.allocator.create(std.mem.Allocator) catch {
