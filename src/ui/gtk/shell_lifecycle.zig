@@ -15,12 +15,30 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
     if (user_data == null) return GFALSE;
     const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
     if (ctx.resident_mode == GTRUE) {
-        c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
-        c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
+        captureListState(ctx);
+        if (ctx.clear_query_on_close == GTRUE) {
+            c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
+            c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
+            ctx.last_selected_row_index = -1;
+            ctx.last_scroll_position = 0;
+            ctx.clear_query_on_close = GFALSE;
+        }
         c.gtk_widget_set_visible(ctx.window, GFALSE);
         return GTRUE;
     }
     return GFALSE;
+}
+
+fn captureListState(ctx: *UiContext) void {
+    const selected = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list));
+    ctx.last_selected_row_index = if (selected != null) c.gtk_list_box_row_get_index(selected) else -1;
+
+    const adjustment = c.gtk_scrolled_window_get_vadjustment(@ptrCast(ctx.scroller));
+    if (adjustment != null) {
+        ctx.last_scroll_position = c.gtk_adjustment_get_value(adjustment);
+    } else {
+        ctx.last_scroll_position = 0;
+    }
 }
 
 pub fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {

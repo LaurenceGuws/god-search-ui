@@ -616,8 +616,6 @@ pub const Shell = struct {
         }
 
         fn summonExistingUi(ui_ctx: *UiContext) void {
-            c.gtk_editable_set_text(@ptrCast(ui_ctx.entry), "");
-            c.gtk_editable_set_position(@ptrCast(ui_ctx.entry), -1);
             c.gtk_window_present(@ptrCast(ui_ctx.window));
             _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(ui_ctx.entry)));
             gtk_shell_startup.afterActivate(ui_ctx);

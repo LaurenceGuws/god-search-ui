@@ -3,8 +3,10 @@ const gtk_types = @import("types.zig");
 const gtk_controller = @import("controller.zig");
 const gtk_async_coord = @import("async_coordinator.zig");
 const gtk_results_flow = @import("results_flow.zig");
+const search_mod = @import("../../search/mod.zig");
 const gtk_preview = @import("preview.zig");
 const gtk_nav = @import("navigation.zig");
+const gtk_async = @import("async_state.zig");
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -35,8 +37,16 @@ fn onStartupReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
     if (user_data == null) return GFALSE;
     const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
     ctx.startup_idle_id = 0;
-    populateResults(ctx, "");
+
+    const entry_text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+    const query = if (entry_text_ptr != null)
+        std.mem.span(@as([*:0]const u8, @ptrCast(entry_text_ptr)))
+    else
+        "";
+    const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
+    populateResults(ctx, query_trimmed);
     gtk_nav.updateScrollbarActiveClass(ctx);
+    restoreListState(ctx);
     return GFALSE;
 }
 
@@ -60,13 +70,81 @@ fn startAsyncRouteSearch(ctx: *UiContext, allocator: std.mem.Allocator, query_tr
     gtk_async_coord.startAsyncRouteSearch(ctx, allocator, query_trimmed, onAsyncSearchReady);
 }
 
+fn launchPendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator) bool {
+    return gtk_async_coord.launchPendingAsyncQuery(ctx, allocator, onAsyncSearchReady);
+}
+
 fn cancelAsyncRouteSearch(ctx: *UiContext) void {
     gtk_async_coord.cancelAsyncRouteSearch(ctx);
 }
 
-fn onAsyncSearchReady(_: ?*anyopaque) callconv(.c) c.gboolean {
-    // Startup path only schedules baseline rows; async completion is handled by the main shell flow.
+fn onAsyncSearchReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+    if (user_data == null) return GFALSE;
+    const payload: *gtk_async.AsyncSearchResult = @ptrCast(@alignCast(user_data.?));
+    const ctx = payload.ctx;
+    gtk_async_coord.clearAsyncReadySourceIdIf(ctx, payload.ready_source_id);
+    const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+    const allocator = allocator_ptr.*;
+    if (gtk_async_coord.isAsyncShuttingDown(ctx)) return GFALSE;
+    ctx.async_worker_active = GFALSE;
+    if (payload.generation != ctx.async_search_generation) {
+        _ = launchPendingAsyncQuery(ctx, allocator);
+        return GFALSE;
+    }
+
+    gtk_async_coord.endAsyncSpinner(ctx);
+    if (payload.search_error) |err| {
+        gtk_results_flow.renderSearchError(ctx, allocator, err);
+        gtk_nav.selectFirstActionableRow(ctx);
+        return GFALSE;
+    }
+
+    var scored = allocator.alloc(search_mod.ScoredCandidate, payload.rows.len) catch return GFALSE;
+    defer allocator.free(scored);
+    for (payload.rows, 0..) |row, idx| {
+        scored[idx] = .{
+            .candidate = .{
+                .kind = row.kind,
+                .title = row.title,
+                .subtitle = row.subtitle,
+                .action = row.action,
+                .icon = row.icon,
+            },
+            .score = row.score,
+        };
+    }
+
+    gtk_results_flow.renderRankedRows(ctx, allocator, std.mem.trim(u8, payload.query, " \t\r\n"), scored, payload.total_len);
+    restoreListState(ctx);
     return GFALSE;
+}
+
+fn restoreListState(ctx: *UiContext) void {
+    var restored = false;
+    if (ctx.last_selected_row_index >= 0) {
+        const row = c.gtk_list_box_get_row_at_index(@ptrCast(ctx.list), ctx.last_selected_row_index);
+        if (row != null) {
+            c.gtk_list_box_select_row(@ptrCast(ctx.list), row);
+            restored = true;
+        }
+    }
+    if (!restored) {
+        gtk_nav.selectFirstActionableRow(ctx);
+    }
+
+    const adjustment = c.gtk_scrolled_window_get_vadjustment(@ptrCast(ctx.scroller));
+    if (adjustment == null) return;
+    const page_size = c.gtk_adjustment_get_page_size(adjustment);
+    const upper = c.gtk_adjustment_get_upper(adjustment);
+    const max = @max(0.0, upper - page_size);
+    const target = if (ctx.last_scroll_position < 0.0)
+        0.0
+    else if (ctx.last_scroll_position > max)
+        max
+    else
+        ctx.last_scroll_position;
+    c.gtk_adjustment_set_value(adjustment, target);
+    gtk_nav.ensureSelectedRowVisible(ctx);
 }
 
 fn logStartupMetric(ctx: *UiContext, metric_name: []const u8) void {

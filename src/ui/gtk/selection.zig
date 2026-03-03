@@ -95,6 +95,9 @@ pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks:
                     .ok => {
                         hooks.emit_telemetry(ctx, outcome.telemetry_kind, action, "ok", outcome.telemetry_detail);
                         if (outcome.close_on_success) {
+                            ctx.clear_query_on_close = gtk_types.GTRUE;
+                            ctx.last_selected_row_index = -1;
+                            ctx.last_scroll_position = 0;
                             // Clear stale query so next summon starts with an empty entry.
                             c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
                             c.gtk_window_close(@ptrCast(ctx.window));

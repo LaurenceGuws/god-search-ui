@@ -40,9 +40,6 @@ pub const ActivateHooks = struct {
 
 pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: ActivateHooks) void {
     if (launch.ctx) |existing_ctx| {
-        // Resident daemon reuses one UI context across summons; reset query each summon.
-        c.gtk_editable_set_text(@ptrCast(existing_ctx.entry), "");
-        c.gtk_editable_set_position(@ptrCast(existing_ctx.entry), -1);
         c.gtk_window_present(@ptrCast(existing_ctx.window));
         _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(existing_ctx.entry)));
         hooks.after_activate(existing_ctx);
@@ -219,6 +216,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.telemetry = launch.telemetry;
     ctx.resident_mode = if (launch.resident_mode) gtk_types.GTRUE else gtk_types.GFALSE;
     ctx.pending_power_confirm = gtk_types.GFALSE;
+    ctx.clear_query_on_close = gtk_types.GFALSE;
     ctx.search_debounce_id = 0;
     ctx.status_reset_id = 0;
     ctx.last_status_hash = 0;
@@ -242,6 +240,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.focus_ready_logged = gtk_types.GFALSE;
     ctx.first_keypress_logged = gtk_types.GFALSE;
     ctx.first_input_logged = gtk_types.GFALSE;
+    ctx.last_selected_row_index = -1;
+    ctx.last_scroll_position = 0;
     ctx.startup_key_queue_id = 0;
     ctx.startup_key_queue_active = gtk_types.GFALSE;
     ctx.startup_key_queue_len = 0;
