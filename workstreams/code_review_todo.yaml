@@ -1,0 +1,115 @@
+items:
+  - id: REVIEW-01
+    title: Cap greedy shell capture in grep route execution
+    status: in_progress
+    owner: shell
+    files:
+      - src/app/search_service/dynamic_routes.zig
+      - src/app/search_service/query_context.zig
+    done:
+      - Replaced unbounded grep capture with a bounded cap.
+      - Added explicit StreamTooLong log path when grep output exceeds cap.
+    todo:
+      - Add tests for oversized grep output behavior and OOM guard semantics.
+      - Add explicit cap-based UX hint when results were truncated.
+      - Add integration assertion that huge result sets do not OOM the daemon.
+    notes: Highest priority memory risk; isolate and close quickly.
+
+  - id: REVIEW-02
+    title: Constrain async result cache growth and polling window
+    status: pending
+    owner: shell
+    files:
+      - src/ui/gtk/results_flow.zig
+      - src/ui/gtk/async_state.zig
+    done: []
+    todo:
+      - Introduce bounded result cache with explicit max size.
+      - Ensure poll windows are bounded by UI demand.
+      - Make cache replacement policy explicit and tested under rapid scroll.
+      - Keep list model updates scroll-safe.
+    notes: Affects UI memory footprint and responsiveness during repeated polling.
+
+  - id: REVIEW-03
+    title: Move heavy route work off GTK main thread
+    status: pending
+    owner: shell
+    files:
+      - src/ui/gtk/results_flow.zig
+      - src/ui/gtk_shell.zig
+      - src/app/search_service/query_engine.zig
+    done: []
+    todo:
+      - Audit synchronous hot paths still doing collect/rank on main thread.
+      - Route long-running operations through background async workers with cancellation support.
+      - Return incremental updates safely on UI thread boundary.
+    notes: UI jank risk is highest during large searches.
+
+  - id: REVIEW-04
+    title: Remove stale ToolState snapshoting of executable/env state
+    status: pending
+    owner: shell
+    files:
+      - src/app/search_service/dynamic_routes.zig
+    done: []
+    todo:
+      - Validate tools state on each command execution or add explicit cache invalidation.
+      - Avoid stale tool/env assumptions across daemon lifetime.
+      - Add telemetry when tool availability changes.
+    notes: Prevents intermittent route misbehavior and false negatives.
+
+  - id: REVIEW-05
+    title: Fix help row signal/user-data lifecycle
+    status: pending
+    owner: shell
+    files:
+      - src/ui/gtk/bootstrap.zig
+    done: []
+    todo:
+      - Audit all row click signal handlers for detached user_data cleanup.
+      - Ensure destroy notifier frees per-row state.
+      - Validate no leaks under repetitive popup reopen.
+    notes: Memory hygiene for repeated info/help interactions.
+
+  - id: REVIEW-06
+    title: Remove IPC single-read truncation risk
+    status: in_progress
+    owner: shell
+    files:
+      - src/ipc/control.zig
+      - src/main.zig
+    done:
+      - Removed fixed-size response read by switching client side to chunked reads.
+      - Reworked server response serialization to avoid fixed-response-size buffer truncation.
+    todo:
+      - Add robust decode error logging with byte counts and offsets.
+      - Add protocol-level max-response logging/truncation guard behavior.
+    notes: Prevents silent truncation/failure on larger control responses.
+
+  - id: REVIEW-07
+    title: Improve diagnostics surface quality
+    status: pending
+    owner: shell
+    files:
+      - src/ipc/control.zig
+      - src/main.zig
+      - src/app/search_service/
+    done: []
+    todo:
+      - Preserve action-specific error context for UI-facing control failures.
+      - Add structured logging fields: endpoint, route, elapsed_ns, exit_code.
+    notes: Makes future debugging faster for daemon and protocol issues.
+
+  - id: REVIEW-08
+    title: Re-audit results streaming invariants after recent changes
+    status: pending
+    owner: shell
+    files:
+      - src/ui/gtk/results_flow.zig
+      - src/ui/gtk/render.zig
+    done: []
+    todo:
+      - Verify list model and rendering contracts no longer rely on full-result assumptions.
+      - Preserve scroll position under item churn.
+      - Keep popup/info widgets outside main blocking path when possible.
+    notes: Aligns with current architecture after prior UI changes.

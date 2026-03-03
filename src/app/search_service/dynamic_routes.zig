@@ -3,6 +3,8 @@ const providers = @import("../../providers/mod.zig");
 const notifications = @import("../../notifications/mod.zig");
 const search = @import("../../search/mod.zig");
 
+const max_rg_capture_bytes = 64 * 1024 * 1024;
+
 pub const ToolState = struct {
     fd_available: ?bool = null,
     rg_available: ?bool = null,
@@ -125,7 +127,10 @@ fn collectRgCandidates(
     defer allocator.free(cmd);
 
     std.log.info("grep collect start route=grep term={s} cmd={s}", .{ term, cmd });
-    const rows = try runShellCaptureUnlimited(allocator, cmd);
+    const rows = runShellCaptureBounded(allocator, cmd, max_rg_capture_bytes) catch |err| {
+        std.log.warn("grep collect failed route=grep term={s} err={s}", .{ term, @errorName(err) });
+        return;
+    };
     defer allocator.free(rows);
     var lines = std.mem.splitScalar(u8, rows, '\n');
     var parsed_count: usize = 0;
@@ -363,24 +368,14 @@ fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
 }
 
 fn runShellCapture(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
-    const result = try std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &.{ "sh", "-lc", command },
-        .max_output_bytes = 8 * 1024 * 1024,
-    });
-    defer allocator.free(result.stderr);
-    if (result.term != .Exited or result.term.Exited != 0) {
-        allocator.free(result.stdout);
-        return error.CommandFailed;
-    }
-    return result.stdout;
+    return runShellCaptureBounded(allocator, command, 8 * 1024 * 1024);
 }
 
-fn runShellCaptureUnlimited(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
+fn runShellCaptureBounded(allocator: std.mem.Allocator, command: []const u8, max_output_bytes: usize) ![]u8 {
     const result = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &.{ "sh", "-lc", command },
-        .max_output_bytes = std.math.maxInt(usize),
+        .max_output_bytes = max_output_bytes,
     });
     defer allocator.free(result.stderr);
     if (result.term != .Exited or result.term.Exited != 0) {
