@@ -16,13 +16,15 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
     const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
     if (ctx.resident_mode == GTRUE) {
         captureListState(ctx);
+        const launch: *LaunchContext = @ptrCast(@alignCast(ctx.launch_ctx));
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+        launch.service.clearDynamicState(allocator);
         if (ctx.clear_query_on_close == GTRUE) {
             c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
             c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
             ctx.last_selected_row_index = -1;
             ctx.last_scroll_position = 0;
-            const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-            const allocator = allocator_ptr.*;
             if (ctx.last_query_text) |query_ptr| {
                 allocator.free(query_ptr[0..ctx.last_query_len]);
                 ctx.last_query_text = null;

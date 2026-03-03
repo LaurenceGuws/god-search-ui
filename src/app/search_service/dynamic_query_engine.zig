@@ -16,6 +16,7 @@ pub fn rankDynamicRoute(
     dynamic_tool_state: *dynamic_routes.ToolState,
     generations: *std.ArrayListUnmanaged(dynamic_generations.Generation),
     generation_keep: usize,
+    generation_keep_bytes: usize,
     allocator: std.mem.Allocator,
     query: search.Query,
     recent: []const []const u8,
@@ -25,6 +26,7 @@ pub fn rankDynamicRoute(
         dynamic_tool_state,
         generations,
         generation_keep,
+        generation_keep_bytes,
         allocator,
         query,
         recent,
@@ -37,6 +39,7 @@ pub fn rankDynamicRouteWithCollector(
     dynamic_tool_state: *dynamic_routes.ToolState,
     generations: *std.ArrayListUnmanaged(dynamic_generations.Generation),
     generation_keep: usize,
+    generation_keep_bytes: usize,
     allocator: std.mem.Allocator,
     query: search.Query,
     recent: []const []const u8,
@@ -48,6 +51,8 @@ pub fn rankDynamicRouteWithCollector(
     if (term.len == 0 and query.route != .notifications) return allocator.alloc(search.ScoredCandidate, 0);
 
     const keep = @max(generation_keep, @as(usize, 1));
+    const keep_bytes = if (generation_keep_bytes == 0) std.math.maxInt(usize) else generation_keep_bytes;
+    const query_hash = hashQuery(query);
 
     var generation: dynamic_generations.BeginPinned = undefined;
     {
@@ -55,23 +60,64 @@ pub fn rankDynamicRouteWithCollector(
         defer dynamic_mu.unlock();
 
         generation = try dynamic_generations.beginPinned(generations, allocator);
+        const started_at = std.time.nanoTimestamp();
         collector(dynamic_tool_state, generation.owned, allocator, query, &dynamic_candidates) catch |err| {
             std.log.err("dynamic collector failed for route {s}: {s}", .{ @tagName(query.route), @errorName(err) });
-            dynamic_generations.finishPinned(generations, generation.id, keep, allocator, false);
+            _ = dynamic_generations.finishPinned(generations, generation.id, keep, keep_bytes, allocator, false);
             return err;
         };
-        dynamic_generations.prune(generations, keep, allocator);
+        _ = dynamic_generations.prune(generations, keep, keep_bytes, allocator);
+        std.log.debug(
+            "dynamic collect route={s} query_hash={d} emitted={d} elapsed_ns={d}",
+            .{
+                @tagName(query.route),
+                query_hash,
+                dynamic_candidates.items.len,
+                std.time.nanoTimestamp() - started_at,
+            },
+        );
     }
 
     var keep_generation = false;
+    var prune_report = dynamic_generations.PruneReport{};
     defer {
         dynamic_mu.lock();
-        dynamic_generations.finishPinned(generations, generation.id, keep, allocator, keep_generation);
+        const finished = dynamic_generations.finishPinned(
+            generations,
+            generation.id,
+            keep,
+            keep_bytes,
+            allocator,
+            keep_generation,
+        );
+        prune_report.removed_generations += finished.removed_generations;
+        prune_report.removed_items += finished.removed_items;
+        prune_report.removed_bytes += finished.removed_bytes;
         dynamic_mu.unlock();
+        const after = dynamic_generations.metrics(generations.items);
+        std.log.info(
+            "dynamic route complete route={s} query_hash={d} query_term_len={d} emitted={d} generation_count={d} owned_items={d} owned_bytes={d} pruned_generations={d} pruned_items={d} pruned_bytes={d}",
+            .{
+                @tagName(query.route),
+                query_hash,
+                query.term.len,
+                dynamic_candidates.items.len,
+                after.generation_count,
+                after.owned_item_count,
+                after.owned_bytes,
+                prune_report.removed_generations,
+                prune_report.removed_items,
+                prune_report.removed_bytes,
+            },
+        );
     }
 
     const ranked = try search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);
     keep_generation = true;
+    std.log.info(
+        "dynamic route ranked route={s} query_hash={d} ranked={d}",
+        .{ @tagName(query.route), query_hash, ranked.len },
+    );
     return ranked;
 }
 
@@ -133,6 +179,7 @@ fn slowChurnWorker(
         tool_state,
         generations,
         1,
+        0,
         std.heap.page_allocator,
         search.parseQuery("% slow"),
         &.{},
@@ -155,6 +202,7 @@ fn fastChurnWorker(
         tool_state,
         generations,
         1,
+        0,
         std.heap.page_allocator,
         search.parseQuery("% fast"),
         &.{},
@@ -220,6 +268,7 @@ test "rankDynamicRouteWithCollector propagates collector errors" {
             &tool_state,
             &generations,
             2,
+            0,
             allocator,
             search.parseQuery("% fail"),
             &.{},
@@ -227,4 +276,13 @@ test "rankDynamicRouteWithCollector propagates collector errors" {
         ),
     );
     try std.testing.expectEqual(@as(usize, 0), generations.items.len);
+}
+
+fn hashQuery(query: search.Query) u64 {
+    var hasher = std.hash.Wyhash.init(0);
+    var route_buf: [16]u8 = undefined;
+    std.mem.writeInt(u64, route_buf[0..8], @intFromEnum(query.route), .little);
+    hasher.update(route_buf[0..8]);
+    hasher.update(query.term);
+    return hasher.final();
 }

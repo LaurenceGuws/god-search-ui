@@ -609,11 +609,13 @@ pub const Shell = struct {
                     summonExistingUi(ui_ctx);
                 } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
                 .hide => if (state.ctx.launch.ctx) |ui_ctx| {
+                    state.ctx.launch.service.clearDynamicState(state.ctx.launch.allocator);
                     gtk_shell_lifecycle.captureListState(ui_ctx);
                     c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
                 },
                 .toggle => if (state.ctx.launch.ctx) |ui_ctx| {
                     if (c.gtk_widget_get_visible(ui_ctx.window) == GTRUE) {
+                        state.ctx.launch.service.clearDynamicState(state.ctx.launch.allocator);
                         gtk_shell_lifecycle.captureListState(ui_ctx);
                         c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
                     } else {

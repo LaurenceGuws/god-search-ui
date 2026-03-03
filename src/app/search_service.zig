@@ -42,6 +42,7 @@ pub const SearchService = struct {
     dynamic_tool_state: dynamic_routes.ToolState = .{},
     dynamic_generations: std.ArrayListUnmanaged(dynamic_generations.Generation) = .{},
     dynamic_generation_keep: usize = 12,
+    dynamic_generation_keep_bytes: usize = 256 * 1024 * 1024,
     max_history: usize = 32,
     last_query_elapsed_ns: u64 = 0,
     last_query_refreshed_cache: bool = false,
@@ -176,9 +177,30 @@ pub const SearchService = struct {
             &self.dynamic_tool_state,
             &self.dynamic_generations,
             self.dynamic_generation_keep,
+            self.dynamic_generation_keep_bytes,
             allocator,
             query,
             recent,
+        );
+    }
+
+    pub fn clearDynamicState(self: *SearchService, allocator: std.mem.Allocator) void {
+        self.dynamic_mu.lock();
+        const before = dynamic_generations.metrics(self.dynamic_generations.items);
+        dynamic_generations.clear(&self.dynamic_generations, allocator);
+        dynamic_routes.invalidateToolStateCache(&self.dynamic_tool_state);
+        const after = dynamic_generations.metrics(self.dynamic_generations.items);
+        self.dynamic_mu.unlock();
+        std.log.info(
+            "dynamic cache cleared before_generations={d} before_items={d} before_bytes={d} after_generations={d} after_items={d} after_bytes={d}",
+            .{
+                before.generation_count,
+                before.owned_item_count,
+                before.owned_bytes,
+                after.generation_count,
+                after.owned_item_count,
+                after.owned_bytes,
+            },
         );
     }
 

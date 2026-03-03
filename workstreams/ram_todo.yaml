@@ -1,0 +1,156 @@
+items:
+  - id: RAM-01
+    title: Establish reproducible RAM baseline for daemon lifecycle
+    status: in_progress
+    owner: shell
+    files:
+      - src/main.zig
+      - re-run.sh
+    done:
+      - Confirmed repository workflow/docs and todo format.
+      - Confirmed current branch/state before RAM audit.
+      - Added end-to-end runbook and measurable artifact set.
+    todo:
+      - Ensure all measurement is done in a single reproducible run.
+      - Baseline from stopped process state (no daemon), then with fresh `./re-run.sh`.
+      - Run heavy dynamic query, clear query, hide, reopen.
+      - Capture RSS/PSS and daemon logs at every phase.
+      - Fill evidence table with exact timestamps and query state.
+    notes: |
+      This item is evidence-only; no behavior changes allowed.
+      Command sequence:
+      - `pkill -f 'god_search_ui --ui-daemon' || true`
+      - `./re-run.sh`
+      - `pgrep -fa god_search_ui`
+      - `date --iso-8601=seconds`
+      - `pid=<PID_FROM_PGREP>`
+      - `awk '/VmRSS|VmHWM|VmSize/ {print}` `/proc/$pid/status`
+      - `awk '/Pss:/ {print "PSS_KB=" $2}' /proc/$pid/smaps_rollup`
+      - Use daemon control to apply phases: idle, heavy query, clear, hide, reopen.
+      - `./zig-out/bin/god_search_ui --ctl hide`
+      - `./zig-out/bin/god_search_ui --ctl summon`
+      - `tail -n 400 ~/.local/state/god-search-ui/daemon.log`
+      Mandatory logging columns:
+      - `timestamp` `phase` `pid` `VmRSS_kb` `VmHWM_kb` `VmSize_kb` `PSS_kb` `query` `ui_visible`
+      Evidence artifacts:
+      - `/tmp/god-search-ui-ram-baseline.csv`
+      - `/tmp/god-search-ui-ram-daemon-log.txt`
+      Completion criteria:
+      - All phases captured with one process and one CSV.
+      - One deterministic observed delta for baseline, post-query peak, post-hide, and post-reopen.
+
+  - id: RAM-02
+    title: Trace dynamic route retention and release semantics
+    status: in_progress
+    owner: shell
+    files:
+      - src/app/search_service.zig
+      - src/app/search_service/dynamic_query_engine.zig
+      - src/app/search_service/dynamic_generations.zig
+      - src/app/search_service/dynamic_routes.zig
+    done:
+      - Identified dynamic generation retention path and grep cap boundaries.
+      - Confirmed prune and release hooks are only in service scope.
+      - Fixed dynamic generation leak by deallocating nested owned buffers on prune/clear/remove.
+      - Added post-clear visibility of dynamic cache counts/bytes in `clearDynamicState` logs.
+    todo:
+      - Build lifecycle matrix by event: submit, repeat, clear, hide, reopen.
+      - Quantify generation count/bytes before and after each event.
+      - Verify whether prune is triggered by same-query repeat and when it stops.
+      - Verify whether hide/close path calls service cache release.
+    notes: |
+      Must be backed by explicit logs and code proof.
+      Code proof anchors:
+      - `src/app/search_service.zig` (`dynamic_generation_keep`)
+      - `src/app/search_service/dynamic_query_engine.zig` (`prune`, `finishPinned` lifecycle)
+      - `src/app/search_service/dynamic_generations.zig` (`prune`, `clear`, ownership release)
+      - `src/app/search_service/dynamic_routes.zig` (`max_rg_capture_bytes`, `runShellCaptureBounded`, emitted/parsed counts)
+      Completion criteria:
+      - Event/state matrix filled with phase evidence lines.
+      - At least one repeated same-query cycle with observable generation behavior.
+      - Explicit answer: why memory persists after hide.
+      Acceptance gate:
+      - `dynamic_gen_count` and `dynamic_bytes_live` are directly measurable from logs.
+
+  - id: RAM-03
+    title: Separate UI-side cache impact from service-side retention
+    status: in_progress
+    owner: shell
+    files:
+      - src/ui/gtk/async_search.zig
+      - src/ui/gtk/async_state.zig
+      - src/ui/gtk/results_flow.zig
+      - src/ui/gtk/shell_lifecycle.zig
+    done:
+      - Confirmed async cache and result rows have fixed caps.
+      - Confirmed async cache is cleared on query changes and window destruction.
+    todo:
+      - Validate UI cap behavior under heavy dynamic query (200 rows/ 200 cached).
+      - Validate clear/hide/destroy cache clearing with matching logs and no assumptions.
+      - Compare memory attribution between service dynamic and UI async cache in same timeline.
+    notes: |
+      Goal is attribution clarity before optimization decisions.
+      Required output:
+      - Table columns: `bucket`, `estimated_kb`, `evidence_source`, `confidence`.
+      - One line determining dominant memory bucket for 1.1GB+ symptom.
+      Completion criteria:
+      - UI cache remains bounded and quantified.
+      - Service dynamic vs UI cache attribution is clear and non-ambiguous.
+    acceptance_gate:
+      - UI cache contribution is bounded and measured during test runs.
+      - Dominant contributor must be identified with source references.
+
+  - id: RAM-04
+    title: Define release-policy candidates and tradeoffs
+    status: in_progress
+    owner: shell
+    files:
+      - src/app/search_service.zig
+      - src/ui/gtk_shell.zig
+      - src/ui/gtk/shell_lifecycle.zig
+    done:
+      - Created policy decision template and policy-score criteria.
+    todo:
+      - Draft candidate policies: route-change clear, empty-query clear, hide clear, idle clear, manual CTL clear.
+      - Score each candidate on latency impact and UX risk.
+      - Pick ordering for rollout with rollback thresholds.
+    notes: |
+      Design-only step; no code edits until policy approved by user.
+      For each policy capture:
+      - Trigger
+      - What is freed
+      - When it runs
+      - Expected RSS effect
+      - Latency impact on next query
+      - UX regression risk
+      - Rollback condition
+      Completion criteria:
+      - At least 3 scored candidates.
+      - One recommended policy with rationale from RAM-01..03.
+
+  - id: RAM-05
+    title: Add observability gates required before optimization
+    status: in_progress
+    owner: shell
+    files:
+      - src/app/search_service.zig
+      - src/app/search_service/dynamic_generations.zig
+      - src/app/search_service/dynamic_routes.zig
+      - src/ui/gtk/results_flow.zig
+    done:
+      - Finalized required RAM event schema and threshold placeholders.
+      - Added dynamic prune/cap/route completion logs in `dynamic_query_engine` and clear-state logs in service layer.
+    todo:
+      - Finalize schema fields and units.
+      - Define guardrail checks and regression tests to catch future reversion.
+      - Define post-optimization pass/fail thresholds.
+    notes: |
+      Logging and tests should be implemented before/with first optimization slice.
+      Required fields: `ram_event`, `query_hash`, `route`, `query_term_len`, `emitted_rows`, `owned_item_count`, `owned_bytes`, `generation_count`, `pruned_count`, `window_limit`, `cached_rows`, `cached_bytes`.
+      Acceptance threshold examples:
+      - `post_hide_drop_ratio >= 0.25` when hide-clear policy active.
+      - `steady_state_dynamic_bytes <= 2 * max_rg_capture_bytes`.
+      - `async_cached_rows <= max_cached_rows` (hard bound by code).
+      Completion criteria:
+      - Thresholds approved before any optimization code.
+      - Metrics and thresholds documented in this file and linked to commands.
