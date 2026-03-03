@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_mod = @import("../../app/mod.zig");
+const search_mod = @import("../../search/mod.zig");
 
 pub const c = @cImport({
     @cInclude("gtk/gtk.h");
@@ -58,6 +59,10 @@ pub const UiContext = extern struct {
     startup_key_queue_active: c.gboolean,
     startup_key_queue_len: u8,
     startup_key_queue: [24]u32,
+    async_cached_query_hash: u64,
+    async_cached_total_len: usize,
+    async_cached_rows_ptr: ?[*]search_mod.ScoredCandidate,
+    async_cached_rows_len: usize,
     result_query_hash: u64,
     result_window_limit: u32,
     async_worker_lock: c.GMutex,

@@ -2,6 +2,7 @@ const std = @import("std");
 const search_mod = @import("../../search/mod.zig");
 const history_access = @import("../../app/search_service/history_access.zig");
 const gtk_types = @import("types.zig");
+const gtk_async_state = @import("async_state.zig");
 const gtk_query = @import("query_helpers.zig");
 const gtk_render = @import("render.zig");
 const gtk_icons = @import("icons.zig");
@@ -14,7 +15,7 @@ const c = gtk_types.c;
 const GFALSE = gtk_types.GFALSE;
 const GTRUE = gtk_types.GTRUE;
 const hot_render_rows: usize = 20;
-const max_polled_rows: usize = 1000;
+const max_polled_rows: usize = std.math.maxInt(usize);
 
 pub const AsyncHooks = struct {
     start_async_route_search: *const fn (*UiContext, std.mem.Allocator, []const u8) void,
@@ -29,15 +30,21 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     if (ctx.result_query_hash != hash) {
         ctx.result_query_hash = hash;
         ctx.result_window_limit = hot_render_rows;
+        gtk_async_state.clearAsyncSearchCache(ctx, allocator);
     }
 
     if (query_trimmed.len == 0) {
+        gtk_async_state.clearAsyncSearchCache(ctx, allocator);
         hooks.cancel_async_route_search(ctx);
         renderDefaultLoadout(ctx, allocator);
         return;
     }
 
     if (gtk_query.shouldAsyncRouteQuery(query_trimmed)) {
+        if (renderFromAsyncCache(ctx, allocator, query_trimmed)) {
+            return;
+        }
+        std.log.info("results_flow.populate start async route_query={s} hash={d}", .{ query_trimmed, hash });
         hooks.start_async_route_search(ctx, allocator, query_trimmed);
         return;
     }
@@ -52,6 +59,80 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     renderRankedRows(ctx, allocator, query_trimmed, ranked, ranked.len);
     _ = ctx.service.drainScheduledRefresh(allocator) catch false;
     gtk_nav.selectFirstActionableRow(ctx);
+}
+
+fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) bool {
+    const hash = std.hash.Wyhash.hash(0x1fe2cd, query_trimmed);
+    if (!gtk_async_state.asyncCacheKnownForQuery(ctx, hash)) return false;
+    const cached_rows: []const search_mod.ScoredCandidate = if (gtk_async_state.asyncCachedRows(ctx, hash)) |rows|
+        rows
+    else
+        &[_]search_mod.ScoredCandidate{};
+    const total_len = gtk_async_state.asyncCachedTotalLen(ctx, hash);
+    const route_hint = gtk_query.routeHintForQuery(query_trimmed);
+    std.log.info(
+        "results_flow.cache hit query={s} total={d} cached={d} route_hint={s} window_limit={d}",
+        .{
+            query_trimmed,
+            total_len,
+            cached_rows.len,
+            route_hint orelse "",
+            ctx.result_window_limit,
+        },
+    );
+    renderWithScrollRetention(ctx, allocator, query_trimmed, cached_rows, total_len);
+    return true;
+}
+
+pub fn cacheAndRenderAsyncRows(
+    ctx: *UiContext,
+    allocator: std.mem.Allocator,
+    query: []const u8,
+    ranked: []const search_mod.ScoredCandidate,
+    total_len: usize,
+) void {
+    const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
+    const hash = std.hash.Wyhash.hash(0x1fe2cd, query_trimmed);
+    gtk_async_state.cacheAsyncSearchRows(ctx, allocator, hash, total_len, ranked);
+    std.log.info(
+        "results_flow.cache store query={s} total={d} rows={d} query_hash={d}",
+        .{ query_trimmed, total_len, ranked.len, hash },
+    );
+    renderWithScrollRetention(ctx, allocator, query_trimmed, ranked, total_len);
+}
+
+fn renderWithScrollRetention(
+    ctx: *UiContext,
+    allocator: std.mem.Allocator,
+    query_trimmed: []const u8,
+    ranked: []const search_mod.ScoredCandidate,
+    total_len: usize,
+) void {
+    const selected_row = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list));
+    const selected_index = if (selected_row != null)
+        c.gtk_list_box_row_get_index(@ptrCast(selected_row))
+    else
+        -1;
+    const adjustment = c.gtk_scrolled_window_get_vadjustment(@ptrCast(ctx.scroller));
+    const previous_value = if (adjustment != null)
+        c.gtk_adjustment_get_value(adjustment)
+    else
+        0.0;
+
+    renderRankedRows(ctx, allocator, query_trimmed, ranked, total_len);
+
+    if (adjustment == null) return;
+    const upper = c.gtk_adjustment_get_upper(adjustment);
+    const page = c.gtk_adjustment_get_page_size(adjustment);
+    const max_value = @max(0.0, upper - page);
+    c.gtk_adjustment_set_value(adjustment, @min(max_value, previous_value));
+
+    if (selected_index >= 0) {
+        const restored = c.gtk_list_box_get_row_at_index(@ptrCast(ctx.list), selected_index);
+        if (restored != null) {
+            c.gtk_list_box_select_row(@ptrCast(ctx.list), restored);
+        }
+    }
 }
 
 fn renderDefaultLoadout(ctx: *UiContext, allocator: std.mem.Allocator) void {
@@ -234,8 +315,16 @@ pub fn shouldPollMoreOnScroll(ctx: *UiContext) bool {
 
     const current: usize = @intCast(ctx.result_window_limit);
     if (current >= max_polled_rows) return false;
-    const next = @min(max_polled_rows, current + hot_render_rows);
+    const next = if (current > max_polled_rows - hot_render_rows)
+        max_polled_rows
+    else
+        current + hot_render_rows;
     if (next == current) return false;
+    std.log.info("scroll poll increasing window {d} -> {d} for query_hash={d}", .{
+        current,
+        next,
+        ctx.result_query_hash,
+    });
     ctx.result_window_limit = @intCast(next);
     return true;
 }

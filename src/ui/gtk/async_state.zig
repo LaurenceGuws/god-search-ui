@@ -1,6 +1,7 @@
 const std = @import("std");
 const gtk_types = @import("types.zig");
 const CandidateKind = gtk_types.CandidateKind;
+const search_mod = @import("../../search/mod.zig");
 const UiContext = gtk_types.UiContext;
 
 pub const AsyncRenderedRow = struct {
@@ -31,6 +32,119 @@ pub fn queuePendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator, que
     }
     ctx.async_pending_query_ptr = query_owned.ptr;
     ctx.async_pending_query_len = query_owned.len;
+}
+
+pub fn clearAsyncSearchCache(ctx: *UiContext, allocator: std.mem.Allocator) void {
+    if (ctx.async_cached_rows_ptr) |ptr| {
+        const cached = ptr[0..ctx.async_cached_rows_len];
+        for (cached) |cached_row| {
+            if (cached_row.candidate.title.len > 0) allocator.free(cached_row.candidate.title);
+            if (cached_row.candidate.subtitle.len > 0) allocator.free(cached_row.candidate.subtitle);
+            if (cached_row.candidate.action.len > 0) allocator.free(cached_row.candidate.action);
+            if (cached_row.candidate.icon.len > 0) allocator.free(cached_row.candidate.icon);
+        }
+        allocator.free(cached);
+        ctx.async_cached_rows_ptr = null;
+        ctx.async_cached_rows_len = 0;
+    }
+    ctx.async_cached_query_hash = 0;
+    ctx.async_cached_total_len = 0;
+}
+
+pub fn cacheAsyncSearchRows(
+    ctx: *UiContext,
+    allocator: std.mem.Allocator,
+    query_hash: u64,
+    total_len: usize,
+    rows: []const search_mod.ScoredCandidate,
+) void {
+    clearAsyncSearchCache(ctx, allocator);
+    if (rows.len == 0) {
+        ctx.async_cached_query_hash = query_hash;
+        ctx.async_cached_total_len = total_len;
+        return;
+    }
+    const cached_rows = allocator.alloc(search_mod.ScoredCandidate, rows.len) catch return;
+    var copied: usize = 0;
+    for (rows, 0..) |row, idx| {
+        const title = allocator.dupe(u8, row.candidate.title) catch {
+            for (cached_rows[0..copied]) |cached_row| {
+                if (cached_row.candidate.title.len > 0) allocator.free(cached_row.candidate.title);
+                if (cached_row.candidate.subtitle.len > 0) allocator.free(cached_row.candidate.subtitle);
+                if (cached_row.candidate.action.len > 0) allocator.free(cached_row.candidate.action);
+                if (cached_row.candidate.icon.len > 0) allocator.free(cached_row.candidate.icon);
+            }
+            allocator.free(cached_rows);
+            return;
+        };
+        const subtitle = allocator.dupe(u8, row.candidate.subtitle) catch {
+            allocator.free(title);
+            for (cached_rows[0..copied]) |cached_row| {
+                if (cached_row.candidate.title.len > 0) allocator.free(cached_row.candidate.title);
+                if (cached_row.candidate.subtitle.len > 0) allocator.free(cached_row.candidate.subtitle);
+                if (cached_row.candidate.action.len > 0) allocator.free(cached_row.candidate.action);
+                if (cached_row.candidate.icon.len > 0) allocator.free(cached_row.candidate.icon);
+            }
+            allocator.free(cached_rows);
+            return;
+        };
+        const action = allocator.dupe(u8, row.candidate.action) catch {
+            allocator.free(subtitle);
+            allocator.free(title);
+            for (cached_rows[0..copied]) |cached_row| {
+                if (cached_row.candidate.title.len > 0) allocator.free(cached_row.candidate.title);
+                if (cached_row.candidate.subtitle.len > 0) allocator.free(cached_row.candidate.subtitle);
+                if (cached_row.candidate.action.len > 0) allocator.free(cached_row.candidate.action);
+                if (cached_row.candidate.icon.len > 0) allocator.free(cached_row.candidate.icon);
+            }
+            allocator.free(cached_rows);
+            return;
+        };
+        const icon = allocator.dupe(u8, row.candidate.icon) catch {
+            allocator.free(action);
+            allocator.free(subtitle);
+            allocator.free(title);
+            for (cached_rows[0..copied]) |cached_row| {
+                if (cached_row.candidate.title.len > 0) allocator.free(cached_row.candidate.title);
+                if (cached_row.candidate.subtitle.len > 0) allocator.free(cached_row.candidate.subtitle);
+                if (cached_row.candidate.action.len > 0) allocator.free(cached_row.candidate.action);
+                if (cached_row.candidate.icon.len > 0) allocator.free(cached_row.candidate.icon);
+            }
+            allocator.free(cached_rows);
+            return;
+        };
+        cached_rows[idx] = .{
+            .score = row.score,
+            .candidate = .{
+                .kind = row.candidate.kind,
+                .title = title,
+                .subtitle = subtitle,
+                .action = action,
+                .icon = icon,
+            },
+        };
+        copied += 1;
+    }
+    ctx.async_cached_rows_ptr = cached_rows.ptr;
+    ctx.async_cached_rows_len = cached_rows.len;
+    ctx.async_cached_query_hash = query_hash;
+    ctx.async_cached_total_len = total_len;
+    std.log.info("async cache stored rows={d} total={d} query_hash={d}", .{ cached_rows.len, total_len, query_hash });
+}
+
+pub fn asyncCachedRows(ctx: *UiContext, query_hash: u64) ?[]search_mod.ScoredCandidate {
+    if (ctx.async_cached_query_hash != query_hash) return null;
+    if (ctx.async_cached_rows_ptr == null) return null;
+    return ctx.async_cached_rows_ptr.?[0..ctx.async_cached_rows_len];
+}
+
+pub fn asyncCachedTotalLen(ctx: *UiContext, query_hash: u64) usize {
+    if (ctx.async_cached_query_hash != query_hash) return 0;
+    return ctx.async_cached_total_len;
+}
+
+pub fn asyncCacheKnownForQuery(ctx: *UiContext, query_hash: u64) bool {
+    return ctx.async_cached_query_hash == query_hash;
 }
 
 pub fn takePendingAsyncQuery(ctx: *UiContext) ?[]u8 {

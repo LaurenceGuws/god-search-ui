@@ -119,25 +119,26 @@ fn collectRgCandidates(
     const hidden_flag = if (rgIncludeHidden(tool_state)) "--hidden" else "";
     const cmd = try std.fmt.allocPrint(
         allocator,
-        // Bound output at the source: one match per file, then cap emitted JSON lines.
-        // 5000 lines can still exceed our capture buffer on verbose JSON events in large homes.
-        "rg --json --line-number --color never --smart-case {s} --max-count 1 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null | head -n 1000 || true",
+        "rg --json --line-number --color never --smart-case {s} --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null || true",
         .{ hidden_flag, term_q, home_q },
     );
     defer allocator.free(cmd);
 
-    const rows = try runShellCapture(allocator, cmd);
+    std.log.info("grep collect start route=grep term={s} cmd={s}", .{ term, cmd });
+    const rows = try runShellCaptureUnlimited(allocator, cmd);
     defer allocator.free(rows);
     var lines = std.mem.splitScalar(u8, rows, '\n');
-    var count: usize = 0;
+    var parsed_count: usize = 0;
+    var emitted_count: usize = 0;
     while (lines.next()) |line| {
+        parsed_count += 1;
         const parsed = parseRgJsonRow(allocator, line) orelse continue;
         errdefer freeParsedRgRow(allocator, parsed);
         try appendRgCandidate(dynamic_owned, allocator, parsed, out);
         freeParsedRgRow(allocator, parsed);
-        count += 1;
-        if (count >= 1000) break;
+        emitted_count += 1;
     }
+    std.log.info("grep collect done term={s} parsed_lines={d} emitted={d}", .{ term, parsed_count, emitted_count });
 }
 
 fn parseFdOutputRow(line: []const u8) ?[]const u8 {
@@ -366,6 +367,20 @@ fn runShellCapture(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
         .allocator = allocator,
         .argv = &.{ "sh", "-lc", command },
         .max_output_bytes = 8 * 1024 * 1024,
+    });
+    defer allocator.free(result.stderr);
+    if (result.term != .Exited or result.term.Exited != 0) {
+        allocator.free(result.stdout);
+        return error.CommandFailed;
+    }
+    return result.stdout;
+}
+
+fn runShellCaptureUnlimited(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
+    const result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "sh", "-lc", command },
+        .max_output_bytes = std.math.maxInt(usize),
     });
     defer allocator.free(result.stderr);
     if (result.term != .Exited or result.term.Exited != 0) {

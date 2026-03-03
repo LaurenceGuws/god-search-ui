@@ -64,13 +64,14 @@ pub fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
         _ = c.g_source_remove(ctx.status_reset_id);
         ctx.status_reset_id = 0;
     }
+    const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+    const allocator = allocator_ptr.*;
     if (ctx.last_query_text) |query_ptr| {
-        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const allocator = allocator_ptr.*;
         allocator.free(query_ptr[0..ctx.last_query_len]);
         ctx.last_query_text = null;
         ctx.last_query_len = 0;
     }
+    gtk_async.clearAsyncSearchCache(ctx, allocator);
     if (ctx.async_spinner_id != 0) {
         _ = c.g_source_remove(ctx.async_spinner_id);
         ctx.async_spinner_id = 0;
@@ -93,8 +94,6 @@ pub fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
     gtk_async.freePendingAsyncQuery(ctx);
     c.g_mutex_clear(&ctx.async_worker_lock);
     c.g_cond_clear(&ctx.async_worker_cond);
-    const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-    const allocator = allocator_ptr.*;
     allocator.destroy(allocator_ptr);
     c.g_free(ctx);
 }

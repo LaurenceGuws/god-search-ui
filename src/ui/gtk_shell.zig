@@ -298,8 +298,8 @@ pub const Shell = struct {
                 .score = row.score,
             };
         }
-
-        gtk_results_flow.renderRankedRows(ctx, allocator, std.mem.trim(u8, payload.query, " \t\r\n"), scored, payload.total_len);
+        const query_trimmed = std.mem.trim(u8, payload.query, " \t\r\n");
+        gtk_results_flow.cacheAndRenderAsyncRows(ctx, allocator, query_trimmed, scored, payload.total_len);
         gtk_nav.selectFirstActionableRow(ctx);
         return GFALSE;
     }
