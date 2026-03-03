@@ -4,12 +4,25 @@ const notifications = @import("../../notifications/mod.zig");
 const search = @import("../../search/mod.zig");
 
 const max_rg_capture_bytes = 64 * 1024 * 1024;
+const tool_state_refresh_ttl_ns: i64 = 5 * std.time.ns_per_s;
 
 pub const ToolState = struct {
     fd_available: ?bool = null,
     rg_available: ?bool = null,
     rg_include_hidden: ?bool = null,
+    fd_last_checked_ns: i128 = 0,
+    rg_last_checked_ns: i128 = 0,
+    rg_hidden_last_checked_ns: i128 = 0,
 };
+
+pub fn invalidateToolStateCache(state: *ToolState) void {
+    state.fd_available = null;
+    state.rg_available = null;
+    state.rg_include_hidden = null;
+    state.fd_last_checked_ns = 0;
+    state.rg_last_checked_ns = 0;
+    state.rg_hidden_last_checked_ns = 0;
+}
 
 pub fn collectForRoute(
     tool_state: *ToolState,
@@ -319,24 +332,54 @@ fn commandExists(name: []const u8) bool {
     return result.term == .Exited and result.term.Exited == 0;
 }
 
+fn isCacheFresh(last_checked_ns: i128, now_ns: i128) bool {
+    if (last_checked_ns <= 0 or now_ns <= 0) return false;
+    const elapsed = now_ns - last_checked_ns;
+    return elapsed >= 0 and elapsed < tool_state_refresh_ttl_ns;
+}
+
 fn fdAvailable(state: *ToolState) bool {
-    if (state.fd_available) |value| return value;
+    const now_ns = std.time.nanoTimestamp();
+    if (state.fd_available) |value| {
+        if (isCacheFresh(state.fd_last_checked_ns, now_ns)) return value;
+    }
+    const previous = state.fd_available;
     const value = commandExists("fd");
     state.fd_available = value;
+    state.fd_last_checked_ns = now_ns;
+    if (previous != null and previous.? != value) {
+        std.log.info("dynamic tool availability changed tool=fd available={}", .{value});
+    }
     return value;
 }
 
 fn rgAvailable(state: *ToolState) bool {
-    if (state.rg_available) |value| return value;
+    const now_ns = std.time.nanoTimestamp();
+    if (state.rg_available) |value| {
+        if (isCacheFresh(state.rg_last_checked_ns, now_ns)) return value;
+    }
+    const previous = state.rg_available;
     const value = commandExists("rg");
     state.rg_available = value;
+    state.rg_last_checked_ns = now_ns;
+    if (previous != null and previous.? != value) {
+        std.log.info("dynamic tool availability changed tool=rg available={}", .{value});
+    }
     return value;
 }
 
 fn rgIncludeHidden(state: *ToolState) bool {
-    if (state.rg_include_hidden) |value| return value;
+    const now_ns = std.time.nanoTimestamp();
+    if (state.rg_include_hidden) |value| {
+        if (isCacheFresh(state.rg_hidden_last_checked_ns, now_ns)) return value;
+    }
+    const previous = state.rg_include_hidden;
     const value = envFlagEnabled("GOD_SEARCH_RG_HIDDEN");
     state.rg_include_hidden = value;
+    state.rg_hidden_last_checked_ns = now_ns;
+    if (previous != null and previous.? != value) {
+        std.log.info("dynamic hidden mode changed rg_hidden={}", .{value});
+    }
     return value;
 }
 
@@ -585,4 +628,24 @@ test "collectForRoute skips dynamic tools when cached unavailable" {
     try collectForRoute(&state, &owned, allocator, grep_query, &out);
     try std.testing.expectEqual(@as(usize, 0), out.items.len);
     try std.testing.expectEqual(@as(usize, 0), owned.items.len);
+}
+
+test "invalidateToolStateCache resets tool state cache entries" {
+    var state = ToolState{
+        .fd_available = false,
+        .rg_available = false,
+        .rg_include_hidden = false,
+        .fd_last_checked_ns = 12,
+        .rg_last_checked_ns = 34,
+        .rg_hidden_last_checked_ns = 56,
+    };
+
+    invalidateToolStateCache(&state);
+
+    try std.testing.expect(state.fd_available == null);
+    try std.testing.expect(state.rg_available == null);
+    try std.testing.expect(state.rg_include_hidden == null);
+    try std.testing.expectEqual(@as(i128, 0), state.fd_last_checked_ns);
+    try std.testing.expectEqual(@as(i128, 0), state.rg_last_checked_ns);
+    try std.testing.expectEqual(@as(i128, 0), state.rg_hidden_last_checked_ns);
 }

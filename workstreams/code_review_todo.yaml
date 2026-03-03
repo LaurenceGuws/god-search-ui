@@ -53,11 +53,14 @@ items:
 
   - id: REVIEW-04
     title: Remove stale ToolState snapshoting of executable/env state
-    status: pending
+    status: in_progress
     owner: shell
     files:
       - src/app/search_service/dynamic_routes.zig
-    done: []
+    done:
+      - Added freshness window for dynamic tool availability and hidden flag checks.
+      - Added explicit cache invalidation API for ToolState.
+      - Added cache miss logging when tool/hidden state changes.
     todo:
       - Validate tools state on each command execution or add explicit cache invalidation.
       - Avoid stale tool/env assumptions across daemon lifetime.
