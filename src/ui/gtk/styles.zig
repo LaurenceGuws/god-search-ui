@@ -5,7 +5,10 @@ pub fn installCss(window: *c.GtkWidget) void {
     const css =
         ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
         ".gs-help-btn { min-width: 28px; min-height: 28px; padding: 0 10px; border-radius: 8px; }\n" ++
-        ".gs-help-popover, .gs-help-popover > contents { background: rgba(20, 26, 39, 0.96); border: 1px solid rgba(132, 160, 228, 0.25); border-radius: 8px; padding: 8px 10px; }\n" ++
+        ".gs-help-popover, .gs-help-popover > viewport { background: rgba(20, 26, 39, 0.96); border: 1px solid rgba(132, 160, 228, 0.25); border-radius: 8px; }\n" ++
+        ".gs-help-scroll scrollbar { min-width: 4px; border: none; box-shadow: none; background: transparent; margin: 0; padding: 0; }\n" ++
+        ".gs-help-scroll scrollbar trough { background: transparent; border: none; box-shadow: none; }\n" ++
+        ".gs-help-scroll scrollbar slider { min-width: 4px; min-height: 20px; background: rgba(140, 170, 235, 0.20); border: none; box-shadow: none; border-radius: 3px; }\n" ++
         ".gs-help-title { color: #e8eeff; font-size: 1.02em; font-weight: 700; }\n" ++
         ".gs-help-subtitle { color: #aab6d0; font-size: 0.86em; margin-bottom: 2px; }\n" ++
         ".gs-help-section { color: #88aef4; font-size: 0.80em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }\n" ++

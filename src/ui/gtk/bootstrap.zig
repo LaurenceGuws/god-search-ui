@@ -94,32 +94,40 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_widget_add_css_class(help_button, "gs-help-btn");
     c.gtk_widget_set_tooltip_text(help_button, "Search routes and shortcuts");
 
-    const help_box = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 4);
-    c.gtk_widget_add_css_class(help_box, "gs-help-popover");
-    c.gtk_widget_set_margin_top(help_box, 8);
-    c.gtk_widget_set_margin_bottom(help_box, 8);
-    c.gtk_widget_set_size_request(help_box, 380, -1);
-    appendHelpTitle(help_box, "Quick Reference", "Routes, commands, and keys");
-    appendHelpSection(help_box, "Routes");
-    appendHelpItem(help_box, "@", "Apps");
-    appendHelpItem(help_box, "#", "Windows");
-    appendHelpItem(help_box, "!", "Workspaces");
-    appendHelpItem(help_box, "~", "Recent folders");
-    appendHelpItemWithDetails(help_box, "%", "Files", &files_options);
-    appendHelpItemWithDetails(help_box, "&", "Grep matches", &grep_options);
-    appendHelpItem(help_box, "$", "Notifications");
-    appendHelpSection(help_box, "Commands");
-    appendHelpItem(help_box, ">", "Run shell command");
-    appendHelpItem(help_box, "=", "Calculator");
-    appendHelpItem(help_box, "?", "Web search");
-    appendHelpSection(help_box, "Hotkeys");
-    appendHelpItem(help_box, "Enter", "Launch selected item");
-    appendHelpItem(help_box, "Ctrl+P", "Toggle preview panel");
-    appendHelpItem(help_box, "Ctrl+R", "Refresh providers");
-    appendHelpItem(help_box, "PgUp/PgDn", "Move selection");
-    appendHelpItem(help_box, "Esc", "Close launcher");
-    appendHelpSection(help_box, "Actions");
-    appendActionsInfo(help_box);
+    const help_content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 4);
+    c.gtk_widget_set_margin_top(help_content, 8);
+    c.gtk_widget_set_margin_bottom(help_content, 8);
+    c.gtk_widget_set_margin_start(help_content, 10);
+    c.gtk_widget_set_margin_end(help_content, 10);
+    appendHelpTitle(help_content, "Quick Reference", "Routes, commands, and keys");
+    appendHelpSection(help_content, "Routes");
+    appendHelpItem(help_content, "@", "Apps");
+    appendHelpItem(help_content, "#", "Windows");
+    appendHelpItem(help_content, "!", "Workspaces");
+    appendHelpItem(help_content, "~", "Recent folders");
+    appendHelpItemWithDetails(help_content, "%", "Files", &files_options);
+    appendHelpItemWithDetails(help_content, "&", "Grep matches", &grep_options);
+    appendHelpItem(help_content, "$", "Notifications");
+    appendHelpSection(help_content, "Commands");
+    appendHelpItem(help_content, ">", "Run shell command");
+    appendHelpItem(help_content, "=", "Calculator");
+    appendHelpItem(help_content, "?", "Web search");
+    appendHelpSection(help_content, "Hotkeys");
+    appendHelpItem(help_content, "Enter", "Launch selected item");
+    appendHelpItem(help_content, "Ctrl+P", "Toggle preview panel");
+    appendHelpItem(help_content, "Ctrl+R", "Refresh providers");
+    appendHelpItem(help_content, "PgUp/PgDn", "Move selection");
+    appendHelpItem(help_content, "Esc", "Close launcher");
+    appendHelpSection(help_content, "Actions");
+    appendActionsInfo(help_content);
+
+    const help_scroll = c.gtk_scrolled_window_new();
+    c.gtk_widget_add_css_class(help_scroll, "gs-help-popover");
+    c.gtk_widget_add_css_class(help_scroll, "gs-help-scroll");
+    c.gtk_widget_set_size_request(help_scroll, 380, 360);
+    c.gtk_scrolled_window_set_policy(@ptrCast(help_scroll), c.GTK_POLICY_NEVER, c.GTK_POLICY_AUTOMATIC);
+    c.gtk_scrolled_window_set_overlay_scrolling(@ptrCast(help_scroll), GTRUE);
+    c.gtk_scrolled_window_set_child(@ptrCast(help_scroll), help_content);
 
     const help_panel_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 0);
     c.gtk_widget_set_hexpand(help_panel_row, GTRUE);
@@ -128,9 +136,9 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_widget_set_valign(help_panel_row, c.GTK_ALIGN_START);
     const help_panel_spacer = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 0);
     c.gtk_widget_set_hexpand(help_panel_spacer, GTRUE);
-    c.gtk_widget_set_halign(help_box, c.GTK_ALIGN_END);
+    c.gtk_widget_set_halign(help_scroll, c.GTK_ALIGN_END);
     c.gtk_box_append(@ptrCast(help_panel_row), help_panel_spacer);
-    c.gtk_box_append(@ptrCast(help_panel_row), help_box);
+    c.gtk_box_append(@ptrCast(help_panel_row), help_scroll);
 
     const help_toggle_state = std.heap.page_allocator.create(HelpToggleState) catch return;
     help_toggle_state.* = .{
