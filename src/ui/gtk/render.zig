@@ -20,6 +20,7 @@ pub fn computeRenderHash(
     route_hint: ?[]const u8,
     rows: []const ScoredCandidate,
     total_len: usize,
+    result_limit: usize,
 ) u64 {
     var h = std.hash.Wyhash.init(0);
     h.update(query_trimmed);
@@ -27,6 +28,8 @@ pub fn computeRenderHash(
     var len_buf: [32]u8 = undefined;
     const len_txt = std.fmt.bufPrint(&len_buf, "{d}", .{total_len}) catch "";
     h.update(len_txt);
+    const limit_txt = std.fmt.bufPrint(&len_buf, "{d}", .{result_limit}) catch "";
+    h.update(limit_txt);
     for (rows) |row| {
         h.update(kindTag(row.candidate.kind));
         h.update(row.candidate.title);

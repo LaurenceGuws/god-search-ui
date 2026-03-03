@@ -262,7 +262,7 @@ pub fn renderRankedRows(
     const route_hint = gtk_query.routeHintForQuery(query_trimmed);
     const highlight_token = gtk_query.highlightTokenForQuery(query_trimmed);
     const has_app_glyph_fallback = gtk_icons.hasAppGlyphFallback(rows);
-    const render_hash = gtk_render.computeRenderHash(query_trimmed, route_hint, rows, ranked.len);
+    const render_hash = gtk_render.computeRenderHash(query_trimmed, route_hint, rows, ranked.len, limit);
     if (ctx.last_render_hash != render_hash) {
         gtk_widgets.clearList(ctx.list);
         if (route_hint) |hint| {

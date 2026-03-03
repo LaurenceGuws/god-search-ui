@@ -115,12 +115,14 @@ items:
 
   - id: REVIEW-08
     title: Re-audit results streaming invariants after recent changes
-    status: pending
+    status: in_progress
     owner: shell
     files:
       - src/ui/gtk/results_flow.zig
       - src/ui/gtk/render.zig
-    done: []
+    done:
+      - Added result-window-size into render hash so cached async rows re-render when pagination grows.
+      - Prevented async-ready callback from always forcing first-row selection (which reset scroll during pagination).
     todo:
       - Verify list model and rendering contracts no longer rely on full-result assumptions.
       - Preserve scroll position under item churn.
