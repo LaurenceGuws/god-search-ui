@@ -9,22 +9,24 @@ const Dependency = union(enum) {
     home_relative_path: []const u8,
 };
 
-const ActionSpec = struct {
+pub const ActionSpec = struct {
     title: []const u8,
     subtitle: []const u8,
     action: []const u8,
     command: []const u8,
     dependency: Dependency,
     confirm: bool = false,
+    help: []const u8 = "",
 };
 
-const action_specs = [_]ActionSpec{
+pub const action_specs = [_]ActionSpec{
     .{
         .title = "Settings",
         .subtitle = "System",
         .action = "settings",
         .command = "wlrlui",
         .dependency = .{ .command = "wlrlui" },
+        .help = "Open the application launcher settings panel (requires `wlrlui`).",
     },
     .{
         .title = "Power menu",
@@ -32,7 +34,8 @@ const action_specs = [_]ActionSpec{
         .action = "power",
         .command = "wlogout",
         .dependency = .{ .command = "wlogout" },
-        .confirm = true,
+        .confirm = false,
+        .help = "Open the session power/logout menu via `wlogout`.",
     },
     .{
         .title = "Restart Waybar",
@@ -40,6 +43,7 @@ const action_specs = [_]ActionSpec{
         .action = "restart-waybar",
         .command = "waybar --reload",
         .dependency = .{ .command = "waybar" },
+        .help = "Reload the Waybar configuration (`waybar --reload`).",
     },
     .{
         .title = "Notifications panel",
@@ -47,6 +51,7 @@ const action_specs = [_]ActionSpec{
         .action = "notifications",
         .command = "$HOME/.config/waybar/scripts/swaync-control.sh toggle",
         .dependency = .{ .home_relative_path = ".config/waybar/scripts/swaync-control.sh" },
+        .help = "Toggle the SwayNC notifications panel.",
     },
 };
 
@@ -108,6 +113,10 @@ pub fn resolveActionCommand(action: []const u8) ?[]const u8 {
         if (std.mem.eql(u8, action, spec.action)) return spec.command;
     }
     return null;
+}
+
+pub fn allSpecs() []const ActionSpec {
+    return action_specs[0..];
 }
 
 pub fn requiresConfirmation(action: []const u8) bool {
@@ -215,7 +224,7 @@ test "execute action returns runner errors for failed commands" {
     try std.testing.expectError(error.CommandFailed, executeAction("settings", Runner.run));
 }
 
-test "power action requires confirmation" {
-    try std.testing.expect(requiresConfirmation("power"));
+test "power action has no confirmation gating" {
+    try std.testing.expect(!requiresConfirmation("power"));
     try std.testing.expect(!requiresConfirmation("settings"));
 }

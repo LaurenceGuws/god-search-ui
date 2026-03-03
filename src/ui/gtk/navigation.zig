@@ -108,8 +108,16 @@ pub fn updateScrollbarActiveClass(ctx: *UiContext) void {
 pub fn activateSelectedRow(ctx: *UiContext) void {
     var row = c.gtk_list_box_get_selected_row(ctx.list);
     if (row == null) {
-        selectFirstActionableRow(ctx);
-        row = c.gtk_list_box_get_selected_row(ctx.list);
+        const idx = firstActionableIndex(ctx, gtkIndexExists, gtkIndexActionable) orelse {
+            c.gtk_list_box_select_row(ctx.list, null);
+            return;
+        };
+        row = c.gtk_list_box_get_row_at_index(ctx.list, idx) orelse {
+            c.gtk_list_box_select_row(ctx.list, null);
+            return;
+        };
+        c.gtk_list_box_select_row(ctx.list, row);
+        ensureSelectedRowVisible(ctx);
     }
     if (row != null) c.g_signal_emit_by_name(ctx.list, "row-activated", row);
 }

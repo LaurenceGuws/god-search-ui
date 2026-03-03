@@ -4,6 +4,7 @@ const gtk_types = @import("types.zig");
 const gtk_preview = @import("preview.zig");
 const placement_bridge = @import("placement_bridge.zig");
 const layer_shell = @import("layer_shell.zig");
+const action_provider = @import("../../providers/actions.zig");
 const SurfaceMode = @import("../surfaces/mod.zig").SurfaceMode;
 const PlacementPolicy = @import("../placement/mod.zig").RuntimePolicy;
 
@@ -102,6 +103,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     appendHelpItem(help_box, "Ctrl+R", "Refresh providers");
     appendHelpItem(help_box, "PgUp/PgDn", "Move selection");
     appendHelpItem(help_box, "Esc", "Close launcher");
+    appendHelpSection(help_box, "Actions");
+    appendActionsInfo(help_box);
     c.gtk_popover_set_child(@ptrCast(help_popover), help_box);
     _ = c.g_signal_connect_data(help_button, "clicked", c.G_CALLBACK(onHelpClicked), help_popover, null, 0);
 
@@ -345,4 +348,21 @@ fn appendHelpItem(box: *c.GtkWidget, key_text: []const u8, description_text: []c
     c.gtk_box_append(@ptrCast(row), key);
     c.gtk_box_append(@ptrCast(row), desc);
     c.gtk_box_append(@ptrCast(box), row);
+}
+
+fn appendActionsInfo(box: *c.GtkWidget) void {
+    const specs = action_provider.allSpecs();
+    for (specs) |spec| {
+        var detail = std.ArrayList(u8).empty;
+        defer detail.deinit(std.heap.page_allocator);
+
+        const writer = detail.writer(std.heap.page_allocator);
+        writer.print("{s}", .{spec.help}) catch continue;
+        if (spec.confirm) {
+            writer.print(" Requires confirmation.", .{}) catch continue;
+        }
+        const detail_text = detail.toOwnedSlice(std.heap.page_allocator) catch continue;
+        defer std.heap.page_allocator.free(detail_text);
+        appendHelpItem(box, spec.title, detail_text);
+    }
 }

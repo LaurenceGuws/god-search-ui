@@ -51,7 +51,7 @@ pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks:
         return;
     }
 
-    var decision = common_execute.resolveSelectionKind(allocator, kind, action, ctx.pending_power_confirm == gtk_types.GTRUE) catch return;
+    var decision = common_execute.resolveSelectionKind(allocator, kind, action) catch return;
     defer decision.deinit(allocator);
 
     if (decision.record_selection) {
@@ -61,13 +61,7 @@ pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks:
         };
     }
 
-    if (decision.guard_waiting_confirmation) {
-        hooks.arm_power_confirmation(ctx);
-        hooks.emit_telemetry(ctx, "action", action, "guarded", "await-confirm");
-        return;
-    }
-
-    if (decision.clear_power_confirmation) {
+    if (ctx.pending_power_confirm == gtk_types.GTRUE) {
         hooks.clear_power_confirmation(ctx);
     }
 
