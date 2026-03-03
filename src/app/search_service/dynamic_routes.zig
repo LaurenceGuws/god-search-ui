@@ -6,6 +6,7 @@ const search = @import("../../search/mod.zig");
 pub const ToolState = struct {
     fd_available: ?bool = null,
     rg_available: ?bool = null,
+    rg_include_hidden: ?bool = null,
 };
 
 pub fn collectForRoute(
@@ -115,12 +116,13 @@ fn collectRgCandidates(
     const home_q = try shellSingleQuote(allocator, home);
     defer allocator.free(home_q);
 
+    const hidden_flag = if (rgIncludeHidden(tool_state)) "--hidden" else "";
     const cmd = try std.fmt.allocPrint(
         allocator,
         // Bound output at the source: one match per file, then cap emitted JSON lines.
         // 5000 lines can still exceed our capture buffer on verbose JSON events in large homes.
-        "rg --json --line-number --color never --smart-case --hidden --max-count 1 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null | head -n 1000 || true",
-        .{ term_q, home_q },
+        "rg --json --line-number --color never --smart-case {s} --max-count 1 --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null | head -n 1000 || true",
+        .{ hidden_flag, term_q, home_q },
     );
     defer allocator.free(cmd);
 
@@ -134,7 +136,7 @@ fn collectRgCandidates(
         try appendRgCandidate(dynamic_owned, allocator, parsed, out);
         freeParsedRgRow(allocator, parsed);
         count += 1;
-        if (count >= 200) break;
+        if (count >= 1000) break;
     }
 }
 
@@ -323,6 +325,25 @@ fn rgAvailable(state: *ToolState) bool {
     const value = commandExists("rg");
     state.rg_available = value;
     return value;
+}
+
+fn rgIncludeHidden(state: *ToolState) bool {
+    if (state.rg_include_hidden) |value| return value;
+    const value = envFlagEnabled("GOD_SEARCH_RG_HIDDEN");
+    state.rg_include_hidden = value;
+    return value;
+}
+
+fn envFlagEnabled(name: []const u8) bool {
+    const raw = std.process.getEnvVarOwned(std.heap.page_allocator, name) catch return false;
+    defer std.heap.page_allocator.free(raw);
+    const trimmed = std.mem.trim(u8, raw, " \t\r\n");
+    if (trimmed.len == 0) return false;
+    if (std.ascii.eqlIgnoreCase(trimmed, "1")) return true;
+    if (std.ascii.eqlIgnoreCase(trimmed, "true")) return true;
+    if (std.ascii.eqlIgnoreCase(trimmed, "yes")) return true;
+    if (std.ascii.eqlIgnoreCase(trimmed, "on")) return true;
+    return false;
 }
 
 fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
