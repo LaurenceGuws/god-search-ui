@@ -115,16 +115,16 @@ pub fn main() !void {
         }
         const surface_mode = resolveSurfaceMode(args, cfg);
         if (resident_mode) {
-            const already_running = god_search_ui.ipc.control.trySendCommand(allocator, .ping) catch false;
+            const already_running = isCommandOk(allocator, .ping);
             if (already_running) {
                 if (!start_hidden) {
-                    _ = god_search_ui.ipc.control.trySendCommand(allocator, .summon) catch false;
+                    _ = isCommandOk(allocator, .summon);
                 }
                 return;
             }
         }
         if (!resident_mode and hasArg(args, "--ui")) {
-            const summoned = god_search_ui.ipc.control.trySendCommand(allocator, .summon) catch false;
+            const summoned = isCommandOk(allocator, .summon);
             if (summoned) return;
         }
         var runtime = try setupRuntime(allocator);
@@ -151,6 +151,15 @@ pub fn main() !void {
 
     logger.info("startup ready in {d:.2} ms", .{startup_sw.elapsedMs()});
     try god_search_ui.bufferedPrint();
+}
+
+fn isCommandOk(allocator: std.mem.Allocator, cmd: god_search_ui.ipc.control.Command) bool {
+    const response = god_search_ui.ipc.control.executeCommand(allocator, cmd) catch return false;
+    defer {
+        allocator.free(response.code);
+        allocator.free(response.message);
+    }
+    return response.ok and std.mem.eql(u8, response.code, "ok");
 }
 
 fn printCtlUsage() !void {
