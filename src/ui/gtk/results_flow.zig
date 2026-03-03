@@ -15,7 +15,8 @@ const c = gtk_types.c;
 const GFALSE = gtk_types.GFALSE;
 const GTRUE = gtk_types.GTRUE;
 const hot_render_rows: usize = 20;
-const max_polled_rows: usize = std.math.maxInt(usize);
+const max_poll_windows: usize = 10;
+const max_polled_rows: usize = hot_render_rows * max_poll_windows;
 
 pub const AsyncHooks = struct {
     start_async_route_search: *const fn (*UiContext, std.mem.Allocator, []const u8) void,
@@ -313,7 +314,10 @@ pub fn shouldPollMoreOnScroll(ctx: *UiContext) bool {
     const remaining = upper - (value + page);
     if (remaining > 24.0) return false;
 
+    const total_len = gtk_async_state.asyncCachedTotalLen(ctx, ctx.result_query_hash);
     const current: usize = @intCast(ctx.result_window_limit);
+    if (total_len <= current) return false;
+
     if (current >= max_polled_rows) return false;
     const next = if (current > max_polled_rows - hot_render_rows)
         max_polled_rows

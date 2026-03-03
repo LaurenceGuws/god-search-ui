@@ -25,6 +25,8 @@ pub const AsyncSearchResult = struct {
     on_ready: *const fn (?*anyopaque) callconv(.c) gtk_types.c.gboolean,
 };
 
+const max_cached_rows: usize = 200;
+
 pub fn queuePendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator, query_owned: []u8) void {
     if (ctx.async_pending_query_ptr) |ptr| {
         const prev = ptr[0..ctx.async_pending_query_len];
@@ -59,14 +61,18 @@ pub fn cacheAsyncSearchRows(
     rows: []const search_mod.ScoredCandidate,
 ) void {
     clearAsyncSearchCache(ctx, allocator);
-    if (rows.len == 0) {
+    const keep_rows = @min(rows.len, max_cached_rows);
+    if (rows.len > max_cached_rows) {
+        std.log.warn("async cache truncated rows={d} kept={d}", .{ rows.len, keep_rows });
+    }
+    if (keep_rows == 0) {
         ctx.async_cached_query_hash = query_hash;
         ctx.async_cached_total_len = total_len;
         return;
     }
-    const cached_rows = allocator.alloc(search_mod.ScoredCandidate, rows.len) catch return;
+    const cached_rows = allocator.alloc(search_mod.ScoredCandidate, keep_rows) catch return;
     var copied: usize = 0;
-    for (rows, 0..) |row, idx| {
+    for (rows[0..keep_rows], 0..) |row, idx| {
         const title = allocator.dupe(u8, row.candidate.title) catch {
             for (cached_rows[0..copied]) |cached_row| {
                 if (cached_row.candidate.title.len > 0) allocator.free(cached_row.candidate.title);
@@ -126,10 +132,10 @@ pub fn cacheAsyncSearchRows(
         copied += 1;
     }
     ctx.async_cached_rows_ptr = cached_rows.ptr;
-    ctx.async_cached_rows_len = cached_rows.len;
+    ctx.async_cached_rows_len = copied;
     ctx.async_cached_query_hash = query_hash;
     ctx.async_cached_total_len = total_len;
-    std.log.info("async cache stored rows={d} total={d} query_hash={d}", .{ cached_rows.len, total_len, query_hash });
+    std.log.info("async cache stored rows={d} total={d} query_hash={d}", .{ copied, total_len, query_hash });
 }
 
 pub fn asyncCachedRows(ctx: *UiContext, query_hash: u64) ?[]search_mod.ScoredCandidate {
