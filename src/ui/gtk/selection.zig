@@ -5,6 +5,7 @@ const common_execute = @import("../common/execute.zig");
 const notifications = @import("../../notifications/mod.zig");
 const gtk_types = @import("types.zig");
 const gtk_actions = @import("actions.zig");
+const gtk_shell_startup = @import("shell_startup.zig");
 
 const c = gtk_types.c;
 const UiContext = gtk_types.UiContext;
@@ -98,6 +99,7 @@ pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks:
                             ctx.clear_query_on_close = gtk_types.GTRUE;
                             ctx.last_selected_row_index = -1;
                             ctx.last_scroll_position = 0;
+                            gtk_shell_startup.clearStoredQuery(ctx);
                             // Clear stale query so next summon starts with an empty entry.
                             c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
                             c.gtk_window_close(@ptrCast(ctx.window));

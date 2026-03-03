@@ -177,6 +177,7 @@ pub const Shell = struct {
             gtk_controller.flushAndDisableStartupKeyQueue(ctx);
         }
         gtk_controller.updateEntryRouteIcon(ctx, query);
+        gtk_shell_startup.storeQueryText(ctx, query);
         if (std.mem.trim(u8, query, " \t\r\n").len == 0) {
             cancelAsyncRouteSearch(ctx);
         }
@@ -198,6 +199,7 @@ pub const Shell = struct {
             return GFALSE;
         }
         const query = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
+        gtk_shell_startup.storeQueryText(ctx, query);
         populateResults(ctx, query);
         return GFALSE;
     }
@@ -315,6 +317,7 @@ pub const Shell = struct {
         const allocator = allocator_ptr.*;
         const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
         const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        gtk_shell_startup.storeQueryText(ctx, query);
         if (refreshUnsupportedMessageForQuery(query)) |msg| {
             setStatus(ctx, msg);
             return;
@@ -603,9 +606,13 @@ pub const Shell = struct {
                 .summon => if (state.ctx.launch.ctx) |ui_ctx| {
                     summonExistingUi(ui_ctx);
                 } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
-                .hide => if (state.ctx.launch.ctx) |ui_ctx| c.gtk_widget_set_visible(ui_ctx.window, GFALSE),
+                .hide => if (state.ctx.launch.ctx) |ui_ctx| {
+                    gtk_shell_lifecycle.captureListState(ui_ctx);
+                    c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
+                },
                 .toggle => if (state.ctx.launch.ctx) |ui_ctx| {
                     if (c.gtk_widget_get_visible(ui_ctx.window) == GTRUE) {
+                        gtk_shell_lifecycle.captureListState(ui_ctx);
                         c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
                     } else {
                         summonExistingUi(ui_ctx);

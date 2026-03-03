@@ -242,6 +242,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.first_input_logged = gtk_types.GFALSE;
     ctx.last_selected_row_index = -1;
     ctx.last_scroll_position = 0;
+    ctx.last_query_text = null;
+    ctx.last_query_len = 0;
     ctx.startup_key_queue_id = 0;
     ctx.startup_key_queue_active = gtk_types.GFALSE;
     ctx.startup_key_queue_len = 0;

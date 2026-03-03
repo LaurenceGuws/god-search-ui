@@ -52,6 +52,8 @@ pub const UiContext = extern struct {
     first_input_logged: c.gboolean,
     last_selected_row_index: c.gint,
     last_scroll_position: c.gdouble,
+    last_query_text: ?[*]u8,
+    last_query_len: usize,
     startup_key_queue_id: c.guint,
     startup_key_queue_active: c.gboolean,
     startup_key_queue_len: u8,

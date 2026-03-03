@@ -39,11 +39,17 @@ fn onStartupReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
     ctx.startup_idle_id = 0;
 
     const entry_text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-    const query = if (entry_text_ptr != null)
+    const entry_query = if (entry_text_ptr != null)
         std.mem.span(@as([*:0]const u8, @ptrCast(entry_text_ptr)))
     else
         "";
+    const persisted_query = getPersistedQuery(ctx);
+    const query = if (entry_query.len > 0) entry_query else persisted_query;
+    if (entry_query.len == 0 and persisted_query.len > 0) {
+        hydrateEntryTextFromQuery(ctx, persisted_query);
+    }
     const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
+    storeQueryText(ctx, query_trimmed);
     populateResults(ctx, query_trimmed);
     gtk_nav.updateScrollbarActiveClass(ctx);
     restoreListState(ctx);
@@ -88,7 +94,10 @@ fn onAsyncSearchReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
     if (gtk_async_coord.isAsyncShuttingDown(ctx)) return GFALSE;
     ctx.async_worker_active = GFALSE;
     if (payload.generation != ctx.async_search_generation) {
-        _ = launchPendingAsyncQuery(ctx, allocator);
+        if (!launchPendingAsyncQuery(ctx, allocator)) {
+            gtk_async_coord.endAsyncSpinner(ctx);
+            gtk_nav.selectFirstActionableRow(ctx);
+        }
         return GFALSE;
     }
 
@@ -117,6 +126,46 @@ fn onAsyncSearchReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
     gtk_results_flow.renderRankedRows(ctx, allocator, std.mem.trim(u8, payload.query, " \t\r\n"), scored, payload.total_len);
     restoreListState(ctx);
     return GFALSE;
+}
+
+pub fn storeQueryText(ctx: *UiContext, query: []const u8) void {
+    const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+    const allocator = allocator_ptr.*;
+    if (ctx.last_query_text) |query_ptr| {
+        allocator.free(query_ptr[0..ctx.last_query_len]);
+        ctx.last_query_text = null;
+        ctx.last_query_len = 0;
+    }
+    if (query.len == 0) return;
+    const query_copy = allocator.dupe(u8, query) catch return;
+    ctx.last_query_text = query_copy.ptr;
+    ctx.last_query_len = query_copy.len;
+}
+
+pub fn clearStoredQuery(ctx: *UiContext) void {
+    const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+    const allocator = allocator_ptr.*;
+    if (ctx.last_query_text) |query_ptr| {
+        allocator.free(query_ptr[0..ctx.last_query_len]);
+        ctx.last_query_text = null;
+        ctx.last_query_len = 0;
+    }
+}
+
+fn getPersistedQuery(ctx: *UiContext) []const u8 {
+    if (ctx.last_query_text) |query_ptr| {
+        return query_ptr[0..ctx.last_query_len];
+    }
+    return "";
+}
+
+fn hydrateEntryTextFromQuery(ctx: *UiContext, query: []const u8) void {
+    const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+    const allocator = allocator_ptr.*;
+    const query_z = allocator.dupeZ(u8, query) catch return;
+    defer allocator.free(query_z);
+    c.gtk_editable_set_text(@ptrCast(ctx.entry), query_z.ptr);
+    c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
 }
 
 fn restoreListState(ctx: *UiContext) void {

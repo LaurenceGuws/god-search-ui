@@ -21,6 +21,13 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
             c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
             ctx.last_selected_row_index = -1;
             ctx.last_scroll_position = 0;
+            const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+            const allocator = allocator_ptr.*;
+            if (ctx.last_query_text) |query_ptr| {
+                allocator.free(query_ptr[0..ctx.last_query_len]);
+                ctx.last_query_text = null;
+                ctx.last_query_len = 0;
+            }
             ctx.clear_query_on_close = GFALSE;
         }
         c.gtk_widget_set_visible(ctx.window, GFALSE);
@@ -29,7 +36,7 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
     return GFALSE;
 }
 
-fn captureListState(ctx: *UiContext) void {
+pub fn captureListState(ctx: *UiContext) void {
     const selected = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list));
     ctx.last_selected_row_index = if (selected != null) c.gtk_list_box_row_get_index(selected) else -1;
 
@@ -56,6 +63,13 @@ pub fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
     if (ctx.status_reset_id != 0) {
         _ = c.g_source_remove(ctx.status_reset_id);
         ctx.status_reset_id = 0;
+    }
+    if (ctx.last_query_text) |query_ptr| {
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+        allocator.free(query_ptr[0..ctx.last_query_len]);
+        ctx.last_query_text = null;
+        ctx.last_query_len = 0;
     }
     if (ctx.async_spinner_id != 0) {
         _ = c.g_source_remove(ctx.async_spinner_id);
