@@ -198,7 +198,8 @@ fn sendCommand(allocator: std.mem.Allocator, cmd: Command) !OwnedResponse {
                     );
                     return error.PollTimeout;
                 }
-                const remaining_ms = @as(i32, @intCast(@max(@as(i128, 0), @divFloor(remaining_ns, std.time.ns_per_ms))));
+                const raw_remaining_ms = (remaining_ns + std.time.ns_per_ms - 1) / std.time.ns_per_ms;
+                const remaining_ms = @as(i32, @intCast(@max(@as(i128, 1), raw_remaining_ms)));
                 var followup_poll_fds = [_]std.posix.pollfd{
                     .{
                         .fd = fd,
