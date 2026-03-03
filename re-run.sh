@@ -37,16 +37,22 @@ mkdir -p "$(dirname "$RERUN_LOG")"
 echo "[re-run] building: zig build ${build_flags[*]}"
 zig build "${build_flags[@]}"
 
-if [[ "$RERUN_KILL_TARGET" == "true" ]]; then
-    echo "[re-run] stopping matching existing daemon for ${RERUN_BIN}"
-    if [[ -f "$RERUN_BIN" ]]; then
-        RERUN_BIN_REAL="$(realpath "$RERUN_BIN")"
-        pgrep -af "$RERUN_BIN_REAL" | awk '{print $1}' | while read -r pid; do
-            kill "$pid" 2>/dev/null || true
-        done
-    else
-        pkill -x god_search_ui 2>/dev/null || true
-    fi
+    if [[ "$RERUN_KILL_TARGET" == "true" ]]; then
+        echo "[re-run] stopping matching existing daemon for ${RERUN_BIN}"
+        if [[ -f "$RERUN_BIN" ]]; then
+            RERUN_BIN_REAL="$(realpath "$RERUN_BIN")"
+            mapfile -t matched_pids < <(pgrep -af -- "$RERUN_BIN_REAL" | awk '{print $1}' || true)
+            if ((${#matched_pids[@]} == 0)); then
+                echo "[re-run] no existing daemon found for ${RERUN_BIN_REAL}"
+            else
+                echo "[re-run] killing: ${matched_pids[*]}"
+            fi
+            for pid in "${matched_pids[@]}"; do
+                kill "$pid" 2>/dev/null || true
+            done
+        else
+            pkill -x god_search_ui 2>/dev/null || true
+        fi
 else
     echo "[re-run] skipping daemon kill (RERUN_KILL_TARGET=false)"
 fi
