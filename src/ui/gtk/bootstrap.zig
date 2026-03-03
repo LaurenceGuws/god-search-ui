@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_mod = @import("../../app/mod.zig");
 const gtk_types = @import("types.zig");
+const gtk_preview = @import("preview.zig");
 const placement_bridge = @import("placement_bridge.zig");
 const layer_shell = @import("layer_shell.zig");
 const SurfaceMode = @import("../surfaces/mod.zig").SurfaceMode;
@@ -118,15 +119,12 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
 
     const preview_title = c.gtk_label_new("Preview");
     c.gtk_label_set_xalign(@ptrCast(preview_title), 0.0);
+    c.gtk_widget_set_hexpand(preview_title, GTRUE);
     c.gtk_widget_add_css_class(preview_title, "gs-preview-title");
 
-    const preview_label = c.gtk_label_new("No selection");
-    c.gtk_label_set_xalign(@ptrCast(preview_label), 0.0);
-    c.gtk_label_set_yalign(@ptrCast(preview_label), 0.0);
-    c.gtk_label_set_wrap(@ptrCast(preview_label), GTRUE);
-    c.gtk_label_set_wrap_mode(@ptrCast(preview_label), c.PANGO_WRAP_WORD_CHAR);
-    c.gtk_label_set_selectable(@ptrCast(preview_label), GTRUE);
-    c.gtk_widget_add_css_class(preview_label, "gs-preview-body");
+    const preview_toggle_button = c.gtk_button_new_with_label("tree");
+    c.gtk_widget_add_css_class(preview_toggle_button, "gs-preview-toggle");
+    c.gtk_widget_set_visible(preview_toggle_button, gtk_types.GFALSE);
 
     const preview_text = c.gtk_text_view_new();
     c.gtk_text_view_set_editable(@ptrCast(preview_text), gtk_types.GFALSE);
@@ -143,12 +141,16 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_widget_set_vexpand(preview_text_scroller, GTRUE);
     c.gtk_widget_add_css_class(preview_text_scroller, "gs-preview-text-scroll");
     c.gtk_scrolled_window_set_child(@ptrCast(preview_text_scroller), preview_text);
-    c.gtk_widget_set_visible(preview_text_scroller, gtk_types.GFALSE);
+    c.gtk_widget_set_visible(preview_text_scroller, gtk_types.GTRUE);
+
+    const preview_header = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+    c.gtk_widget_add_css_class(preview_header, "gs-preview-header");
+    c.gtk_box_append(@ptrCast(preview_header), preview_title);
+    c.gtk_box_append(@ptrCast(preview_header), preview_toggle_button);
 
     const preview_inner = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 8);
     c.gtk_widget_add_css_class(preview_inner, "gs-preview-inner");
-    c.gtk_box_append(@ptrCast(preview_inner), preview_title);
-    c.gtk_box_append(@ptrCast(preview_inner), preview_label);
+    c.gtk_box_append(@ptrCast(preview_inner), preview_header);
     c.gtk_box_append(@ptrCast(preview_inner), preview_text_scroller);
 
     const preview_scroller = c.gtk_scrolled_window_new();
@@ -190,7 +192,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.list = @ptrCast(list);
     ctx.scroller = @ptrCast(scroller);
     ctx.preview_panel = @ptrCast(preview_panel);
-    ctx.preview_label = @ptrCast(preview_label);
+    ctx.preview_title = @ptrCast(preview_title);
+    ctx.preview_toggle_button = @ptrCast(preview_toggle_button);
     ctx.preview_text_scroller = @ptrCast(preview_text_scroller);
     ctx.preview_text_view = @ptrCast(preview_text);
     ctx.allocator = @ptrCast(allocator_box);
@@ -205,6 +208,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.last_render_hash = 0;
     ctx.last_preview_hash = 0;
     ctx.preview_enabled = gtk_types.GFALSE;
+    ctx.preview_dir_tree_mode = gtk_types.GFALSE;
     ctx.async_search_generation = 0;
     ctx.async_spinner_id = 0;
     ctx.async_ready_id = 0;
@@ -236,6 +240,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     _ = c.g_signal_connect_data(entry, "activate", c.G_CALLBACK(hooks.on_entry_activate), ctx, null, 0);
     _ = c.g_signal_connect_data(list, "row-activated", c.G_CALLBACK(hooks.on_row_activated), ctx, null, 0);
     _ = c.g_signal_connect_data(list, "row-selected", c.G_CALLBACK(hooks.on_row_selected), ctx, null, 0);
+    _ = c.g_signal_connect_data(preview_toggle_button, "clicked", c.G_CALLBACK(gtk_preview.onPreviewToggleClicked), ctx, null, 0);
     const vadj = c.gtk_scrolled_window_get_vadjustment(@ptrCast(scroller));
     if (vadj != null) {
         _ = c.g_signal_connect_data(vadj, "changed", c.G_CALLBACK(hooks.on_adjustment_changed), ctx, null, 0);

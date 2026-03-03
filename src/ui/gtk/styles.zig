@@ -14,8 +14,9 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-preview-panel, .gs-preview-panel > box, .gs-preview-panel > widget { background: @theme_base_color; border: none; box-shadow: none; border-radius: 0; }\n" ++
         ".gs-preview-scroll, .gs-preview-scroll > viewport { background: @theme_base_color; border: none; box-shadow: none; border-radius: 0; }\n" ++
         ".gs-preview-inner { padding: 12px; }\n" ++
+        ".gs-preview-header { margin-bottom: 2px; }\n" ++
         ".gs-preview-title { color: #8b93a8; font-weight: 700; }\n" ++
-        ".gs-preview-body { color: #9aa1b5; line-height: 1.25; }\n" ++
+        ".gs-preview-toggle { min-height: 24px; padding: 0 8px; border-radius: 6px; font-size: 0.82em; }\n" ++
         ".gs-preview-text-scroll, .gs-preview-text-scroll > viewport { background: @theme_base_color; border: none; border-radius: 0; box-shadow: none; }\n" ++
         ".gs-preview-text-scroll scrollbar slider { min-width: 4px; min-height: 20px; }\n" ++
         ".gs-preview-text { background: @theme_base_color; color: @theme_text_color; padding: 8px; font-family: monospace; font-size: 12px; }\n" ++
