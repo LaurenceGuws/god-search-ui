@@ -1,21 +1,16 @@
 items:
   - id: UI-01
-    title: Generic preview surface hardening
+    title: Finish generic preview and popup readability polish
     status: in_progress
     owner: shell
-    scope:
+    files:
       - src/ui/gtk/preview.zig
       - src/ui/gtk/bootstrap.zig
       - src/ui/gtk/styles.zig
-      - docs/operations/TROUBLESHOOTING.md
-    acceptance:
-      - "grep preview uses pager-only rendering with hit highlighting"
-      - "directory preview toggles between ls -la and tree views"
-      - "no structured preview-field coupling remains"
-    evidence:
-      tests:
-        - "zig build -Doptimize=ReleaseFast -Denable_gtk=true -Denable_layer_shell=true"
-      smokes:
-        - "./re-run.sh"
-      last_run: "2026-03-03"
-    notes: "Follow-on work should refine UX polish, not reintroduce rigid preview fields."
+    done:
+      - Generic preview model is in place.
+      - Grep hit highlighting and directory mode toggle are implemented.
+    todo:
+      - Improve popup content layout readability.
+      - Clean visual polish for preview pager spacing and contrast.
+    notes: Do not reintroduce structured preview field coupling.

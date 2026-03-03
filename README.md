@@ -59,9 +59,10 @@ Patch common Lua config keys quickly:
 scripts/set_lua_config.sh surface_mode layer-shell
 scripts/set_lua_config.sh launcher.monitor_name DP-1
 ```
-Placement docs:
-- smoke and operator checks: `docs/operations/SMOKE_TESTS.md`
-- full Lua contract + env matrix: `docs/operations/LUA_CONFIG.md`
+Docs:
+- docs index: `docs/INDEX.md`
+- workflow + handoff: `docs/WORKFLOW.md`, `docs/AGENT_HANDOFF.md`
+- design + coding standards: `docs/DESIGN_AND_STANDARDS.md`
 
 Resident GTK modes (recommended for zero-drop fast summon):
 ```bash
@@ -84,8 +85,7 @@ god-search-ui --ctl version
 god-search-ui --ctl shell_health
 god-search-ui --ctl wm_event_stats
 ```
-Reference: `docs/operations/CONTROL_PLANE.md`
-Smoke flow: `docs/operations/SMOKE_TESTS.md`
+Reference: `docs/architecture/WA1_CONTROL_PLANE_SPEC.md`
 
 Control-plane quickstart:
 ```bash
@@ -174,7 +174,7 @@ scripts/check_lua_config_validator.sh
 - DE shell vision and architecture plan: `docs/architecture/DE_SHELL_VISION.md`
 - WA-1 shell control-plane spec: `docs/architecture/WA1_CONTROL_PLANE_SPEC.md`
 - local external implementation workspace: `reference_repo/README.md`
-- Troubleshooting runbook: `docs/operations/TROUBLESHOOTING.md`
+- workflow + status index: `docs/INDEX.md`
 
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.

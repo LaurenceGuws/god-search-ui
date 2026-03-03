@@ -1,20 +1,14 @@
 items:
   - id: CP-01
-    title: Keep control-plane contract aligned with runtime behavior
+    title: Align control-plane docs with actual command behavior
     status: in_progress
     owner: shell
-    scope:
+    files:
       - src/main.zig
       - src/ipc/
-      - docs/operations/CONTROL_PLANE.md
       - docs/architecture/WA1_CONTROL_PLANE_SPEC.md
-    acceptance:
-      - "--ctl summon/ping/refresh/query-mode/preview-mode/help match documented behavior"
-      - "docs and code return semantics are consistent"
-    evidence:
-      tests:
-        - "zig build test"
-      smokes:
-        - "docs/operations/SMOKE_TESTS.md"
-      last_run: "2026-03-03"
-    notes: "Keep this focused on behavior + docs accuracy, not new features."
+    done:
+      - Control commands are documented in one canonical spec.
+    todo:
+      - Confirm spec text matches current command set and response shape.
+    notes: Keep this focused on behavior clarity, not feature expansion.
