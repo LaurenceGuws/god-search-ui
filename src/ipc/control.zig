@@ -184,15 +184,48 @@ fn sendCommand(allocator: std.mem.Allocator, cmd: Command) !OwnedResponse {
     var response_buf: [response_chunk_size]u8 = undefined;
     var response_buf_list = std.ArrayList(u8).empty;
     defer response_buf_list.deinit(allocator);
+    const timeout_deadline = std.time.nanoTimestamp() + (@as(i128, response_timeout_ms) * std.time.ns_per_ms);
     var total_reads: usize = 0;
     var total_bytes: usize = 0;
     while (true) {
-        const n = std.posix.read(fd, &response_buf) catch |err| {
-            std.log.warn(
-                "ipc read failed cmd={s} err={s} reads={d} bytes={d}",
-                .{ @tagName(cmd), @errorName(err), total_reads, total_bytes },
-            );
-            return error.ReadFailed;
+        const n = std.posix.read(fd, &response_buf) catch |err| switch (err) {
+            error.WouldBlock => blk: {
+                const remaining_ns = timeout_deadline - std.time.nanoTimestamp();
+                if (remaining_ns <= 0) {
+                    std.log.warn(
+                        "ipc read timeout cmd={s} reads={d} bytes={d}",
+                        .{ @tagName(cmd), total_reads, total_bytes },
+                    );
+                    return error.PollTimeout;
+                }
+                const remaining_ms = @as(i32, @intCast(@max(@as(i128, 0), @divFloor(remaining_ns, std.time.ns_per_ms))));
+                var followup_poll_fds = [_]std.posix.pollfd{
+                    .{
+                        .fd = fd,
+                        .events = std.posix.POLL.IN,
+                        .revents = 0,
+                    },
+                };
+                const ready = std.posix.poll(&followup_poll_fds, remaining_ms) catch return error.PollFailed;
+                if (ready <= 0) {
+                    std.log.warn(
+                        "ipc read timeout cmd={s} reads={d} bytes={d}",
+                        .{ @tagName(cmd), total_reads, total_bytes },
+                    );
+                    return error.PollTimeout;
+                }
+                if ((followup_poll_fds[0].revents & std.posix.POLL.IN) == 0) {
+                    continue;
+                }
+                break :blk 0;
+            },
+            else => {
+                std.log.warn(
+                    "ipc read failed cmd={s} err={s} reads={d} bytes={d}",
+                    .{ @tagName(cmd), @errorName(err), total_reads, total_bytes },
+                );
+                return error.ReadFailed;
+            },
         };
         if (n == 0) break;
         total_reads += 1;
