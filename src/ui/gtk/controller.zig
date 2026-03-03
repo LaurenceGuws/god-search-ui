@@ -36,6 +36,8 @@ pub fn handleKeyPressed(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierTy
         c.GDK_KEY_Escape => {
             if (ctx.resident_mode == GTRUE) {
                 captureListStateForClose(ctx);
+                const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+                ctx.service.clearDynamicState(allocator_ptr.*);
                 c.gtk_widget_set_visible(ctx.window, GFALSE);
             } else {
                 c.gtk_window_close(@ptrCast(ctx.window));
