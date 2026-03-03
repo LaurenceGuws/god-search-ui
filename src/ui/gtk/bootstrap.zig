@@ -17,7 +17,9 @@ const HelpEntryState = struct {
     key_text: []const u8,
     details: ?[]const []const u8,
     insert_text: ?[]const u8,
-    ui_state: *HelpUiState,
+    entry: *c.GtkWidget,
+    panel: *c.GtkWidget,
+    content: *c.GtkWidget,
 };
 
 const HelpToggleState = struct {
@@ -142,7 +144,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
         .panel = help_panel_row,
         .ui_state = help_ui_state,
     };
-    _ = c.g_signal_connect_data(help_button, "clicked", c.G_CALLBACK(onHelpClicked), help_toggle_state, null, 0);
+    _ = c.g_signal_connect_data(help_button, "clicked", c.G_CALLBACK(onHelpClicked), help_toggle_state, @as(c.GClosureNotify, onHelpToggleStateDestroy), 0);
 
     const entry_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
     c.gtk_widget_set_hexpand(entry_row, GTRUE);
@@ -360,20 +362,44 @@ fn onHelpItemClicked(button: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c)
     const state = @as(*HelpEntryState, @ptrCast(@alignCast(user_data.?)));
     if (state.details) |lines| {
         std.log.info("help item submenu key={s} details_len={d}", .{ state.key_text, lines.len });
-        c.gtk_widget_set_visible(state.ui_state.panel, GFALSE);
-        populateHelpSubmenu(state.ui_state, state.key_text, lines);
-        c.gtk_widget_set_visible(state.ui_state.panel, GTRUE);
+        c.gtk_widget_set_visible(state.panel, GFALSE);
+        var state_ref = HelpUiState{
+            .entry = state.entry,
+            .panel = state.panel,
+            .content = state.content,
+        };
+        populateHelpSubmenu(&state_ref, state.key_text, lines);
+        c.gtk_widget_set_visible(state.panel, GTRUE);
         return;
     }
     if (state.insert_text) |prefix| {
         const prefix_z = std.heap.page_allocator.dupeZ(u8, prefix) catch return;
         defer std.heap.page_allocator.free(prefix_z);
-        c.gtk_editable_set_text(@ptrCast(state.ui_state.entry), prefix_z.ptr);
-        c.gtk_editable_set_position(@ptrCast(state.ui_state.entry), -1);
-        _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(state.ui_state.entry)));
-        c.gtk_widget_set_visible(state.ui_state.panel, GFALSE);
+        c.gtk_editable_set_text(@ptrCast(state.entry), prefix_z.ptr);
+        c.gtk_editable_set_position(@ptrCast(state.entry), -1);
+        _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(state.entry)));
+        c.gtk_widget_set_visible(state.panel, GFALSE);
         std.log.info("help item prefix key={s} text={s}", .{ state.key_text, prefix });
     }
+}
+
+fn onHelpEntryStateDestroy(
+    data: ?*anyopaque,
+    _: ?*c.GClosure,
+) callconv(.c) void {
+    if (data == null) return;
+    const state: *HelpEntryState = @ptrCast(@alignCast(data.?));
+    std.heap.page_allocator.destroy(state);
+}
+
+fn onHelpToggleStateDestroy(
+    data: ?*anyopaque,
+    _: ?*c.GClosure,
+) callconv(.c) void {
+    if (data == null) return;
+    const state: *HelpToggleState = @ptrCast(@alignCast(data.?));
+    std.heap.page_allocator.destroy(state.ui_state);
+    std.heap.page_allocator.destroy(state);
 }
 
 fn onHelpBackClicked(_: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c) void {
@@ -449,24 +475,17 @@ fn appendHelpItemWithDetails(
     c.gtk_box_append(@ptrCast(row), desc);
     c.gtk_button_set_child(@ptrCast(row_button), @ptrCast(row));
 
-    const state = std.heap.page_allocator.create(HelpEntryState) catch return;
-    if (details) |lines| {
-        state.* = .{
-            .key_text = key_text,
-            .details = lines,
-            .insert_text = insert_text,
-            .ui_state = ui_state,
-        };
-    } else {
-        state.* = .{
-            .key_text = key_text,
-            .details = null,
-            .insert_text = insert_text,
-            .ui_state = ui_state,
-        };
-    }
     if (details != null or insert_text != null) {
-        _ = c.g_signal_connect_data(row_button, "clicked", c.G_CALLBACK(onHelpItemClicked), state, null, 0);
+        const state = std.heap.page_allocator.create(HelpEntryState) catch return;
+        state.* = .{
+            .key_text = key_text,
+            .details = details,
+            .insert_text = insert_text,
+            .entry = ui_state.entry,
+            .panel = ui_state.panel,
+            .content = ui_state.content,
+        };
+        _ = c.g_signal_connect_data(row_button, "clicked", c.G_CALLBACK(onHelpItemClicked), state, @as(c.GClosureNotify, onHelpEntryStateDestroy), 0);
     }
 
     c.gtk_box_append(@ptrCast(box), row_button);

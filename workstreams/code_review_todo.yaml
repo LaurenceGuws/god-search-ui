@@ -69,14 +69,15 @@ items:
 
   - id: REVIEW-05
     title: Fix help row signal/user-data lifecycle
-    status: pending
+    status: completed
     owner: shell
     files:
       - src/ui/gtk/bootstrap.zig
-    done: []
+    done:
+      - Added GClosureNotify cleanup for per-row help state in GTK signal connections.
+      - Added toggle-state cleanup callback that frees shared help panel state on widget destruction.
+      - Limited per-row state allocation to interactive rows only.
     todo:
-      - Audit all row click signal handlers for detached user_data cleanup.
-      - Ensure destroy notifier frees per-row state.
       - Validate no leaks under repetitive popup reopen.
     notes: Memory hygiene for repeated info/help interactions.
 
