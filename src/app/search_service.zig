@@ -196,6 +196,9 @@ pub const SearchService = struct {
         dynamic_routes.invalidateToolStateCache(&self.dynamic_tool_state);
         const after = dynamic_generations.metrics(self.dynamic_generations.items);
         self.dynamic_mu.unlock();
+        if (before.generation_count == 0 and prune_report.removed_generations == 0) {
+            return;
+        }
         std.log.info(
             "dynamic cache clear requested before_generations={d} before_items={d} before_bytes={d} removed_generations={d} removed_items={d} removed_bytes={d} after_generations={d} after_items={d} after_bytes={d}",
             .{
