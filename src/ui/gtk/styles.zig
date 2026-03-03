@@ -5,14 +5,15 @@ pub fn installCss(window: *c.GtkWidget) void {
     const css =
         ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
         ".gs-help-btn { min-width: 28px; min-height: 28px; padding: 0 10px; border-radius: 8px; }\n" ++
-        ".gs-help-popover, .gs-help-popover > contents { background: rgba(20, 26, 39, 0.96); border: 1px solid rgba(132, 160, 228, 0.25); border-radius: 8px; }\n" ++
+        ".gs-help-popover, .gs-help-popover > contents { background: rgba(20, 26, 39, 0.96); border: 1px solid rgba(132, 160, 228, 0.25); border-radius: 8px; padding: 8px 10px; }\n" ++
         ".gs-help-title { color: #e8eeff; font-size: 1.02em; font-weight: 700; }\n" ++
         ".gs-help-subtitle { color: #aab6d0; font-size: 0.86em; margin-bottom: 2px; }\n" ++
         ".gs-help-section { color: #88aef4; font-size: 0.80em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }\n" ++
-        ".gs-help-row { padding: 1px 0; }\n" ++
-        ".gs-help-item-btn { padding: 0; margin: 0; min-height: 0; border: none; background: transparent; color: inherit; box-shadow: none; }\n" ++
+        ".gs-help-row { padding: 2px 0; }\n" ++
+        ".gs-help-item-btn { padding: 8px 10px; margin: 0; min-height: 34px; border-radius: 9px; border: 1px solid rgba(132, 160, 228, 0.22); background: rgba(18, 24, 38, 0.48); color: inherit; box-shadow: none; }\n" ++
         ".gs-help-item-btn:focus-within { outline: none; }\n" ++
-        ".gs-help-item-btn:hover { background: rgba(140, 170, 235, 0.15); }\n" ++
+        ".gs-help-item-btn:hover { background: rgba(140, 170, 235, 0.20); }\n" ++
+        ".gs-help-item-btn:active { background: rgba(140, 170, 235, 0.28); }\n" ++
         ".gs-help-key { color: #d9e4ff; font-family: monospace; font-size: 0.88em; font-weight: 700; }\n" ++
         ".gs-help-desc { color: #c7d0e3; font-size: 0.90em; }\n" ++
         ".gs-status-info { color: #80a6d8; }\n" ++

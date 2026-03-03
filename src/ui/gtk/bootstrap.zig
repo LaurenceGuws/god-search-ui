@@ -15,7 +15,26 @@ const UiContext = gtk_types.UiContext;
 
 const HelpEntryState = struct {
     key_text: []const u8,
-    popover: ?*c.GtkWidget,
+    details: ?[]const []const u8,
+};
+
+const HelpToggleState = struct {
+    button: *c.GtkWidget,
+    panel: *c.GtkWidget,
+};
+
+const files_options = [_][]const u8{
+    "Files route: % <term>",
+    "Powered by fd for quick file and folder lookup.",
+    "Includes hidden files/folders by default.",
+    "No launcher runtime toggle yet; adjust fd behavior in command-level config.",
+};
+
+const grep_options = [_][]const u8{
+    "Grep route: & <term>",
+    "Uses rg to search file contents.",
+    "Default: ignore hidden entries.",
+    "Set GOD_SEARCH_RG_HIDDEN=1 in environment to include hidden files/dirs.",
 };
 
 pub const LaunchContext = struct {
@@ -75,16 +94,10 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_widget_add_css_class(help_button, "gs-help-btn");
     c.gtk_widget_set_tooltip_text(help_button, "Search routes and shortcuts");
 
-    const help_popover = c.gtk_popover_new();
-    c.gtk_widget_add_css_class(help_popover, "gs-help-popover");
-    c.gtk_widget_set_halign(help_popover, c.GTK_ALIGN_END);
-    c.gtk_widget_set_parent(help_popover, help_button);
-
     const help_box = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 4);
+    c.gtk_widget_add_css_class(help_box, "gs-help-popover");
     c.gtk_widget_set_margin_top(help_box, 8);
     c.gtk_widget_set_margin_bottom(help_box, 8);
-    c.gtk_widget_set_margin_start(help_box, 10);
-    c.gtk_widget_set_margin_end(help_box, 10);
     c.gtk_widget_set_size_request(help_box, 380, -1);
     appendHelpTitle(help_box, "Quick Reference", "Routes, commands, and keys");
     appendHelpSection(help_box, "Routes");
@@ -92,19 +105,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     appendHelpItem(help_box, "#", "Windows");
     appendHelpItem(help_box, "!", "Workspaces");
     appendHelpItem(help_box, "~", "Recent folders");
-    const files_options = [_][]const u8{
-        "Files route: % <term>",
-        "Powered by fd for quick file and folder lookup.",
-        "Includes hidden files/folders by default.",
-        "No launcher runtime toggle yet; adjust fd behavior in command-level config.",
-    };
     appendHelpItemWithDetails(help_box, "%", "Files", &files_options);
-    const grep_options = [_][]const u8{
-        "Grep route: & <term>",
-        "Uses rg to search file contents.",
-        "Default: ignore hidden entries.",
-        "Set GOD_SEARCH_RG_HIDDEN=1 in environment to include hidden files/dirs.",
-    };
     appendHelpItemWithDetails(help_box, "&", "Grep matches", &grep_options);
     appendHelpItem(help_box, "$", "Notifications");
     appendHelpSection(help_box, "Commands");
@@ -119,8 +120,22 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     appendHelpItem(help_box, "Esc", "Close launcher");
     appendHelpSection(help_box, "Actions");
     appendActionsInfo(help_box);
-    c.gtk_popover_set_child(@ptrCast(help_popover), help_box);
-    _ = c.g_signal_connect_data(help_button, "clicked", c.G_CALLBACK(onHelpClicked), help_popover, null, 0);
+
+    const help_panel_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 0);
+    c.gtk_widget_set_hexpand(help_panel_row, GTRUE);
+    c.gtk_widget_set_visible(help_panel_row, GFALSE);
+    const help_panel_spacer = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 0);
+    c.gtk_widget_set_hexpand(help_panel_spacer, GTRUE);
+    c.gtk_widget_set_halign(help_box, c.GTK_ALIGN_END);
+    c.gtk_box_append(@ptrCast(help_panel_row), help_panel_spacer);
+    c.gtk_box_append(@ptrCast(help_panel_row), help_box);
+
+    const help_toggle_state = std.heap.page_allocator.create(HelpToggleState) catch return;
+    help_toggle_state.* = .{
+        .button = help_button,
+        .panel = help_panel_row,
+    };
+    _ = c.g_signal_connect_data(help_button, "clicked", c.G_CALLBACK(onHelpClicked), help_toggle_state, null, 0);
 
     const entry_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
     c.gtk_widget_set_hexpand(entry_row, GTRUE);
@@ -287,6 +302,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(hooks.on_destroy), ctx, null, 0);
 
     c.gtk_box_append(@ptrCast(root_box), entry_row);
+    c.gtk_box_append(@ptrCast(root_box), help_panel_row);
     c.gtk_box_append(@ptrCast(root_box), status);
     c.gtk_box_append(@ptrCast(root_box), content_pane);
     c.gtk_window_set_child(@ptrCast(window), root_box);
@@ -307,19 +323,49 @@ fn configureInitialWindowSize(window: *c.GtkWidget, policy: PlacementPolicy) voi
     placement_bridge.configureLauncherWindow(window, policy.launcher);
 }
 
-fn onHelpClicked(_: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c) void {
-    if (user_data == null) return;
-    std.log.info("help popup opened", .{});
-    c.gtk_popover_popup(@ptrCast(@alignCast(user_data.?)));
+fn onHelpClicked(button: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c) void {
+    if (button == null or user_data == null) return;
+    const state = @as(*HelpToggleState, @ptrCast(@alignCast(user_data.?)));
+    const button_width = c.gtk_widget_get_width(state.button);
+    const panel_width = c.gtk_widget_get_width(state.panel);
+    const is_open = c.gtk_widget_get_visible(state.panel);
+    std.log.info("help panel toggle button_w={d} panel_w={d} open={d}", .{ button_width, panel_width, is_open });
+    if (is_open == GTRUE) {
+        c.gtk_widget_set_visible(state.panel, GFALSE);
+    } else {
+        c.gtk_widget_set_visible(state.panel, GTRUE);
+    }
 }
 
-fn onHelpItemClicked(_: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c) void {
-    if (user_data == null) return;
-    const state = @as(*HelpEntryState, @alignCast(@ptrCast(user_data.?)));
-    std.log.info("help item clicked key={s}", .{state.key_text});
-    if (state.popover) |popover| {
-        c.gtk_popover_popup(@ptrCast(popover));
+fn onHelpItemClicked(button: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c) void {
+    if (user_data == null or button == null) return;
+    const state = @as(*HelpEntryState, @ptrCast(@alignCast(user_data.?)));
+    const lines = state.details orelse return;
+    std.log.info("help item clicked key={s} details_len={d}", .{ state.key_text, lines.len });
+
+    const submenu_popover = c.gtk_popover_new();
+    c.gtk_widget_add_css_class(submenu_popover, "gs-help-popover");
+    c.gtk_widget_set_parent(submenu_popover, @ptrCast(button));
+    c.gtk_popover_set_position(@ptrCast(submenu_popover), c.GTK_POS_RIGHT);
+    c.gtk_popover_set_has_arrow(@ptrCast(submenu_popover), GFALSE);
+
+    const submenu_box = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
+    c.gtk_widget_set_margin_top(submenu_box, 8);
+    c.gtk_widget_set_margin_bottom(submenu_box, 8);
+    c.gtk_widget_set_margin_start(submenu_box, 10);
+    c.gtk_widget_set_margin_end(submenu_box, 10);
+    for (lines) |line| {
+        const line_label = c.gtk_label_new(null);
+        c.gtk_label_set_xalign(@ptrCast(line_label), 0.0);
+        c.gtk_label_set_wrap(@ptrCast(line_label), GTRUE);
+        c.gtk_widget_add_css_class(line_label, "gs-help-desc");
+        const line_z = std.heap.page_allocator.dupeZ(u8, line) catch continue;
+        defer std.heap.page_allocator.free(line_z);
+        c.gtk_label_set_text(@ptrCast(line_label), line_z.ptr);
+        c.gtk_box_append(@ptrCast(submenu_box), line_label);
     }
+    c.gtk_popover_set_child(@ptrCast(submenu_popover), submenu_box);
+    c.gtk_popover_popup(@ptrCast(submenu_popover));
 }
 
 fn appendHelpTitle(box: *c.GtkWidget, title: []const u8, subtitle: []const u8) void {
@@ -358,12 +404,10 @@ fn appendHelpItemWithDetails(
     description_text: []const u8,
     details: ?[]const []const u8,
 ) void {
-    const row_button = c.gtk_menu_button_new();
+    const row_button = c.gtk_button_new();
     c.gtk_widget_add_css_class(row_button, "gs-help-row");
     c.gtk_widget_add_css_class(row_button, "gs-help-item-btn");
     c.gtk_widget_set_hexpand(row_button, GTRUE);
-    c.gtk_menu_button_set_has_frame(@ptrCast(row_button), GFALSE);
-    c.gtk_menu_button_set_always_show_arrow(@ptrCast(row_button), GFALSE);
 
     const row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
     c.gtk_widget_set_hexpand(row, GTRUE);
@@ -387,38 +431,18 @@ fn appendHelpItemWithDetails(
 
     c.gtk_box_append(@ptrCast(row), key);
     c.gtk_box_append(@ptrCast(row), desc);
-    c.gtk_menu_button_set_child(@ptrCast(row_button), @ptrCast(row));
+    c.gtk_button_set_child(@ptrCast(row_button), @ptrCast(row));
 
     const state = std.heap.page_allocator.create(HelpEntryState) catch return;
     if (details) |lines| {
-        const submenu_popover = c.gtk_popover_new();
-        c.gtk_widget_add_css_class(submenu_popover, "gs-help-popover");
-
-        const submenu_box = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 2);
-        c.gtk_widget_set_margin_top(submenu_box, 8);
-        c.gtk_widget_set_margin_bottom(submenu_box, 8);
-        c.gtk_widget_set_margin_start(submenu_box, 10);
-        c.gtk_widget_set_margin_end(submenu_box, 10);
-        for (lines) |line| {
-            const line_label = c.gtk_label_new(null);
-            c.gtk_label_set_xalign(@ptrCast(line_label), 0.0);
-            c.gtk_label_set_wrap(@ptrCast(line_label), GTRUE);
-            c.gtk_widget_add_css_class(line_label, "gs-help-desc");
-            const line_z = std.heap.page_allocator.dupeZ(u8, line) catch continue;
-            defer std.heap.page_allocator.free(line_z);
-            c.gtk_label_set_text(@ptrCast(line_label), line_z.ptr);
-            c.gtk_box_append(@ptrCast(submenu_box), line_label);
-        }
-        c.gtk_popover_set_child(@ptrCast(submenu_popover), submenu_box);
-        c.gtk_menu_button_set_popover(@ptrCast(row_button), @ptrCast(submenu_popover));
         state.* = .{
             .key_text = key_text,
-            .popover = submenu_popover,
+            .details = lines,
         };
     } else {
         state.* = .{
             .key_text = key_text,
-            .popover = null,
+            .details = null,
         };
     }
     if (details != null) {
