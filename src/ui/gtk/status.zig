@@ -60,6 +60,11 @@ fn onStatusReset(user_data: ?*anyopaque) callconv(.c) c.gboolean {
         reset_ctx.status_tone,
     )) return GFALSE;
 
+    refreshStatusForCurrentQuery(ctx);
+    return GFALSE;
+}
+
+pub fn refreshStatusForCurrentQuery(ctx: *UiContext) void {
     const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
     const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
     const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
@@ -68,7 +73,6 @@ fn onStatusReset(user_data: ?*anyopaque) callconv(.c) c.gboolean {
     } else {
         setStatus(ctx, "");
     }
-    return GFALSE;
 }
 
 const StatusResetContext = struct {
@@ -121,10 +125,6 @@ fn appendLaunchFeedbackRow(list: *c.GtkListBox, message: []const u8) void {
 }
 
 fn setStatusWithTone(ctx: *UiContext, message: []const u8, tone: StatusTone) void {
-    const status_hash = std.hash.Wyhash.hash(0, message);
-    const tone_code = statusToneCode(tone);
-    if (ctx.last_status_hash == status_hash and ctx.last_status_tone == tone_code) return;
-
     const status_widget: *c.GtkWidget = @ptrCast(@alignCast(ctx.status));
     c.gtk_widget_remove_css_class(status_widget, "gs-status-info");
     c.gtk_widget_remove_css_class(status_widget, "gs-status-success");
@@ -139,20 +139,67 @@ fn setStatusWithTone(ctx: *UiContext, message: []const u8, tone: StatusTone) voi
         .failure => c.gtk_widget_add_css_class(status_widget, "gs-status-failure"),
         .neutral => {},
     }
-    const prefix = statusPrefix(tone);
-    if (prefix.len > 0) {
-        const composed = std.fmt.allocPrint(std.heap.page_allocator, "{s} {s}", .{ prefix, message }) catch return;
-        defer std.heap.page_allocator.free(composed);
-        const msg_z = std.heap.page_allocator.dupeZ(u8, composed) catch return;
-        defer std.heap.page_allocator.free(msg_z);
-        c.gtk_label_set_text(ctx.status, msg_z.ptr);
-    } else {
-        const msg_z = std.heap.page_allocator.dupeZ(u8, message) catch return;
-        defer std.heap.page_allocator.free(msg_z);
-        c.gtk_label_set_text(ctx.status, msg_z.ptr);
-    }
+
+    const rendered = renderStatusText(ctx, message, tone) catch return;
+    defer std.heap.page_allocator.free(rendered);
+    const status_hash = std.hash.Wyhash.hash(0, rendered);
+    const tone_code = statusToneCode(tone);
+    if (ctx.last_status_hash == status_hash and ctx.last_status_tone == tone_code) return;
+
+    const msg_z = std.heap.page_allocator.dupeZ(u8, rendered) catch return;
+    defer std.heap.page_allocator.free(msg_z);
+    c.gtk_label_set_text(ctx.status, msg_z.ptr);
     ctx.last_status_hash = status_hash;
     ctx.last_status_tone = tone_code;
+}
+
+fn renderStatusText(ctx: *UiContext, message: []const u8, tone: StatusTone) ![]u8 {
+    const prefix = statusPrefix(tone);
+    const base = if (prefix.len > 0)
+        try std.fmt.allocPrint(std.heap.page_allocator, "{s} {s}", .{ prefix, message })
+    else
+        try std.heap.page_allocator.dupe(u8, message);
+    errdefer std.heap.page_allocator.free(base);
+    if (ctx.show_nerd_stats != GTRUE) return base;
+
+    const rss_kb = readSelfRssKb() orelse 0;
+    const ram_mb = rss_kb / 1024;
+    const query_to_ui_ms = nsToMs(ctx.last_ui_query_total_ns);
+    const query_backend_ms = nsToMs(ctx.service.lastQueryElapsedNs());
+    const rendered = if (base.len > 0)
+        try std.fmt.allocPrint(
+            std.heap.page_allocator,
+            "{s} | RAM {d}MB | Q->UI {d:.2}ms | Query {d:.2}ms",
+            .{ base, ram_mb, query_to_ui_ms, query_backend_ms },
+        )
+    else
+        try std.fmt.allocPrint(
+            std.heap.page_allocator,
+            "RAM {d}MB | Q->UI {d:.2}ms | Query {d:.2}ms",
+            .{ ram_mb, query_to_ui_ms, query_backend_ms },
+        );
+    std.heap.page_allocator.free(base);
+    return rendered;
+}
+
+fn nsToMs(ns: u64) f64 {
+    return @as(f64, @floatFromInt(ns)) / 1_000_000.0;
+}
+
+fn readSelfRssKb() ?usize {
+    const file = std.fs.openFileAbsolute("/proc/self/status", .{}) catch return null;
+    defer file.close();
+    const data = file.readToEndAlloc(std.heap.page_allocator, 32 * 1024) catch return null;
+    defer std.heap.page_allocator.free(data);
+    var lines = std.mem.splitScalar(u8, data, '\n');
+    while (lines.next()) |line| {
+        if (!std.mem.startsWith(u8, line, "VmRSS:")) continue;
+        var toks = std.mem.tokenizeAny(u8, line, " \t");
+        _ = toks.next();
+        const kb_txt = toks.next() orelse return null;
+        return std.fmt.parseUnsigned(usize, kb_txt, 10) catch null;
+    }
+    return null;
 }
 
 fn launchStatusTone(message: []const u8) StatusTone {

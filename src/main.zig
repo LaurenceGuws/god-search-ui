@@ -143,6 +143,7 @@ pub fn main() !void {
             .start_hidden = start_hidden,
             .surface_mode = surface_mode,
             .placement_policy = cfg.placement_policy,
+            .show_nerd_stats = cfg.ui.show_nerd_stats,
             .notifications_show_close_button = cfg.notification_actions.show_close_button,
             .notifications_show_dbus_actions = cfg.notification_actions.show_dbus_actions,
         });

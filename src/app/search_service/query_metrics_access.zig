@@ -55,3 +55,12 @@ pub fn readFlags(
         .last_query_had_provider_runtime_failure = last_query_had_provider_runtime_failure.*,
     };
 }
+
+pub fn readElapsed(
+    query_mu: *std.Thread.Mutex,
+    last_query_elapsed_ns: *const u64,
+) u64 {
+    query_mu.lock();
+    defer query_mu.unlock();
+    return last_query_elapsed_ns.*;
+}

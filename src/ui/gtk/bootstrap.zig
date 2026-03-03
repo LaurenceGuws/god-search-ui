@@ -57,6 +57,7 @@ pub const LaunchContext = struct {
     start_hidden: bool,
     surface_mode: SurfaceMode,
     placement_policy: PlacementPolicy,
+    show_nerd_stats: bool,
     ctx: ?*UiContext,
     gtk_app: *c.GtkApplication,
 };
@@ -68,6 +69,7 @@ pub const ActivateHooks = struct {
     on_row_activated: *const fn (?*c.GtkListBox, ?*c.GtkListBoxRow, ?*anyopaque) callconv(.c) void,
     on_row_selected: *const fn (?*c.GtkListBox, ?*c.GtkListBoxRow, ?*anyopaque) callconv(.c) void,
     on_adjustment_changed: *const fn (?*c.GtkAdjustment, ?*anyopaque) callconv(.c) void,
+    on_window_active_notify: *const fn (?*c.GtkWindow, ?*c.GParamSpec, ?*anyopaque) callconv(.c) void,
     on_close_request: *const fn (?*c.GtkWindow, ?*anyopaque) callconv(.c) c.gboolean,
     on_destroy: *const fn (?*c.GtkWidget, ?*anyopaque) callconv(.c) void,
     install_css: *const fn (*c.GtkWidget) void,
@@ -304,6 +306,13 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.startup_key_queue = [_]u32{0} ** 24;
     ctx.result_query_hash = 0;
     ctx.result_window_limit = 20;
+    ctx.deferred_dynamic_clear_id = 0;
+    ctx.deferred_stats_refresh_id = 0;
+    ctx.show_nerd_stats = if (launch.show_nerd_stats) gtk_types.GTRUE else gtk_types.GFALSE;
+    ctx.active_query_hash = 0;
+    ctx.active_query_started_ns = 0;
+    ctx.last_ui_query_total_ns = 0;
+    ctx.last_query_dynamic = gtk_types.GFALSE;
     c.g_mutex_init(&ctx.async_worker_lock);
     c.g_cond_init(&ctx.async_worker_cond);
 
@@ -322,6 +331,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     }
     _ = c.g_signal_connect_data(window, "close-request", c.G_CALLBACK(hooks.on_close_request), ctx, null, 0);
     _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(hooks.on_destroy), ctx, null, 0);
+    _ = c.g_signal_connect_data(window, "notify::is-active", c.G_CALLBACK(hooks.on_window_active_notify), ctx, null, 0);
 
     c.gtk_box_append(@ptrCast(root_box), entry_row);
     c.gtk_box_append(@ptrCast(root_box), content_overlay);

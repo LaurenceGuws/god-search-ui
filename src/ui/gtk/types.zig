@@ -65,6 +65,13 @@ pub const UiContext = extern struct {
     async_cached_rows_len: usize,
     result_query_hash: u64,
     result_window_limit: u32,
+    deferred_dynamic_clear_id: c.guint,
+    deferred_stats_refresh_id: c.guint,
+    show_nerd_stats: c.gboolean,
+    active_query_hash: u64,
+    active_query_started_ns: i128,
+    last_ui_query_total_ns: u64,
+    last_query_dynamic: c.gboolean,
     async_worker_lock: c.GMutex,
     async_worker_cond: c.GCond,
 };

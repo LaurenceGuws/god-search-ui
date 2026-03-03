@@ -349,6 +349,10 @@ pub const SearchService = struct {
         );
     }
 
+    pub fn lastQueryElapsedNs(self: *SearchService) u64 {
+        return query_metrics_access.readElapsed(&self.query_mu, &self.last_query_elapsed_ns);
+    }
+
     fn historySnapshotNewestFirstOwnedInternal(self: *SearchService, allocator: std.mem.Allocator) ![]const []const u8 {
         self.query_mu.lock();
         defer self.query_mu.unlock();

@@ -22,6 +22,7 @@ const notifications_mod = @import("../notifications/mod.zig");
 const shell_mod = @import("../shell/mod.zig");
 const gtk_shell_control = @import("gtk/shell_control.zig");
 const gtk_shell_lifecycle = @import("gtk/shell_lifecycle.zig");
+const gtk_deferred_clear = @import("gtk/deferred_clear.zig");
 const gtk_shell_notifications = @import("gtk/shell_notifications.zig");
 const gtk_shell_notifications_popup = @import("gtk/shell_notifications_popup.zig");
 const gtk_shell_startup = @import("gtk/shell_startup.zig");
@@ -44,6 +45,7 @@ pub const Shell = struct {
         start_hidden: bool = false,
         surface_mode: SurfaceMode = .auto,
         placement_policy: PlacementPolicy = .{},
+        show_nerd_stats: bool = true,
         notifications_show_close_button: bool = true,
         notifications_show_dbus_actions: bool = true,
     };
@@ -67,6 +69,7 @@ pub const Shell = struct {
             .start_hidden = options.start_hidden,
             .surface_mode = options.surface_mode,
             .placement_policy = options.placement_policy,
+            .show_nerd_stats = options.show_nerd_stats,
             .ctx = null,
             .gtk_app = gtk_app,
         };
@@ -116,6 +119,7 @@ pub const Shell = struct {
             .on_row_activated = onRowActivated,
             .on_row_selected = onRowSelected,
             .on_adjustment_changed = onResultsAdjustmentChanged,
+            .on_window_active_notify = gtk_shell_lifecycle.onWindowActiveNotify,
             .on_close_request = gtk_shell_lifecycle.onCloseRequest,
             .on_destroy = gtk_shell_lifecycle.onDestroy,
             .install_css = installCss,
@@ -617,7 +621,7 @@ pub const Shell = struct {
                         "ram_event=ui_hide request query_hash={d} window_limit={d}",
                         .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit },
                     );
-                    state.ctx.launch.service.clearDynamicState(state.ctx.launch.allocator);
+                    gtk_deferred_clear.request(ui_ctx);
                     gtk_shell_lifecycle.captureListState(ui_ctx);
                     c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
                 },
@@ -627,7 +631,7 @@ pub const Shell = struct {
                             "ram_event=ui_toggle_hide request query_hash={d} window_limit={d}",
                             .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit },
                         );
-                        state.ctx.launch.service.clearDynamicState(state.ctx.launch.allocator);
+                        gtk_deferred_clear.request(ui_ctx);
                         gtk_shell_lifecycle.captureListState(ui_ctx);
                         c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
                     } else {

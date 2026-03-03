@@ -5,6 +5,7 @@ const gtk_nav = @import("navigation.zig");
 const gtk_query = @import("query_helpers.zig");
 const gtk_row_data = @import("row_data.zig");
 const gtk_preview = @import("preview.zig");
+const gtk_deferred_clear = @import("deferred_clear.zig");
 
 const c = gtk_types.c;
 const UiContext = gtk_types.UiContext;
@@ -36,8 +37,7 @@ pub fn handleKeyPressed(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierTy
         c.GDK_KEY_Escape => {
             if (ctx.resident_mode == GTRUE) {
                 captureListStateForClose(ctx);
-                const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-                ctx.service.clearDynamicState(allocator_ptr.*);
+                gtk_deferred_clear.request(ctx);
                 c.gtk_widget_set_visible(ctx.window, GFALSE);
             } else {
                 c.gtk_window_close(@ptrCast(ctx.window));

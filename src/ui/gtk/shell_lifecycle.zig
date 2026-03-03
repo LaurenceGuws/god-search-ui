@@ -4,6 +4,7 @@ const gtk_bootstrap = @import("bootstrap.zig");
 const gtk_async = @import("async_state.zig");
 const gtk_async_coord = @import("async_coordinator.zig");
 const gtk_controller = @import("controller.zig");
+const gtk_deferred_clear = @import("deferred_clear.zig");
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -16,9 +17,6 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
     const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
     if (ctx.resident_mode == GTRUE) {
         captureListState(ctx);
-        const launch: *LaunchContext = @ptrCast(@alignCast(ctx.launch_ctx));
-        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const allocator = allocator_ptr.*;
         std.log.info(
             "ram_event=ui_close_request query_hash={d} window_limit={d} clear_query_on_close={}",
             .{
@@ -27,8 +25,10 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
                 ctx.clear_query_on_close == GTRUE,
             },
         );
-        launch.service.clearDynamicState(allocator);
+        gtk_deferred_clear.request(ctx);
         if (ctx.clear_query_on_close == GTRUE) {
+            const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+            const allocator = allocator_ptr.*;
             c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
             c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
             ctx.last_selected_row_index = -1;
@@ -44,6 +44,22 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
         return GTRUE;
     }
     return GFALSE;
+}
+
+pub fn onWindowActiveNotify(window: ?*c.GtkWindow, _: ?*c.GParamSpec, user_data: ?*anyopaque) callconv(.c) void {
+    if (window == null or user_data == null) return;
+    const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+    if (ctx.resident_mode != GTRUE) return;
+    if (c.gtk_widget_get_visible(ctx.window) != GTRUE) return;
+    if (c.gtk_window_is_active(window) == GTRUE) return;
+
+    captureListState(ctx);
+    std.log.info(
+        "ram_event=ui_focus_lost_hide query_hash={d} window_limit={d}",
+        .{ ctx.result_query_hash, ctx.result_window_limit },
+    );
+    gtk_deferred_clear.request(ctx);
+    c.gtk_widget_set_visible(ctx.window, GFALSE);
 }
 
 pub fn captureListState(ctx: *UiContext) void {
@@ -94,6 +110,7 @@ pub fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
         _ = c.g_source_remove(ctx.startup_key_queue_id);
         ctx.startup_key_queue_id = 0;
     }
+    gtk_deferred_clear.cancel(ctx);
     gtk_controller.disableStartupKeyQueue(ctx);
     gtk_async_coord.beginAsyncShutdown(ctx);
     const ready_id = gtk_async_coord.takeAsyncReadySourceId(ctx);

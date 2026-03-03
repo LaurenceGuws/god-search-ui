@@ -90,6 +90,12 @@ fn parseSettingsFromTop(lua: *c.lua_State, allocator: std.mem.Allocator, initial
     }
     c.lua_pop(lua, 1);
 
+    _ = c.lua_getfield(lua, -1, "ui");
+    if (c.lua_istable(lua, -1)) {
+        out.ui = parseUiTable(lua, -1, out.ui);
+    }
+    c.lua_pop(lua, 1);
+
     return out;
 }
 
@@ -105,6 +111,16 @@ fn parseNotificationsTable(
         maybeBoolField(lua, -1, "show_dbus_actions", &out.show_dbus_actions);
     }
     c.lua_pop(lua, 1);
+    return out;
+}
+
+fn parseUiTable(
+    lua: *c.lua_State,
+    idx: c_int,
+    initial: config.Settings.UiPolicy,
+) config.Settings.UiPolicy {
+    var out = initial;
+    maybeBoolField(lua, idx, "show_nerd_stats", &out.show_nerd_stats);
     return out;
 }
 

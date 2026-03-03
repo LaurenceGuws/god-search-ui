@@ -75,6 +75,9 @@ pub const template =
     \\      show_dbus_actions = true,
     \\    },
     \\  },
+    \\  ui = {
+    \\    show_nerd_stats = true,
+    \\  },
     \\}
     \\
 ;

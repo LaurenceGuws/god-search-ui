@@ -9,6 +9,7 @@ const gtk_icons = @import("icons.zig");
 const gtk_nav = @import("navigation.zig");
 const gtk_widgets = @import("widgets.zig");
 const gtk_status = @import("status.zig");
+const gtk_deferred_clear = @import("deferred_clear.zig");
 
 const UiContext = gtk_types.UiContext;
 const c = gtk_types.c;
@@ -28,6 +29,7 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     const allocator = allocator_ptr.*;
     const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
     const hash = std.hash.Wyhash.hash(0x1fe2cd, query_trimmed);
+    const current_dynamic = gtk_query.shouldAsyncRouteQuery(query_trimmed);
     if (ctx.result_query_hash != hash) {
         ctx.result_query_hash = hash;
         ctx.result_window_limit = hot_render_rows;
@@ -35,13 +37,24 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     }
 
     if (query_trimmed.len == 0) {
+        if (ctx.last_query_dynamic == GTRUE) {
+            gtk_deferred_clear.request(ctx);
+        }
+        ctx.last_query_dynamic = GFALSE;
+        ctx.active_query_hash = 0;
+        ctx.active_query_started_ns = 0;
         gtk_async_state.clearAsyncSearchCache(ctx, allocator);
         hooks.cancel_async_route_search(ctx);
         renderDefaultLoadout(ctx, allocator);
         return;
     }
+    ctx.last_query_dynamic = if (current_dynamic) GTRUE else GFALSE;
+    if (ctx.active_query_hash != hash) {
+        ctx.active_query_hash = hash;
+        ctx.active_query_started_ns = std.time.nanoTimestamp();
+    }
 
-    if (gtk_query.shouldAsyncRouteQuery(query_trimmed)) {
+    if (current_dynamic) {
         if (renderFromAsyncCache(ctx, allocator, query_trimmed)) {
             return;
         }
@@ -249,6 +262,7 @@ fn loadoutLessThan(_: void, a: search_mod.ScoredCandidate, b: search_mod.ScoredC
 }
 
 pub fn renderSearchError(ctx: *UiContext, allocator: std.mem.Allocator, err: anyerror) void {
+    markUiQueryCompleted(ctx);
     const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
     defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
 
@@ -267,6 +281,7 @@ pub fn renderRankedRows(
     ranked: []const search_mod.ScoredCandidate,
     total_len: usize,
 ) void {
+    markUiQueryCompleted(ctx);
     const limit = @min(ranked.len, @as(usize, @intCast(ctx.result_window_limit)));
     const rows = ranked[0..limit];
     const empty_query = query_trimmed.len == 0;
@@ -313,6 +328,15 @@ pub fn renderRankedRows(
     } else {
         gtk_status.setStatus(ctx, "");
     }
+}
+
+fn markUiQueryCompleted(ctx: *UiContext) void {
+    if (ctx.active_query_hash == 0 or ctx.active_query_started_ns <= 0) return;
+    const now = std.time.nanoTimestamp();
+    if (now <= ctx.active_query_started_ns) return;
+    const elapsed_ns: u64 = @intCast(now - ctx.active_query_started_ns);
+    ctx.last_ui_query_total_ns = elapsed_ns;
+    ctx.active_query_started_ns = 0;
 }
 
 pub fn shouldPollMoreOnScroll(ctx: *UiContext) bool {
