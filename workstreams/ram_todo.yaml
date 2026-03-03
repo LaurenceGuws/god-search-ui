@@ -53,6 +53,8 @@ items:
       - Confirmed prune and release hooks are only in service scope.
       - Fixed dynamic generation leak by deallocating nested owned buffers on prune/clear/remove.
       - Added post-clear visibility of dynamic cache counts/bytes in `clearDynamicState` logs.
+      - Added crash-safe clear semantics in `clearDynamicState` (pin-aware pruning) to avoid freeing in-flight generations.
+      - Updated clear log path to avoid no-op spam while preserving actionable clear events.
     todo:
       - Build lifecycle matrix by event: submit, repeat, clear, hide, reopen.
       - Quantify generation count/bytes before and after each event.
@@ -84,6 +86,7 @@ items:
     done:
       - Confirmed async cache and result rows have fixed caps.
       - Confirmed async cache is cleared on query changes and window destruction.
+      - Kept dynamic result streaming cache at fixed `max_cached_rows` with truncation logs for over-cap rows.
     todo:
       - Validate UI cap behavior under heavy dynamic query (200 rows/ 200 cached).
       - Validate clear/hide/destroy cache clearing with matching logs and no assumptions.
@@ -140,6 +143,7 @@ items:
     done:
       - Finalized required RAM event schema and threshold placeholders.
       - Added dynamic prune/cap/route completion logs in `dynamic_query_engine` and clear-state logs in service layer.
+      - Added zero-result no-op suppression in clear logs to keep signal-to-noise ratio in lifecycle evidence.
     todo:
       - Finalize schema fields and units.
       - Define guardrail checks and regression tests to catch future reversion.
