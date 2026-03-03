@@ -140,15 +140,49 @@ fn sendCommand(allocator: std.mem.Allocator, cmd: Command) !OwnedResponse {
     var response_buf: [response_chunk_size]u8 = undefined;
     var response_buf_list = std.ArrayList(u8).empty;
     defer response_buf_list.deinit(allocator);
+    var total_reads: usize = 0;
+    var total_bytes: usize = 0;
     while (true) {
-        const n = std.posix.read(fd, &response_buf) catch return error.ReadFailed;
+        const n = std.posix.read(fd, &response_buf) catch |err| {
+            std.log.warn(
+                "ipc read failed cmd={s} err={s} reads={d} bytes={d}",
+                .{ @tagName(cmd), @errorName(err), total_reads, total_bytes },
+            );
+            return error.ReadFailed;
+        };
         if (n == 0) break;
-        if (response_buf_list.items.len + n > max_response_bytes) return error.ReadFailed;
+        total_reads += 1;
+        total_bytes += n;
+        if (response_buf_list.items.len + n > max_response_bytes) {
+            std.log.warn(
+                "ipc response exceeds max bytes cmd={s} bytes={d} max={d} reads={d}",
+                .{ @tagName(cmd), response_buf_list.items.len + n, max_response_bytes, total_reads },
+            );
+            return error.ReadFailed;
+        }
         try response_buf_list.appendSlice(allocator, response_buf[0..n]);
     }
     if (response_buf_list.items.len == 0) return error.EmptyResponse;
 
-    const parsed = std.json.parseFromSlice(Response, allocator, response_buf_list.items, .{}) catch return error.BadResponse;
+    var scanner = std.json.Scanner.initCompleteInput(allocator, response_buf_list.items);
+    defer scanner.deinit();
+    var diagnostics = std.json.Scanner.Diagnostics{};
+    scanner.enableDiagnostics(&diagnostics);
+    const parsed = std.json.parseFromTokenSource(Response, allocator, &scanner, .{}) catch |err| {
+        std.log.warn(
+            "ipc decode failed cmd={s} err={s} bytes={d} reads={d} offset={d} line={d} col={d}",
+            .{
+                @tagName(cmd),
+                @errorName(err),
+                response_buf_list.items.len,
+                total_reads,
+                diagnostics.getByteOffset(),
+                diagnostics.getLine(),
+                diagnostics.getColumn(),
+            },
+        );
+        return error.BadResponse;
+    };
     defer parsed.deinit();
     const code = try allocator.dupe(u8, parsed.value.code);
     const message = try allocator.dupe(u8, parsed.value.message);
@@ -220,68 +254,68 @@ fn serverMain(server: *Server) void {
 fn handleClient(server: *Server, client_fd: std.posix.socket_t) void {
     var buf: [4096]u8 = undefined;
     const n = std.posix.read(client_fd, &buf) catch {
-        writeResponse(server.allocator, client_fd, false, "read_error", "Failed to read request");
+        writeResponse(server.allocator, client_fd, "invalid_request", false, "read_error", "Failed to read request");
         return;
     };
     if (n == 0) {
-        writeResponse(server.allocator, client_fd, false, "bad_request", "Empty request");
+        writeResponse(server.allocator, client_fd, "invalid_request", false, "bad_request", "Empty request");
         return;
     }
 
     var parsed = std.json.parseFromSlice(Request, server.allocator, buf[0..n], .{}) catch {
-        writeResponse(server.allocator, client_fd, false, "bad_request", "Invalid JSON");
+        writeResponse(server.allocator, client_fd, "invalid_request", false, "bad_request", "Invalid JSON");
         return;
     };
     defer parsed.deinit();
 
     if (parsed.value.v != 1) {
-        writeResponse(server.allocator, client_fd, false, "bad_request", "Unsupported protocol version");
+        writeResponse(server.allocator, client_fd, "invalid_request", false, "bad_request", "Unsupported protocol version");
         return;
     }
 
     const cmd = parseCommand(parsed.value.cmd) orelse {
-        writeResponse(server.allocator, client_fd, false, "bad_request", "Unknown command");
+        writeResponse(server.allocator, client_fd, "invalid_request", false, "bad_request", "Unknown command");
         return;
     };
 
     switch (cmd) {
-        .ping => writeResponse(server.allocator, client_fd, true, "ok", "pong"),
-        .version => writeResponse(server.allocator, client_fd, true, "ok", "dev"),
+        .ping => writeResponse(server.allocator, client_fd, @tagName(cmd), true, "ok", "pong"),
+        .version => writeResponse(server.allocator, client_fd, @tagName(cmd), true, "ok", "dev"),
         .shell_health => {
             const query = server.query_handler orelse {
-                writeResponse(server.allocator, client_fd, false, "rejected", "No query handler");
+                writeResponse(server.allocator, client_fd, @tagName(cmd), false, "rejected", "No query handler");
                 return;
             };
             const msg_opt = query(server.allocator, cmd, server.user_data) catch {
-                writeResponse(server.allocator, client_fd, false, "rejected", "Query failed");
+                writeResponse(server.allocator, client_fd, @tagName(cmd), false, "rejected", "Query failed");
                 return;
             };
             if (msg_opt) |msg| {
                 defer server.allocator.free(msg);
-                writeResponse(server.allocator, client_fd, true, "ok", msg);
+                writeResponse(server.allocator, client_fd, @tagName(cmd), true, "ok", msg);
             } else {
-                writeResponse(server.allocator, client_fd, false, "rejected", "No data");
+                writeResponse(server.allocator, client_fd, @tagName(cmd), false, "rejected", "No data");
             }
         },
         .wm_event_stats => {
             const query = server.query_handler orelse {
-                writeResponse(server.allocator, client_fd, false, "rejected", "No query handler");
+                writeResponse(server.allocator, client_fd, @tagName(cmd), false, "rejected", "No query handler");
                 return;
             };
             const msg_opt = query(server.allocator, cmd, server.user_data) catch {
-                writeResponse(server.allocator, client_fd, false, "rejected", "Query failed");
+                writeResponse(server.allocator, client_fd, @tagName(cmd), false, "rejected", "Query failed");
                 return;
             };
             if (msg_opt) |msg| {
                 defer server.allocator.free(msg);
-                writeResponse(server.allocator, client_fd, true, "ok", msg);
+                writeResponse(server.allocator, client_fd, @tagName(cmd), true, "ok", msg);
             } else {
-                writeResponse(server.allocator, client_fd, false, "rejected", "No data");
+                writeResponse(server.allocator, client_fd, @tagName(cmd), false, "rejected", "No data");
             }
         },
         else => {
             const result = server.handler(cmd, server.user_data);
-            writeResponse(server.allocator, client_fd, result.ok, result.code, result.message);
+            writeResponse(server.allocator, client_fd, @tagName(cmd), result.ok, result.code, result.message);
         },
     }
 }
@@ -295,7 +329,14 @@ fn parseCommand(value: []const u8) ?Command {
     return null;
 }
 
-fn writeResponse(allocator: std.mem.Allocator, fd: std.posix.socket_t, ok: bool, code: []const u8, message: []const u8) void {
+fn writeResponse(
+    allocator: std.mem.Allocator,
+    fd: std.posix.socket_t,
+    endpoint: []const u8,
+    ok: bool,
+    code: []const u8,
+    message: []const u8,
+) void {
     const Payload = struct {
         ok: bool,
         code: []const u8,
@@ -306,6 +347,15 @@ fn writeResponse(allocator: std.mem.Allocator, fd: std.posix.socket_t, ok: bool,
     defer output.deinit(allocator);
     const payload = std.json.fmt(Payload{ .ok = ok, .code = code, .message = message }, .{});
     output.writer(allocator).print("{f}", .{payload}) catch return;
+    if (output.items.len > max_response_bytes) {
+        std.log.warn(
+            "ipc response too large for client protocol cmd={s} bytes={d} max={d}",
+            .{ endpoint, output.items.len, max_response_bytes },
+        );
+        const fallback = "{\"ok\":false,\"code\":\"response_too_large\",\"message\":\"response exceeded ipc limit\"}";
+        _ = std.posix.write(fd, fallback) catch {};
+        return;
+    }
     _ = std.posix.write(fd, output.items) catch {};
 }
 

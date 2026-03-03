@@ -83,7 +83,7 @@ items:
 
   - id: REVIEW-06
     title: Remove IPC single-read truncation risk
-    status: in_progress
+    status: completed
     owner: shell
     files:
       - src/ipc/control.zig
@@ -91,9 +91,10 @@ items:
     done:
       - Removed fixed-size response read by switching client side to chunked reads.
       - Reworked server response serialization to avoid fixed-response-size buffer truncation.
+      - Added endpoint-aware server write-response logs for oversized payload diagnostics.
+      - Added response decode diagnostics and read telemetry (bytes/reads/offset/line/column) on client.
     todo:
-      - Add robust decode error logging with byte counts and offsets.
-      - Add protocol-level max-response logging/truncation guard behavior.
+      - None.
     notes: Prevents silent truncation/failure on larger control responses.
 
   - id: REVIEW-07
