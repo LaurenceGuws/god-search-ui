@@ -187,16 +187,24 @@ pub const SearchService = struct {
     pub fn clearDynamicState(self: *SearchService, allocator: std.mem.Allocator) void {
         self.dynamic_mu.lock();
         const before = dynamic_generations.metrics(self.dynamic_generations.items);
-        dynamic_generations.clear(&self.dynamic_generations, allocator);
+        const prune_report = dynamic_generations.prune(
+            &self.dynamic_generations,
+            0,
+            std.math.maxInt(usize),
+            allocator,
+        );
         dynamic_routes.invalidateToolStateCache(&self.dynamic_tool_state);
         const after = dynamic_generations.metrics(self.dynamic_generations.items);
         self.dynamic_mu.unlock();
         std.log.info(
-            "dynamic cache cleared before_generations={d} before_items={d} before_bytes={d} after_generations={d} after_items={d} after_bytes={d}",
+            "dynamic cache clear requested before_generations={d} before_items={d} before_bytes={d} removed_generations={d} removed_items={d} removed_bytes={d} after_generations={d} after_items={d} after_bytes={d}",
             .{
                 before.generation_count,
                 before.owned_item_count,
                 before.owned_bytes,
+                prune_report.removed_generations,
+                prune_report.removed_items,
+                prune_report.removed_bytes,
                 after.generation_count,
                 after.owned_item_count,
                 after.owned_bytes,
