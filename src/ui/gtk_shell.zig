@@ -605,20 +605,36 @@ pub const Shell = struct {
 
         fn applyControlEvent(state: *State, event: shell_mod.module.Event) void {
             switch (event) {
-                .summon => if (state.ctx.launch.ctx) |ui_ctx| {
+            .summon => if (state.ctx.launch.ctx) |ui_ctx| {
+                    std.log.info(
+                        "ram_event=ui_summon query_hash={d} window_limit={d} visible={}",
+                        .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit, c.gtk_widget_get_visible(ui_ctx.window) == GTRUE },
+                    );
                     summonExistingUi(ui_ctx);
                 } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
                 .hide => if (state.ctx.launch.ctx) |ui_ctx| {
+                    std.log.info(
+                        "ram_event=ui_hide request query_hash={d} window_limit={d}",
+                        .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit },
+                    );
                     state.ctx.launch.service.clearDynamicState(state.ctx.launch.allocator);
                     gtk_shell_lifecycle.captureListState(ui_ctx);
                     c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
                 },
                 .toggle => if (state.ctx.launch.ctx) |ui_ctx| {
                     if (c.gtk_widget_get_visible(ui_ctx.window) == GTRUE) {
+                        std.log.info(
+                            "ram_event=ui_toggle_hide request query_hash={d} window_limit={d}",
+                            .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit },
+                        );
                         state.ctx.launch.service.clearDynamicState(state.ctx.launch.allocator);
                         gtk_shell_lifecycle.captureListState(ui_ctx);
                         c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
                     } else {
+                        std.log.info(
+                            "ram_event=ui_toggle_show query_hash={d} window_limit={d}",
+                            .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit },
+                        );
                         summonExistingUi(ui_ctx);
                     }
                 } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),

@@ -10,6 +10,7 @@ items:
       - Confirmed repository workflow/docs and todo format.
       - Confirmed current branch/state before RAM audit.
       - Added end-to-end runbook and measurable artifact set.
+      - Added `scripts/ram_usage_audit.sh` to run a phased capture and collect daemon evidence.
     todo:
       - Ensure all measurement is done in a single reproducible run.
       - Baseline from stopped process state (no daemon), then with fresh `./re-run.sh`.
@@ -55,6 +56,8 @@ items:
       - Added post-clear visibility of dynamic cache counts/bytes in `clearDynamicState` logs.
       - Added crash-safe clear semantics in `clearDynamicState` (pin-aware pruning) to avoid freeing in-flight generations.
       - Updated clear log path to avoid no-op spam while preserving actionable clear events.
+      - Added structured RAM event log for dynamic route completion in `dynamic_query_engine.zig`.
+      - Added clear-event RAM accounting in `search_service.zig` (`dynamic_cache_clear` event).
     todo:
       - Build lifecycle matrix by event: submit, repeat, clear, hide, reopen.
       - Quantify generation count/bytes before and after each event.
@@ -87,10 +90,13 @@ items:
       - Confirmed async cache and result rows have fixed caps.
       - Confirmed async cache is cleared on query changes and window destruction.
       - Kept dynamic result streaming cache at fixed `max_cached_rows` with truncation logs for over-cap rows.
+      - Added RAM attribution logs for async cache store events with query metadata.
+      - Added control-path logs for summon/hide/close and retained-window position for lifecycle traceability.
     todo:
       - Validate UI cap behavior under heavy dynamic query (200 rows/ 200 cached).
       - Validate clear/hide/destroy cache clearing with matching logs and no assumptions.
       - Compare memory attribution between service dynamic and UI async cache in same timeline.
+      - Execute `scripts/ram_usage_audit.sh` for at least one heavy query and attach evidence.
     notes: |
       Goal is attribution clarity before optimization decisions.
       Required output:
@@ -113,6 +119,7 @@ items:
       - src/ui/gtk/shell_lifecycle.zig
     done:
       - Created policy decision template and policy-score criteria.
+      - Started policy matrix with hide/close and empty-query clearance as highest-priority candidates for trial.
     todo:
       - Draft candidate policies: route-change clear, empty-query clear, hide clear, idle clear, manual CTL clear.
       - Score each candidate on latency impact and UX risk.

@@ -94,7 +94,18 @@ pub fn cacheAndRenderAsyncRows(
 ) void {
     const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
     const hash = std.hash.Wyhash.hash(0x1fe2cd, query_trimmed);
-    gtk_async_state.cacheAsyncSearchRows(ctx, allocator, hash, total_len, ranked);
+    const parsed_query = search_mod.parseQuery(query_trimmed);
+    const route = @tagName(parsed_query.route);
+    gtk_async_state.cacheAsyncSearchRows(
+        ctx,
+        allocator,
+        hash,
+        total_len,
+        ranked,
+        route,
+        parsed_query.term.len,
+        @as(usize, ctx.result_window_limit),
+    );
     std.log.info(
         "results_flow.cache store query={s} total={d} rows={d} query_hash={d}",
         .{ query_trimmed, total_len, ranked.len, hash },

@@ -200,17 +200,19 @@ pub const SearchService = struct {
             return;
         }
         std.log.info(
-            "dynamic cache clear requested before_generations={d} before_items={d} before_bytes={d} removed_generations={d} removed_items={d} removed_bytes={d} after_generations={d} after_items={d} after_bytes={d}",
+            "ram_event=dynamic_cache_clear query_hash={d} route={s} query_term_len={d} emitted_rows={d} owned_item_count={d} owned_bytes={d} generation_count={d} pruned_count={d} window_limit={d} cached_rows={d} cached_bytes={d}",
             .{
-                before.generation_count,
-                before.owned_item_count,
-                before.owned_bytes,
-                prune_report.removed_generations,
-                prune_report.removed_items,
-                prune_report.removed_bytes,
-                after.generation_count,
+                0,
+                "dynamic",
+                0,
+                0,
                 after.owned_item_count,
                 after.owned_bytes,
+                after.generation_count,
+                prune_report.removed_generations,
+                0,
+                after.owned_item_count,
+                prune_report.removed_bytes,
             },
         );
     }

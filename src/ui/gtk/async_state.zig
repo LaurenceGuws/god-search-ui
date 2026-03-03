@@ -59,6 +59,9 @@ pub fn cacheAsyncSearchRows(
     query_hash: u64,
     total_len: usize,
     rows: []const search_mod.ScoredCandidate,
+    route: []const u8,
+    query_term_len: usize,
+    window_limit: usize,
 ) void {
     clearAsyncSearchCache(ctx, allocator);
     const keep_rows = @min(rows.len, max_cached_rows);
@@ -72,6 +75,7 @@ pub fn cacheAsyncSearchRows(
     }
     const cached_rows = allocator.alloc(search_mod.ScoredCandidate, keep_rows) catch return;
     var copied: usize = 0;
+    var cached_bytes: usize = 0;
     for (rows[0..keep_rows], 0..) |row, idx| {
         const title = allocator.dupe(u8, row.candidate.title) catch {
             for (cached_rows[0..copied]) |cached_row| {
@@ -83,6 +87,7 @@ pub fn cacheAsyncSearchRows(
             allocator.free(cached_rows);
             return;
         };
+        cached_bytes += title.len;
         const subtitle = allocator.dupe(u8, row.candidate.subtitle) catch {
             allocator.free(title);
             for (cached_rows[0..copied]) |cached_row| {
@@ -94,6 +99,7 @@ pub fn cacheAsyncSearchRows(
             allocator.free(cached_rows);
             return;
         };
+        cached_bytes += subtitle.len;
         const action = allocator.dupe(u8, row.candidate.action) catch {
             allocator.free(subtitle);
             allocator.free(title);
@@ -106,6 +112,7 @@ pub fn cacheAsyncSearchRows(
             allocator.free(cached_rows);
             return;
         };
+        cached_bytes += action.len;
         const icon = allocator.dupe(u8, row.candidate.icon) catch {
             allocator.free(action);
             allocator.free(subtitle);
@@ -119,6 +126,7 @@ pub fn cacheAsyncSearchRows(
             allocator.free(cached_rows);
             return;
         };
+        cached_bytes += icon.len;
         cached_rows[idx] = .{
             .score = row.score,
             .candidate = .{
@@ -135,7 +143,22 @@ pub fn cacheAsyncSearchRows(
     ctx.async_cached_rows_len = copied;
     ctx.async_cached_query_hash = query_hash;
     ctx.async_cached_total_len = total_len;
-    std.log.info("async cache stored rows={d} total={d} query_hash={d}", .{ copied, total_len, query_hash });
+    std.log.info(
+        "ram_event=async_cache_store query_hash={d} route={s} query_term_len={d} emitted_rows={d} owned_item_count={d} owned_bytes={d} generation_count={d} pruned_count={d} window_limit={d} cached_rows={d} cached_bytes={d}",
+        .{
+            query_hash,
+            route,
+            query_term_len,
+            rows.len,
+            copied,
+            cached_bytes,
+            0,
+            0,
+            window_limit,
+            copied,
+            cached_bytes,
+        },
+    );
 }
 
 pub fn asyncCachedRows(ctx: *UiContext, query_hash: u64) ?[]search_mod.ScoredCandidate {

@@ -110,6 +110,22 @@ pub fn rankDynamicRouteWithCollector(
                 prune_report.removed_bytes,
             },
         );
+        std.log.info(
+            "ram_event=dynamic_route_complete query_hash={d} route={s} query_term_len={d} emitted_rows={d} owned_item_count={d} owned_bytes={d} generation_count={d} pruned_count={d} window_limit={d} cached_rows={d} cached_bytes={d}",
+            .{
+                query_hash,
+                @tagName(query.route),
+                query.term.len,
+                dynamic_candidates.items.len,
+                after.owned_item_count,
+                after.owned_bytes,
+                after.generation_count,
+                prune_report.removed_generations,
+                0,
+                after.owned_item_count,
+                after.owned_bytes,
+            },
+        );
     }
 
     const ranked = try search.rankCandidatesWithHistory(allocator, query, dynamic_candidates.items, recent);

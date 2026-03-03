@@ -19,6 +19,14 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
         const launch: *LaunchContext = @ptrCast(@alignCast(ctx.launch_ctx));
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
         const allocator = allocator_ptr.*;
+        std.log.info(
+            "ram_event=ui_close_request query_hash={d} window_limit={d} clear_query_on_close={}",
+            .{
+                ctx.result_query_hash,
+                ctx.result_window_limit,
+                ctx.clear_query_on_close == GTRUE,
+            },
+        );
         launch.service.clearDynamicState(allocator);
         if (ctx.clear_query_on_close == GTRUE) {
             c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
