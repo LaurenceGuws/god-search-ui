@@ -41,7 +41,10 @@ zig build "${build_flags[@]}"
         echo "[re-run] stopping matching existing daemon for ${RERUN_BIN}"
         if [[ -f "$RERUN_BIN" ]]; then
             RERUN_BIN_REAL="$(realpath "$RERUN_BIN")"
-            mapfile -t matched_pids < <(pgrep -af -- "$RERUN_BIN_REAL" | awk '{print $1}' || true)
+            RERUN_BIN_BASENAME="$(basename "$RERUN_BIN_REAL")"
+            mapfile -t matched_pids < <(
+                pgrep -a -x "$RERUN_BIN_BASENAME" | awk '/--ui-daemon/ {print $1}' || true
+            )
             if ((${#matched_pids[@]} == 0)); then
                 echo "[re-run] no existing daemon found for ${RERUN_BIN_REAL}"
             else
