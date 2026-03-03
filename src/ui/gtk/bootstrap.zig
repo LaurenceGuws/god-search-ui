@@ -17,6 +17,7 @@ const HelpEntryState = struct {
     key_text: []const u8,
     details: ?[]const []const u8,
     insert_text: ?[]const u8,
+    ui_state: *HelpUiState,
     entry: *c.GtkWidget,
     panel: *c.GtkWidget,
     content: *c.GtkWidget,
@@ -363,12 +364,7 @@ fn onHelpItemClicked(button: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c)
     if (state.details) |lines| {
         std.log.info("help item submenu key={s} details_len={d}", .{ state.key_text, lines.len });
         c.gtk_widget_set_visible(state.panel, GFALSE);
-        var state_ref = HelpUiState{
-            .entry = state.entry,
-            .panel = state.panel,
-            .content = state.content,
-        };
-        populateHelpSubmenu(&state_ref, state.key_text, lines);
+        populateHelpSubmenu(state.ui_state, state.key_text, lines);
         c.gtk_widget_set_visible(state.panel, GTRUE);
         return;
     }
@@ -481,6 +477,7 @@ fn appendHelpItemWithDetails(
             .key_text = key_text,
             .details = details,
             .insert_text = insert_text,
+            .ui_state = ui_state,
             .entry = ui_state.entry,
             .panel = ui_state.panel,
             .content = ui_state.content,
