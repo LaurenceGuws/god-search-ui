@@ -44,9 +44,9 @@ GOD_SEARCH_SURFACE_MODE=layer-shell god-search-ui --ui
 ```
 Accepted values: `auto` (default), `toplevel`, `layer-shell`.
 
-Lua config (optional):
+Lua config:
 ```bash
-zig build -Denable_gtk=true -Denable_lua_config=true
+zig build -Denable_gtk=true
 ```
 Config file path defaults to `~/.config/god-search-ui/config.lua` (override with `GOD_SEARCH_CONFIG_LUA`).
 When missing, a default config file is auto-created on app startup paths that load runtime config.
@@ -60,7 +60,7 @@ scripts/set_lua_config.sh surface_mode layer-shell
 scripts/set_lua_config.sh launcher.monitor_name DP-1
 ```
 Placement docs:
-- canonical operator flow: `docs/operations/PLACEMENT_OPERATOR_FLOW.md`
+- smoke and operator checks: `docs/operations/SMOKE_TESTS.md`
 - full Lua contract + env matrix: `docs/operations/LUA_CONFIG.md`
 
 Resident GTK modes (recommended for zero-drop fast summon):
@@ -85,7 +85,7 @@ god-search-ui --ctl shell_health
 god-search-ui --ctl wm_event_stats
 ```
 Reference: `docs/operations/CONTROL_PLANE.md`
-Smoke flow: `docs/operations/CONTROL_PLANE_SMOKE.md`
+Smoke flow: `docs/operations/SMOKE_TESTS.md`
 
 Control-plane quickstart:
 ```bash
@@ -140,58 +140,6 @@ scripts/control_plane_smoke.sh
 `smoke` validates replace-id behavior, `body-markup` capability, persistent close (`reason=3`), and timeout close (`reason=1`).  
 It also sends an action-capable notification; click its action button while running `dbus-monitor` to observe `ActionInvoked`.
 
-Draft release notes from latest commits:
-```bash
-scripts/gen_release_notes.sh v0.1.0
-```
-
-Release smoke checks:
-```bash
-scripts/release_smoke.sh
-```
-Headless smoke now includes `:icondiag` to validate icon metadata/fallback diagnostics path.
-Strict icon-threshold mode (CI-oriented):
-```bash
-scripts/release_smoke.sh --strict-icon-threshold --icon-threshold=5
-```
-CI/minimal-host mode without GTK dev packages:
-```bash
-scripts/release_smoke.sh --ci
-```
-One-pass operator validation wrapper:
-```bash
-scripts/release_validate.sh --ci
-```
-Enforce clean worktree during validation:
-```bash
-scripts/release_validate.sh --ci --require-clean
-```
-CI non-interactive guard:
-```bash
-scripts/check_release_validate_ci.sh
-```
-Release smoke mode reference:
-- `docs/operations/RELEASE_SMOKE_MODES.md`
-Release validate mode reference:
-- `docs/operations/RELEASE_VALIDATE_MODES.md`
-Release contracts reference:
-- `docs/operations/RELEASE_CONTRACTS.md`
-
-Release contracts quick cheat sheet:
-```bash
-scripts/check_release_contracts.sh --docs-only
-scripts/release_validate.sh --ci --require-clean
-scripts/check_release_validate_ci.sh
-```
-Optional GTK runtime launch smoke:
-```bash
-scripts/release_smoke.sh --with-gtk-runtime
-```
-This optional mode uses a temporary `HOME` with a 4-column apps cache fixture to exercise app icon render paths.
-Release-helper CLI contract checks:
-```bash
-scripts/check_release_helpers.sh
-```
 Apps cache format compatibility checks:
 ```bash
 scripts/check_apps_cache_format.sh
@@ -208,38 +156,6 @@ Icon diagnostics threshold gate (fails when fallback ratio exceeds limit):
 ```bash
 MAX_GLYPH_FALLBACK_PCT=5 scripts/check_icondiag_threshold.sh
 ```
-Release smoke help/docs contract check:
-```bash
-scripts/check_release_smoke_contract.sh
-```
-Meta guard for all release docs contracts:
-```bash
-scripts/check_release_docs_contracts.sh
-```
-One-command alias for all release contract checks:
-```bash
-scripts/check_release_contracts.sh
-```
-Fast docs-only variant:
-```bash
-scripts/check_release_contracts.sh --docs-only
-```
-Release-contracts alias help/docs contract check:
-```bash
-scripts/check_release_contracts_contract.sh
-```
-Release-contracts doc consistency check:
-```bash
-scripts/check_release_contracts_doc.sh
-```
-Placement config/template/docs contract check:
-```bash
-scripts/check_placement_contracts.sh
-```
-Placement precedence regression check:
-```bash
-scripts/check_placement_precedence.sh
-```
 Lua config schema validator:
 ```bash
 scripts/validate_lua_config.sh
@@ -248,57 +164,6 @@ Lua validator canary checks:
 ```bash
 scripts/check_lua_config_validator.sh
 ```
-Release-validate help/docs contract check:
-```bash
-scripts/check_release_validate_contract.sh
-```
-Release script-matrix checks:
-```bash
-scripts/check_release_matrix.sh
-```
-Default-safe cut dry-run checks:
-```bash
-scripts/check_cut_dryrun_default_safe.sh
-```
-v0.1.1 pre-cut readiness gate:
-```bash
-scripts/precut_v0_1_1.sh
-```
-Release notes lint:
-```bash
-scripts/lint_release_notes.sh docs/release-notes-v0.1.1.md
-```
-
-Arch package smoke helper:
-```bash
-scripts/arch_package_smoke.sh
-```
-
-Release tag flow helper (dry-run by default):
-```bash
-scripts/cut_release_tag.sh --version v0.1.0
-```
-To include release notes in the tagged commit:
-```bash
-scripts/cut_release_tag.sh --version v0.1.0 --apply --commit-notes
-```
-To preserve already-edited release notes during apply:
-```bash
-scripts/cut_release_tag.sh --version v0.1.1 --apply --commit-notes --reuse-notes
-```
-To force regeneration (override default-safe reuse):
-```bash
-scripts/cut_release_tag.sh --version v0.1.2 --apply --commit-notes --regen-notes
-```
-
-Publish existing local tag helper (dry-run by default):
-```bash
-scripts/publish_release_tag.sh --version v0.1.0-rc2
-```
-With custom remote:
-```bash
-scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
-```
 
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`
@@ -306,29 +171,12 @@ scripts/publish_release_tag.sh --version v0.1.0-rc2 --remote upstream
 - desktop entry template: `packaging/desktop/god-search-ui.desktop`
 - icon asset: `assets/icons/god-search-ui.svg`
 - docs index and governance: `docs/README.md`
-- Notes: `docs/operations/ARCH_PACKAGING.md`
-- Arch packaged install smoke: `docs/operations/PACKAGED_INSTALL_SMOKE.md`
-- Hypr/Waybar integration: `docs/operations/HYPR_WAYBAR_INTEGRATION.md`
 - DE shell vision and architecture plan: `docs/architecture/DE_SHELL_VISION.md`
-- DE weak-areas execution roadmap: `docs/roadmaps/DE_WEAK_AREAS_ROADMAP.md`
 - WA-1 shell control-plane spec: `docs/architecture/WA1_CONTROL_PLANE_SPEC.md`
-- notifications protocol lock (from vendor artifacts): `docs/architecture/NOTIFICATIONS_PROTOCOL_LOCK.md`
-- vendor references index: `docs/vendor/README.md`
 - local external implementation workspace: `reference_repo/README.md`
-- GTK rollout checklist: `docs/operations/GTK_ROLLOUT_CHECKLIST.md`
-- Troubleshooting runbook: `docs/operations/TROUBLESHOOTING_RUNBOOK.md`
-- Release notes template: `docs/releases/RELEASE_NOTES_TEMPLATE.md`
-- Release notes curation checklist: `docs/releases/RELEASE_NOTES_CURATION_CHECKLIST.md`
-- Release tagging/rollback runbook: `docs/operations/RELEASE_TAG_ROLLBACK_RUNBOOK.md`
-- Release script matrix: `docs/operations/RELEASE_SCRIPT_MATRIX.md`
-- Release contracts reference: `docs/operations/RELEASE_CONTRACTS.md`
-- v0.1.1 patch plan (archived): `docs/archive/2026/V0_1_1_PATCH_PLAN.md`
-- Post-release triage template: `docs/project/POST_RELEASE_TRIAGE_TEMPLATE.md`
-- Triage log: `docs/project/TRIAGE_LOG.md`
-- Icon diagnostics reference: `docs/operations/ICON_DIAGNOSTICS.md`
+- Troubleshooting runbook: `docs/operations/TROUBLESHOOTING.md`
 
 ## Next
 - Wire GTK4/libadwaita bindings via C interop.
 - Implement provider contract (apps/windows/dirs/actions).
-- For release operations, start with `scripts/check_release_contracts.sh --docs-only` then `scripts/release_validate.sh --ci --require-clean`.
 - Add ranked blended results model.

@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 BIN="${BIN:-./zig-out/bin/god_search_ui}"
 if [[ ! -x "$BIN" ]]; then
   echo "missing binary: $BIN" >&2
-  echo "build with: zig build -Doptimize=ReleaseFast -Denable_gtk=true -Denable_lua_config=true -Denable_layer_shell=true" >&2
+  echo "build with: zig build -Doptimize=ReleaseFast -Denable_gtk=true -Denable_layer_shell=true" >&2
   exit 1
 fi
 

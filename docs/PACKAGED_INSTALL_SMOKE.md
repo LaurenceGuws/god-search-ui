@@ -1,1 +1,0 @@
-operations/PACKAGED_INSTALL_SMOKE.md

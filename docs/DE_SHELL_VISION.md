@@ -1,1 +1,0 @@
-architecture/DE_SHELL_VISION.md

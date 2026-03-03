@@ -1,1 +1,0 @@
-releases/RELEASE_NOTES_TEMPLATE.md

@@ -18,11 +18,12 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const enable_gtk = b.option(bool, "enable_gtk", "Enable GTK4 UI shell") orelse false;
     const enable_layer_shell = b.option(bool, "enable_layer_shell", "Enable gtk4-layer-shell integration") orelse false;
-    const enable_lua_config = b.option(bool, "enable_lua_config", "Enable Lua-backed runtime config") orelse false;
+    // Deprecated compatibility flag. Lua config is always enabled now.
+    const enable_lua_config = b.option(bool, "enable_lua_config", "Deprecated: Lua-backed runtime config is always enabled") orelse true;
     const build_options = b.addOptions();
     build_options.addOption(bool, "enable_gtk", enable_gtk);
     build_options.addOption(bool, "enable_layer_shell", enable_layer_shell);
-    build_options.addOption(bool, "enable_lua_config", enable_lua_config);
+    _ = enable_lua_config;
     // It's also possible to define more custom flags to toggle optional features
     // of this build script using `b.option()`. All defined flags (including
     // target and optimize options) will be listed when running `zig build --help`
@@ -101,10 +102,8 @@ pub fn build(b: *std.Build) void {
             exe.root_module.linkSystemLibrary("gtk4-layer-shell-0", .{ .use_pkg_config = .force });
         }
     }
-    if (enable_lua_config) {
-        exe.linkLibC();
-        exe.root_module.linkSystemLibrary("lua5.4", .{ .use_pkg_config = .force });
-    }
+    exe.linkLibC();
+    exe.root_module.linkSystemLibrary("lua5.4", .{ .use_pkg_config = .force });
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
@@ -151,10 +150,8 @@ pub fn build(b: *std.Build) void {
             mod_tests.root_module.linkSystemLibrary("gtk4-layer-shell-0", .{ .use_pkg_config = .force });
         }
     }
-    if (enable_lua_config) {
-        mod_tests.linkLibC();
-        mod_tests.root_module.linkSystemLibrary("lua5.4", .{ .use_pkg_config = .force });
-    }
+    mod_tests.linkLibC();
+    mod_tests.root_module.linkSystemLibrary("lua5.4", .{ .use_pkg_config = .force });
 
     // A run step that will run the test executable.
     const run_mod_tests = b.addRunArtifact(mod_tests);
@@ -172,10 +169,8 @@ pub fn build(b: *std.Build) void {
             exe_tests.root_module.linkSystemLibrary("gtk4-layer-shell-0", .{ .use_pkg_config = .force });
         }
     }
-    if (enable_lua_config) {
-        exe_tests.linkLibC();
-        exe_tests.root_module.linkSystemLibrary("lua5.4", .{ .use_pkg_config = .force });
-    }
+    exe_tests.linkLibC();
+    exe_tests.root_module.linkSystemLibrary("lua5.4", .{ .use_pkg_config = .force });
 
     // A run step that will run the second test executable.
     const run_exe_tests = b.addRunArtifact(exe_tests);

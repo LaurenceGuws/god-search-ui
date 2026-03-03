@@ -6,7 +6,12 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-status { color: #8b93a8; font-size: 0.92em; }\n" ++
         ".gs-help-btn { min-width: 28px; min-height: 28px; padding: 0 10px; border-radius: 8px; }\n" ++
         ".gs-help-popover, .gs-help-popover > contents { background: rgba(20, 26, 39, 0.96); border: 1px solid rgba(132, 160, 228, 0.25); border-radius: 8px; }\n" ++
-        ".gs-help-line { color: #c7d0e3; font-size: 0.90em; }\n" ++
+        ".gs-help-title { color: #e8eeff; font-size: 1.02em; font-weight: 700; }\n" ++
+        ".gs-help-subtitle { color: #aab6d0; font-size: 0.86em; margin-bottom: 2px; }\n" ++
+        ".gs-help-section { color: #88aef4; font-size: 0.80em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }\n" ++
+        ".gs-help-row { padding: 1px 0; }\n" ++
+        ".gs-help-key { color: #d9e4ff; font-family: monospace; font-size: 0.88em; font-weight: 700; }\n" ++
+        ".gs-help-desc { color: #c7d0e3; font-size: 0.90em; }\n" ++
         ".gs-status-info { color: #80a6d8; }\n" ++
         ".gs-status-success { color: #87c97f; }\n" ++
         ".gs-status-failure { color: #e58a8a; }\n" ++

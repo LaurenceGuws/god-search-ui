@@ -82,11 +82,26 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_widget_set_margin_bottom(help_box, 8);
     c.gtk_widget_set_margin_start(help_box, 10);
     c.gtk_widget_set_margin_end(help_box, 10);
-
-    appendHelpLine(help_box, "Routes: @ apps  ~ dirs  # windows  ! workspaces");
-    appendHelpLine(help_box, "Routes: % files  & grep  $ notifications");
-    appendHelpLine(help_box, "Commands: > run  = calc  ? web");
-    appendHelpLine(help_box, "Hotkeys: Ctrl+P preview, Ctrl+R refresh, Esc close");
+    c.gtk_widget_set_size_request(help_box, 380, -1);
+    appendHelpTitle(help_box, "Quick Reference", "Routes, commands, and keys");
+    appendHelpSection(help_box, "Routes");
+    appendHelpItem(help_box, "@", "Apps");
+    appendHelpItem(help_box, "#", "Windows");
+    appendHelpItem(help_box, "!", "Workspaces");
+    appendHelpItem(help_box, "~", "Recent folders");
+    appendHelpItem(help_box, "%", "Files");
+    appendHelpItem(help_box, "&", "Grep matches");
+    appendHelpItem(help_box, "$", "Notifications");
+    appendHelpSection(help_box, "Commands");
+    appendHelpItem(help_box, ">", "Run shell command");
+    appendHelpItem(help_box, "=", "Calculator");
+    appendHelpItem(help_box, "?", "Web search");
+    appendHelpSection(help_box, "Hotkeys");
+    appendHelpItem(help_box, "Enter", "Launch selected item");
+    appendHelpItem(help_box, "Ctrl+P", "Toggle preview panel");
+    appendHelpItem(help_box, "Ctrl+R", "Refresh providers");
+    appendHelpItem(help_box, "PgUp/PgDn", "Move selection");
+    appendHelpItem(help_box, "Esc", "Close launcher");
     c.gtk_popover_set_child(@ptrCast(help_popover), help_box);
     _ = c.g_signal_connect_data(help_button, "clicked", c.G_CALLBACK(onHelpClicked), help_popover, null, 0);
 
@@ -275,13 +290,59 @@ fn onHelpClicked(_: ?*c.GtkButton, user_data: ?*anyopaque) callconv(.c) void {
     c.gtk_popover_popup(@ptrCast(@alignCast(user_data.?)));
 }
 
-fn appendHelpLine(box: *c.GtkWidget, line: []const u8) void {
-    const label = c.gtk_label_new(null);
-    c.gtk_label_set_xalign(@ptrCast(label), 0.0);
-    c.gtk_label_set_wrap(@ptrCast(label), GTRUE);
-    c.gtk_widget_add_css_class(label, "gs-help-line");
-    const line_z = std.heap.page_allocator.dupeZ(u8, line) catch return;
-    defer std.heap.page_allocator.free(line_z);
-    c.gtk_label_set_text(@ptrCast(label), line_z.ptr);
-    c.gtk_box_append(@ptrCast(box), label);
+fn appendHelpTitle(box: *c.GtkWidget, title: []const u8, subtitle: []const u8) void {
+    const title_label = c.gtk_label_new(null);
+    c.gtk_label_set_xalign(@ptrCast(title_label), 0.0);
+    c.gtk_widget_add_css_class(title_label, "gs-help-title");
+    const title_z = std.heap.page_allocator.dupeZ(u8, title) catch return;
+    defer std.heap.page_allocator.free(title_z);
+    c.gtk_label_set_text(@ptrCast(title_label), title_z.ptr);
+    c.gtk_box_append(@ptrCast(box), title_label);
+
+    const subtitle_label = c.gtk_label_new(null);
+    c.gtk_label_set_xalign(@ptrCast(subtitle_label), 0.0);
+    c.gtk_label_set_wrap(@ptrCast(subtitle_label), GTRUE);
+    c.gtk_widget_add_css_class(subtitle_label, "gs-help-subtitle");
+    const subtitle_z = std.heap.page_allocator.dupeZ(u8, subtitle) catch return;
+    defer std.heap.page_allocator.free(subtitle_z);
+    c.gtk_label_set_text(@ptrCast(subtitle_label), subtitle_z.ptr);
+    c.gtk_box_append(@ptrCast(box), subtitle_label);
+}
+
+fn appendHelpSection(box: *c.GtkWidget, section_name: []const u8) void {
+    const section = c.gtk_label_new(null);
+    c.gtk_label_set_xalign(@ptrCast(section), 0.0);
+    c.gtk_widget_set_margin_top(section, 6);
+    c.gtk_widget_add_css_class(section, "gs-help-section");
+    const section_z = std.heap.page_allocator.dupeZ(u8, section_name) catch return;
+    defer std.heap.page_allocator.free(section_z);
+    c.gtk_label_set_text(@ptrCast(section), section_z.ptr);
+    c.gtk_box_append(@ptrCast(box), section);
+}
+
+fn appendHelpItem(box: *c.GtkWidget, key_text: []const u8, description_text: []const u8) void {
+    const row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+    c.gtk_widget_add_css_class(row, "gs-help-row");
+    c.gtk_widget_set_hexpand(row, GTRUE);
+
+    const key = c.gtk_label_new(null);
+    c.gtk_widget_set_size_request(key, 70, -1);
+    c.gtk_label_set_xalign(@ptrCast(key), 0.0);
+    c.gtk_widget_add_css_class(key, "gs-help-key");
+    const key_z = std.heap.page_allocator.dupeZ(u8, key_text) catch return;
+    defer std.heap.page_allocator.free(key_z);
+    c.gtk_label_set_text(@ptrCast(key), key_z.ptr);
+
+    const desc = c.gtk_label_new(null);
+    c.gtk_label_set_xalign(@ptrCast(desc), 0.0);
+    c.gtk_label_set_wrap(@ptrCast(desc), GTRUE);
+    c.gtk_widget_set_hexpand(desc, GTRUE);
+    c.gtk_widget_add_css_class(desc, "gs-help-desc");
+    const desc_z = std.heap.page_allocator.dupeZ(u8, description_text) catch return;
+    defer std.heap.page_allocator.free(desc_z);
+    c.gtk_label_set_text(@ptrCast(desc), desc_z.ptr);
+
+    c.gtk_box_append(@ptrCast(row), key);
+    c.gtk_box_append(@ptrCast(row), desc);
+    c.gtk_box_append(@ptrCast(box), row);
 }

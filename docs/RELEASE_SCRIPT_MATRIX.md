@@ -1,1 +1,0 @@
-operations/RELEASE_SCRIPT_MATRIX.md

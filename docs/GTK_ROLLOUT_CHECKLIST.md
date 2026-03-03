@@ -1,1 +1,0 @@
-operations/GTK_ROLLOUT_CHECKLIST.md

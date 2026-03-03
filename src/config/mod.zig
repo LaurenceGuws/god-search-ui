@@ -1,4 +1,3 @@
-const build_options = @import("build_options");
 const std = @import("std");
 
 pub const Settings = struct {
@@ -35,15 +34,7 @@ pub const Settings = struct {
     }
 };
 
-const impl = if (build_options.enable_lua_config)
-    @import("lua_config.zig")
-else
-    struct {
-        pub fn load(allocator: @import("std").mem.Allocator) Settings {
-            _ = @import("default_lua.zig").ensureDefaultConfig(allocator) catch false;
-            return .{};
-        }
-    };
+const impl = @import("lua_config.zig");
 
 pub fn load(allocator: std.mem.Allocator) Settings {
     return impl.load(allocator);

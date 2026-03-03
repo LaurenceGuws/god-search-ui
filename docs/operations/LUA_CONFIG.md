@@ -5,14 +5,14 @@ Owner: shell
 Last-Reviewed: 2026-02-25  
 Canonical: yes
 
-Operator flow reference: `docs/operations/PLACEMENT_OPERATOR_FLOW.md` is the single step-by-step runbook for placement setup/verification.
+Operator flow is currently validated through runtime config introspection and smoke scripts.
 
 ## Build Flag
 
-Enable Lua config support at build time:
+Lua config support is built in:
 
 ```bash
-zig build -Denable_gtk=true -Denable_lua_config=true
+zig build -Denable_gtk=true
 ```
 
 ## File Location
@@ -155,18 +155,6 @@ Smoke helper:
 
 ```bash
 scripts/placement_smoke.sh
-```
-
-Placement contract checker:
-
-```bash
-scripts/check_placement_contracts.sh
-```
-
-Placement precedence checker (`Lua -> env -> CLI`):
-
-```bash
-scripts/check_placement_precedence.sh
 ```
 
 Strict schema validator:

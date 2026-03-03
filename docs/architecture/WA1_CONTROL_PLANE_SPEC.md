@@ -46,7 +46,7 @@ Request schema:
 ```json
 {
   "v": 1,
-  "cmd": "ping|summon|hide|toggle|version"
+  "cmd": "ping|summon|hide|toggle|version|shell_health|wm_event_stats"
 }
 ```
 
@@ -55,8 +55,7 @@ Response schema:
 {
   "ok": true,
   "code": "ok",
-  "message": "human readable",
-  "data": {}
+  "message": "human readable"
 }
 ```
 
@@ -65,8 +64,7 @@ Error response example:
 {
   "ok": false,
   "code": "bad_request",
-  "message": "unknown command",
-  "data": {}
+  "message": "unknown command"
 }
 ```
 
@@ -75,35 +73,37 @@ Command semantics:
    - health probe
    - side effects: none
 2. `version`
-   - returns app version/build metadata in `data`
+   - returns daemon version in `message`
 3. `summon`
    - show/focus launcher window
 4. `hide`
    - hide launcher window
 5. `toggle`
    - toggle visible/hidden state
+6. `shell_health`
+   - returns compact module-health payload
+7. `wm_event_stats`
+   - returns compact WM event-refresh counters
 
 ## CLI Behavior
 
 `god-search-ui --ui`:
 1. Attempt socket connect and send `summon`.
 2. If daemon responds `ok`, exit immediately with code `0`.
-3. If connect fails (`ENOENT`/`ECONNREFUSED`/timeout), spawn UI daemon process path as fallback.
-4. Fallback instance should continue normal activate behavior.
+3. If connect fails (`ENOENT`/`ECONNREFUSED`/timeout), continue local UI startup path.
 
 Dedicated control commands (optional in same slice if simple):
 - `god-search-ui --ctl ping`
 - `god-search-ui --ctl hide`
 - `god-search-ui --ctl toggle`
+- `god-search-ui --ctl shell_health`
+- `god-search-ui --ctl wm_event_stats`
 
 ## Exit Codes
 
 - `0`: success
 - `10`: daemon not reachable
-- `11`: protocol error / invalid response
-- `12`: command rejected (known command, failed action)
 - `13`: bad CLI arguments
-- `14`: internal runtime error
 
 ## Timeouts
 
@@ -121,7 +121,7 @@ Server logs:
 
 Client logs:
 - connect success/failure
-- fallback to spawn reason
+- fallback to local startup reason
 
 ## Minimal Test Matrix
 

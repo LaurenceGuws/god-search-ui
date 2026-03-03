@@ -1,1 +1,0 @@
-operations/HYPR_WAYBAR_INTEGRATION.md

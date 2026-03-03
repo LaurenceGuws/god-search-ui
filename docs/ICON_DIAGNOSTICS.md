@@ -1,1 +1,0 @@
-operations/ICON_DIAGNOSTICS.md

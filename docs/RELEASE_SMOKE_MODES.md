@@ -1,1 +1,0 @@
-operations/RELEASE_SMOKE_MODES.md

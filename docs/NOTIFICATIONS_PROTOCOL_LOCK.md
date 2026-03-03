@@ -1,1 +1,0 @@
-architecture/NOTIFICATIONS_PROTOCOL_LOCK.md

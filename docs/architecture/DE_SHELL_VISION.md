@@ -7,8 +7,7 @@ Canonical: yes
 
 This document defines how `god-search-ui` evolves from launcher into a core shell daemon for a full Zig-first desktop stack.
 
-Companion execution plan for weak areas:
-- `docs/roadmaps/DE_WEAK_AREAS_ROADMAP.md`
+Companion execution plan is maintained in active issue/task tracking, not a separate roadmap doc.
 
 ## North Star
 
@@ -27,7 +26,7 @@ Build a modular shell daemon (`shelld`) that can run independently from the comp
 - freedesktop notifications daemon MVP + popup renderer + actions/history
 - modular provider-driven search pipeline
 - background cache prewarm and async refresh strategy
-- telemetry and release automation discipline
+- telemetry discipline
 
 This is a strong base for shell-daemon work.
 
