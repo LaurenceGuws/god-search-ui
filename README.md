@@ -170,7 +170,7 @@ scripts/check_lua_config_validator.sh
 - systemd user unit template: `packaging/systemd/god-search-ui.service`
 - desktop entry template: `packaging/desktop/god-search-ui.desktop`
 - icon asset: `assets/icons/god-search-ui.svg`
-- docs index and governance: `docs/README.md`
+- docs index and governance: `docs/INDEX.md`
 - DE shell vision and architecture plan: `docs/architecture/DE_SHELL_VISION.md`
 - WA-1 shell control-plane spec: `docs/architecture/WA1_CONTROL_PLANE_SPEC.md`
 - local external implementation workspace: `reference_repo/README.md`

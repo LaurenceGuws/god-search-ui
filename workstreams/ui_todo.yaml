@@ -1,0 +1,21 @@
+items:
+  - id: UI-01
+    title: Generic preview surface hardening
+    status: in_progress
+    owner: shell
+    scope:
+      - src/ui/gtk/preview.zig
+      - src/ui/gtk/bootstrap.zig
+      - src/ui/gtk/styles.zig
+      - docs/operations/TROUBLESHOOTING.md
+    acceptance:
+      - "grep preview uses pager-only rendering with hit highlighting"
+      - "directory preview toggles between ls -la and tree views"
+      - "no structured preview-field coupling remains"
+    evidence:
+      tests:
+        - "zig build -Doptimize=ReleaseFast -Denable_gtk=true -Denable_layer_shell=true"
+      smokes:
+        - "./re-run.sh"
+      last_run: "2026-03-03"
+    notes: "Follow-on work should refine UX polish, not reintroduce rigid preview fields."
