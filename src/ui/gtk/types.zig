@@ -51,6 +51,8 @@ pub const UiContext = extern struct {
     startup_key_queue_active: c.gboolean,
     startup_key_queue_len: u8,
     startup_key_queue: [24]u32,
+    result_query_hash: u64,
+    result_window_limit: u32,
     async_worker_lock: c.GMutex,
     async_worker_cond: c.GCond,
 };

@@ -10,8 +10,11 @@ const gtk_widgets = @import("widgets.zig");
 const gtk_status = @import("status.zig");
 
 const UiContext = gtk_types.UiContext;
+const c = gtk_types.c;
 const GFALSE = gtk_types.GFALSE;
 const GTRUE = gtk_types.GTRUE;
+const hot_render_rows: usize = 20;
+const max_polled_rows: usize = 1000;
 
 pub const AsyncHooks = struct {
     start_async_route_search: *const fn (*UiContext, std.mem.Allocator, []const u8) void,
@@ -22,6 +25,11 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
     const allocator = allocator_ptr.*;
     const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
+    const hash = std.hash.Wyhash.hash(0x1fe2cd, query_trimmed);
+    if (ctx.result_query_hash != hash) {
+        ctx.result_query_hash = hash;
+        ctx.result_window_limit = hot_render_rows;
+    }
 
     if (query_trimmed.len == 0) {
         hooks.cancel_async_route_search(ctx);
@@ -120,7 +128,7 @@ fn renderDefaultLoadout(ctx: *UiContext, allocator: std.mem.Allocator) void {
     }
 
     std.mem.sort(search_mod.ScoredCandidate, merged.items, {}, loadoutLessThan);
-    const limit = @min(merged.items.len, 20);
+    const limit = @min(merged.items.len, @as(usize, @intCast(ctx.result_window_limit)));
     renderRankedRows(ctx, allocator, "", merged.items[0..limit], merged.items.len);
     gtk_nav.selectFirstActionableRow(ctx);
 }
@@ -166,7 +174,7 @@ pub fn renderRankedRows(
     ranked: []const search_mod.ScoredCandidate,
     total_len: usize,
 ) void {
-    const limit = @min(ranked.len, 20);
+    const limit = @min(ranked.len, @as(usize, @intCast(ctx.result_window_limit)));
     const rows = ranked[0..limit];
     const empty_query = query_trimmed.len == 0;
     const route_hint = gtk_query.routeHintForQuery(query_trimmed);
@@ -182,9 +190,15 @@ pub fn renderRankedRows(
             gtk_widgets.appendInfoRow(ctx.list, "No results");
             gtk_widgets.appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ! workspaces  ~ dirs  % files  & grep  > run  = calc  ? web");
         } else {
+            if (empty_query and route_hint == null) {
+                gtk_render.appendOrderedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = gtk_icons.candidateIconWidget });
+            } else {
             gtk_render.appendGroupedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = gtk_icons.candidateIconWidget });
+            }
             if (total_len > limit) {
-                gtk_widgets.appendInfoRow(ctx.list, "Showing top 20 results");
+                const more = std.fmt.allocPrint(allocator, "Showing top {d} results", .{limit}) catch "Showing results";
+                defer if (!std.mem.eql(u8, more, "Showing results")) allocator.free(more);
+                gtk_widgets.appendInfoRow(ctx.list, more);
             }
         }
         ctx.last_render_hash = render_hash;
@@ -206,4 +220,22 @@ pub fn renderRankedRows(
     } else {
         gtk_status.setStatus(ctx, "");
     }
+}
+
+pub fn shouldPollMoreOnScroll(ctx: *UiContext) bool {
+    const adjustment = c.gtk_scrolled_window_get_vadjustment(@ptrCast(ctx.scroller)) orelse return false;
+    const value = c.gtk_adjustment_get_value(adjustment);
+    const page = c.gtk_adjustment_get_page_size(adjustment);
+    const upper = c.gtk_adjustment_get_upper(adjustment);
+    if (upper <= page) return false;
+
+    const remaining = upper - (value + page);
+    if (remaining > 24.0) return false;
+
+    const current: usize = @intCast(ctx.result_window_limit);
+    if (current >= max_polled_rows) return false;
+    const next = @min(max_polled_rows, current + hot_render_rows);
+    if (next == current) return false;
+    ctx.result_window_limit = @intCast(next);
+    return true;
 }

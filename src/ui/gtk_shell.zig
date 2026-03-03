@@ -205,7 +205,9 @@ pub const Shell = struct {
     fn onResultsAdjustmentChanged(_: ?*c.GtkAdjustment, user_data: ?*anyopaque) callconv(.c) void {
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        gtk_controller.handleResultsAdjustmentChanged(ctx);
+        gtk_controller.handleResultsAdjustmentChanged(ctx, .{
+            .poll_more = pollMoreResults,
+        });
     }
 
     fn searchDebounceMsForQuery(query_trimmed: []const u8) c.guint {
@@ -247,6 +249,13 @@ pub const Shell = struct {
             .cancel_async_route_search = cancelAsyncRouteSearch,
         });
         gtk_preview.refreshFromSelection(ctx);
+    }
+
+    fn pollMoreResults(ctx: *UiContext) void {
+        if (!gtk_results_flow.shouldPollMoreOnScroll(ctx)) return;
+        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        populateResults(ctx, query);
     }
 
     fn startAsyncRouteSearch(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) void {

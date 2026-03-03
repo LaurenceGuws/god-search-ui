@@ -8,6 +8,7 @@ const GFALSE = gtk_types.GFALSE;
 const UiContext = gtk_types.UiContext;
 const AsyncSearchResult = gtk_async.AsyncSearchResult;
 const AsyncRenderedRow = gtk_async.AsyncRenderedRow;
+const max_async_rows: usize = 20;
 
 pub const SpinnerCallbacks = struct {
     begin: *const fn (*UiContext) void,
@@ -115,7 +116,7 @@ fn asyncRouteSearchWorker(payload: *AsyncSearchResult) void {
 
     payload.search_error = null;
     payload.total_len = ranked.len;
-    const limit = @min(ranked.len, 20);
+    const limit = @min(ranked.len, max_async_rows);
     payload.rows = allocator.alloc(AsyncRenderedRow, limit) catch {
         markPayloadSearchFailure(payload, error.OutOfMemory);
         dispatchOrFreePayload(ctx, payload);

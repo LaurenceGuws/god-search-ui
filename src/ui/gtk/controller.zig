@@ -21,6 +21,10 @@ pub const StatusHooks = struct {
     set_status: *const fn (*UiContext, []const u8) void,
 };
 
+pub const ScrollHooks = struct {
+    poll_more: *const fn (*UiContext) void,
+};
+
 pub fn handleKeyPressed(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierType, hooks: InputHooks) c.gboolean {
     if (captureStartupKey(ctx, keyval, state)) {
         return GTRUE;
@@ -193,8 +197,9 @@ pub fn handleEntryActivate(ctx: *UiContext) void {
     gtk_nav.activateSelectedRow(ctx);
 }
 
-pub fn handleResultsAdjustmentChanged(ctx: *UiContext) void {
+pub fn handleResultsAdjustmentChanged(ctx: *UiContext, hooks: ScrollHooks) void {
     gtk_nav.updateScrollbarActiveClass(ctx);
+    hooks.poll_more(ctx);
 }
 
 pub fn updateEntryRouteIcon(ctx: *UiContext, query: []const u8) void {

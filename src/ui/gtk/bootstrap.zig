@@ -166,6 +166,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_widget_set_visible(preview_panel, gtk_types.GFALSE);
 
     const content_pane = c.gtk_paned_new(c.GTK_ORIENTATION_HORIZONTAL);
+    c.gtk_widget_add_css_class(content_pane, "gs-content-pane");
     c.gtk_widget_set_vexpand(content_pane, GTRUE);
     c.gtk_widget_set_hexpand(content_pane, GTRUE);
     c.gtk_paned_set_position(@ptrCast(content_pane), 620);
@@ -223,6 +224,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.startup_key_queue_active = gtk_types.GFALSE;
     ctx.startup_key_queue_len = 0;
     ctx.startup_key_queue = [_]u32{0} ** 24;
+    ctx.result_query_hash = 0;
+    ctx.result_window_limit = 20;
     c.g_mutex_init(&ctx.async_worker_lock);
     c.g_cond_init(&ctx.async_worker_cond);
 

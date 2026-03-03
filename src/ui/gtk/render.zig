@@ -56,6 +56,18 @@ pub fn appendGroupedRows(
     _ = appendGroup(ctx, allocator, rows, .hint, "Hints", rendered_any, highlight_token, hooks);
 }
 
+pub fn appendOrderedRows(
+    ctx: *UiContext,
+    allocator: std.mem.Allocator,
+    rows: []const ScoredCandidate,
+    highlight_token: []const u8,
+    hooks: Hooks,
+) void {
+    for (rows) |row| {
+        appendCandidateRow(ctx.list, allocator, row, highlight_token, hooks);
+    }
+}
+
 fn appendGroup(
     ctx: *UiContext,
     allocator: std.mem.Allocator,
