@@ -36,17 +36,19 @@ items:
 
   - id: REVIEW-03
     title: Move heavy route work off GTK main thread
-    status: pending
+    status: in_progress
     owner: shell
     files:
       - src/ui/gtk/results_flow.zig
       - src/ui/gtk_shell.zig
       - src/app/search_service/query_engine.zig
-    done: []
+    done:
+      - Confirmed hot paths: non-route/default queries remain sync in `results_flow`, while route-heavy prefixes were still dispatched to sync `searchQuery`.
+      - Expanded async route eligibility to include `%`, `&`, `$`, `=` prefixes in UI route detection so heavy dynamic route collectors stay off the GTK main thread.
+      - Added tests covering async route detection edge cases for route prefixes.
     todo:
-      - Audit synchronous hot paths still doing collect/rank on main thread.
-      - Route long-running operations through background async workers with cancellation support.
-      - Return incremental updates safely on UI thread boundary.
+      - If profiler shows still-blocking path for other query routes/providers, expand async offloading scope and measure UI thread latency.
+      - Add integration test ensuring stale async payload generation drops results when query changes mid-flight.
     notes: UI jank risk is highest during large searches.
 
   - id: REVIEW-04

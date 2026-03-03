@@ -36,8 +36,10 @@ pub fn routeIconForLeadingPrefix(query: []const u8) ?[]const u8 {
 pub fn shouldAsyncRouteQuery(query_trimmed: []const u8) bool {
     if (query_trimmed.len < 2) return false;
     const route = query_trimmed[0];
-    if (route != '%' and route != '&') return false;
-    return std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len > 0;
+    return switch (route) {
+        '%', '&', '$', '=' => std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len > 0,
+        else => false,
+    };
 }
 
 pub fn routeHintForQuery(query_trimmed: []const u8) ?[]const u8 {
@@ -124,4 +126,16 @@ test "highlightedMarkup escapes without highlighting when token missing" {
     const markup = try highlightedMarkup(allocator, "<b>safe</b> & text", "missing");
     defer allocator.free(markup);
     try std.testing.expectEqualStrings("&lt;b&gt;safe&lt;/b&gt; &amp; text", markup);
+}
+
+test "route query prefixes with heavy backends should be async" {
+    try std.testing.expect(shouldAsyncRouteQuery("% files"));
+    try std.testing.expect(shouldAsyncRouteQuery("& needle"));
+    try std.testing.expect(shouldAsyncRouteQuery("$ one"));
+    try std.testing.expect(shouldAsyncRouteQuery("= 2+2"));
+}
+
+test "route query prefixes without term should stay sync for hint rendering" {
+    try std.testing.expect(!shouldAsyncRouteQuery("%"));
+    try std.testing.expect(!shouldAsyncRouteQuery("$"));
 }
