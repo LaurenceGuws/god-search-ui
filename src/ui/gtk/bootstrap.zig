@@ -124,6 +124,8 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     const help_panel_row = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 0);
     c.gtk_widget_set_hexpand(help_panel_row, GTRUE);
     c.gtk_widget_set_visible(help_panel_row, GFALSE);
+    c.gtk_widget_set_halign(help_panel_row, c.GTK_ALIGN_FILL);
+    c.gtk_widget_set_valign(help_panel_row, c.GTK_ALIGN_START);
     const help_panel_spacer = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 0);
     c.gtk_widget_set_hexpand(help_panel_spacer, GTRUE);
     c.gtk_widget_set_halign(help_box, c.GTK_ALIGN_END);
@@ -226,6 +228,18 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_paned_set_resize_end_child(@ptrCast(content_pane), GFALSE);
     c.gtk_paned_set_shrink_end_child(@ptrCast(content_pane), GFALSE);
 
+    const content_stack = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 0);
+    c.gtk_widget_set_hexpand(content_stack, GTRUE);
+    c.gtk_widget_set_vexpand(content_stack, GTRUE);
+    c.gtk_box_append(@ptrCast(content_stack), status);
+    c.gtk_box_append(@ptrCast(content_stack), content_pane);
+
+    const content_overlay = c.gtk_overlay_new();
+    c.gtk_widget_set_hexpand(content_overlay, GTRUE);
+    c.gtk_widget_set_vexpand(content_overlay, GTRUE);
+    c.gtk_overlay_set_child(@ptrCast(content_overlay), content_stack);
+    c.gtk_overlay_add_overlay(@ptrCast(content_overlay), help_panel_row);
+
     const ctx: *UiContext = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(UiContext))));
     const allocator_box = launch.allocator.create(std.mem.Allocator) catch {
         c.g_free(ctx);
@@ -302,9 +316,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(hooks.on_destroy), ctx, null, 0);
 
     c.gtk_box_append(@ptrCast(root_box), entry_row);
-    c.gtk_box_append(@ptrCast(root_box), help_panel_row);
-    c.gtk_box_append(@ptrCast(root_box), status);
-    c.gtk_box_append(@ptrCast(root_box), content_pane);
+    c.gtk_box_append(@ptrCast(root_box), content_overlay);
     c.gtk_window_set_child(@ptrCast(window), root_box);
     launch.ctx = ctx;
     if (launch.start_hidden) {
