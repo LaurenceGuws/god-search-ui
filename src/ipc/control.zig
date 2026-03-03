@@ -34,6 +34,7 @@ const OwnedResponse = struct {
     ok: bool,
     code: []const u8,
     message: []const u8,
+    elapsed_ns: u64,
 };
 
 const connect_timeout_ms: u64 = 250;
@@ -86,28 +87,71 @@ pub const Server = struct {
 };
 
 pub fn trySendCommand(allocator: std.mem.Allocator, cmd: Command) !bool {
-    const response = try sendCommand(allocator, cmd);
+    const start_ns = std.time.nanoTimestamp();
+    const response = sendCommand(allocator, cmd) catch |err| {
+        const elapsed_ns = elapsedFrom(start_ns);
+        std.log.warn(
+            "ipc control route failure endpoint=ui-daemon route={s} elapsed_ns={d} exit_code=transport_error err={s}",
+            .{ @tagName(cmd), elapsed_ns, @errorName(err) },
+        );
+        return err;
+    };
     defer {
         allocator.free(response.code);
         allocator.free(response.message);
     }
-    if (!response.ok) return false;
+    if (!response.ok) {
+        std.log.warn(
+            "ipc control route rejected endpoint=ui-daemon route={s} exit_code={s} elapsed_ns={d} message={s}",
+            .{ @tagName(cmd), response.code, response.elapsed_ns, response.message },
+        );
+        return false;
+    }
+    std.log.info(
+        "ipc control route exit endpoint=ui-daemon route={s} exit_code={s} elapsed_ns={d}",
+        .{ @tagName(cmd), response.code, response.elapsed_ns },
+    );
     return std.mem.eql(u8, response.code, "ok");
 }
 
 pub fn queryCommandMessage(allocator: std.mem.Allocator, cmd: Command) !?[]u8 {
-    const response = try sendCommand(allocator, cmd);
+    const start_ns = std.time.nanoTimestamp();
+    const response = sendCommand(allocator, cmd) catch |err| {
+        const elapsed_ns = elapsedFrom(start_ns);
+        std.log.warn(
+            "ipc control query failure endpoint=ui-daemon route={s} elapsed_ns={d} exit_code=transport_error err={s}",
+            .{ @tagName(cmd), elapsed_ns, @errorName(err) },
+        );
+        return err;
+    };
     defer {
         allocator.free(response.code);
         allocator.free(response.message);
     }
-    if (!response.ok) return null;
-    if (!std.mem.eql(u8, response.code, "ok")) return null;
+    if (!response.ok) {
+        std.log.warn(
+            "ipc control query rejected endpoint=ui-daemon route={s} exit_code={s} elapsed_ns={d} message={s}",
+            .{ @tagName(cmd), response.code, response.elapsed_ns, response.message },
+        );
+        return null;
+    }
+    if (!std.mem.eql(u8, response.code, "ok")) {
+        return null;
+    }
+    std.log.info(
+        "ipc control query ok endpoint=ui-daemon route={s} exit_code={s} elapsed_ns={d}",
+        .{ @tagName(cmd), response.code, response.elapsed_ns },
+    );
     const msg = try allocator.dupe(u8, response.message);
     return msg;
 }
 
+pub fn executeCommand(allocator: std.mem.Allocator, cmd: Command) !OwnedResponse {
+    return sendCommand(allocator, cmd);
+}
+
 fn sendCommand(allocator: std.mem.Allocator, cmd: Command) !OwnedResponse {
+    const start_ns = std.time.nanoTimestamp();
     const socket_path = try defaultSocketPathAlloc(allocator);
     defer allocator.free(socket_path);
 
@@ -190,7 +234,13 @@ fn sendCommand(allocator: std.mem.Allocator, cmd: Command) !OwnedResponse {
         .ok = parsed.value.ok,
         .code = code,
         .message = message,
+        .elapsed_ns = elapsedFrom(start_ns),
     };
+}
+
+fn elapsedFrom(start_ns: i128) u64 {
+    const elapsed = std.time.nanoTimestamp() - start_ns;
+    return if (elapsed > 0) @intCast(elapsed) else 0;
 }
 
 pub fn defaultSocketPathAlloc(allocator: std.mem.Allocator) ![]u8 {

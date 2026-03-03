@@ -24,22 +24,48 @@ pub fn main() !void {
             std.process.exit(13);
         };
         if (cmd == .shell_health or cmd == .wm_event_stats) {
-            const msg = god_search_ui.ipc.control.queryCommandMessage(allocator, cmd) catch null;
-            if (msg) |payload| {
-                defer allocator.free(payload);
+            const response = god_search_ui.ipc.control.executeCommand(allocator, cmd) catch |err| {
+                std.log.err("control command failure route={s} err={s}", .{ raw_cmd, @errorName(err) });
+                std.process.exit(10);
+            };
+            defer {
+                allocator.free(response.code);
+                allocator.free(response.message);
+            }
+            if (!response.ok) {
+                std.log.err(
+                    "control command rejected route={s} exit_code={s} elapsed_ns={d} message={s}",
+                    .{ raw_cmd, response.code, response.elapsed_ns, response.message },
+                );
+                std.process.exit(10);
+            }
+            if (response.message.len > 0) {
                 var stdout_buffer: [4096]u8 = undefined;
                 var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
                 const out = &stdout_writer.interface;
-                try out.print("{s}\n", .{payload});
+                try out.print("{s}\n", .{response.message});
                 try out.flush();
-                std.process.exit(0);
+            } else {
+                std.log.err("control command returned empty payload route={s}", .{raw_cmd});
+                std.process.exit(10);
             }
-            std.process.exit(10);
-        }
-        const ok = god_search_ui.ipc.control.trySendCommand(allocator, cmd) catch false;
-        if (ok) {
             std.process.exit(0);
         }
+        const response = god_search_ui.ipc.control.executeCommand(allocator, cmd) catch |err| {
+            std.log.err("control command failure route={s} err={s}", .{ raw_cmd, @errorName(err) });
+            std.process.exit(10);
+        };
+        defer {
+            allocator.free(response.code);
+            allocator.free(response.message);
+        }
+        if (response.ok and std.mem.eql(u8, response.code, "ok")) {
+            std.process.exit(0);
+        }
+        std.log.err(
+            "control command rejected route={s} exit_code={s} elapsed_ns={d} message={s}",
+            .{ raw_cmd, response.code, response.elapsed_ns, response.message },
+        );
         std.process.exit(10);
     }
 

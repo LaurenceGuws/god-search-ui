@@ -99,16 +99,18 @@ items:
 
   - id: REVIEW-07
     title: Improve diagnostics surface quality
-    status: pending
+    status: completed
     owner: shell
     files:
       - src/ipc/control.zig
       - src/main.zig
       - src/app/search_service/
-    done: []
+    done:
+      - Added control command response helper path with route-specific logging and elapsed timing.
+      - Added structured control command logs (endpoint/route/elapsed_ns/exit_code) for query and non-query paths.
+      - Added CLI action context logs on control command rejection/failure in `main`.
     todo:
-      - Preserve action-specific error context for UI-facing control failures.
-      - Add structured logging fields: endpoint, route, elapsed_ns, exit_code.
+      - None.
     notes: Makes future debugging faster for daemon and protocol issues.
 
   - id: REVIEW-08
