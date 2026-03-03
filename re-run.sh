@@ -19,6 +19,7 @@ cd "$ROOT_DIR"
 : "${RERUN_DAEMON_ARGS:=--ui-daemon}"
 : "${RERUN_BIN:=./zig-out/bin/god_search_ui}"
 : "${RERUN_LOG:=$HOME/.local/state/god-search-ui/daemon.log}"
+: "${RERUN_KILL_TARGET:=true}"
 
 if [[ -f "$ROOT_DIR/.rerun.env" ]]; then
   # shellcheck disable=SC1091
@@ -36,8 +37,19 @@ mkdir -p "$(dirname "$RERUN_LOG")"
 echo "[re-run] building: zig build ${build_flags[*]}"
 zig build "${build_flags[@]}"
 
-echo "[re-run] stopping existing daemon"
-pkill -x god_search_ui 2>/dev/null || true
+if [[ "$RERUN_KILL_TARGET" == "true" ]]; then
+    echo "[re-run] stopping matching existing daemon for ${RERUN_BIN}"
+    if [[ -f "$RERUN_BIN" ]]; then
+        RERUN_BIN_REAL="$(realpath "$RERUN_BIN")"
+        pgrep -af "$RERUN_BIN_REAL" | awk '{print $1}' | while read -r pid; do
+            kill "$pid" 2>/dev/null || true
+        done
+    else
+        pkill -x god_search_ui 2>/dev/null || true
+    fi
+else
+    echo "[re-run] skipping daemon kill (RERUN_KILL_TARGET=false)"
+fi
 rm -f "$sock" 2>/dev/null || true
 
 echo "[re-run] starting daemon: GOD_SEARCH_SURFACE_MODE=$RERUN_SURFACE_MODE $RERUN_BIN ${daemon_args[*]}"
