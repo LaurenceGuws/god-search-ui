@@ -1,7 +1,7 @@
 items:
   - id: CP-01
     title: Align control-plane docs with actual command behavior
-    status: in_progress
+    status: completed
     owner: shell
     files:
       - src/main.zig
@@ -9,6 +9,8 @@ items:
       - docs/architecture/WA1_CONTROL_PLANE_SPEC.md
     done:
       - Control commands are documented in one canonical spec.
+      - Removed unsupported command names from control-plane request schema and command lists.
+      - Verified CLI usage text already matches implemented command set.
     todo:
-      - Confirm spec text matches current command set and response shape.
+      - None.
     notes: Keep this focused on behavior clarity, not feature expansion.

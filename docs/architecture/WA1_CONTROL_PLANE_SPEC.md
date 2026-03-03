@@ -46,7 +46,7 @@ Request schema:
 ```json
 {
   "v": 1,
-  "cmd": "ping|summon|hide|toggle|version|shell_health|wm_event_stats|refresh|query-mode|preview-mode|help"
+  "cmd": "ping|summon|hide|toggle|version|shell_health|wm_event_stats"
 }
 ```
 
@@ -77,10 +77,6 @@ Error response example:
 5. `toggle`: toggle visible/hidden state.
 6. `shell_health`: returns compact module-health payload.
 7. `wm_event_stats`: returns compact WM event-refresh counters.
-8. `refresh`: force shell state refresh.
-9. `query-mode`: print current mode.
-10. `preview-mode`: print current preview mode state.
-11. `help`: print control command help.
 
 ## CLI Behavior
 
@@ -97,10 +93,6 @@ Dedicated control commands:
 - `god-search-ui --ctl version`
 - `god-search-ui --ctl shell_health`
 - `god-search-ui --ctl wm_event_stats`
-- `god-search-ui --ctl refresh`
-- `god-search-ui --ctl query-mode`
-- `god-search-ui --ctl preview-mode`
-- `god-search-ui --ctl help`
 
 ## Exit Codes
 
@@ -111,6 +103,6 @@ Dedicated control commands:
 ## Notes
 
 - Keep server single-threaded.
-- Keep request buffer bounded (for example 4 KiB).
+- Keep request/response payloads bounded (8 MiB maximum response cap).
 - Keep protocol versioned from day one (`v` field).
 - Keep control-plane code under `src/ipc/`.
