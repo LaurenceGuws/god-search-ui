@@ -5,7 +5,7 @@ const c = gtk_types.c;
 pub fn searchDebounceMsForQuery(query_trimmed: []const u8) c.guint {
     const query_len = query_trimmed.len;
     if (query_len == 0) return 110;
-    if (query_len >= 1 and (query_trimmed[0] == '%' or query_trimmed[0] == '&' or query_trimmed[0] == '+')) {
+    if (query_len >= 1 and (query_trimmed[0] == '%' or query_trimmed[0] == '&' or query_trimmed[0] == '+' or query_trimmed[0] == '^')) {
         const term_len = if (query_len > 1) std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len else 0;
         if (term_len <= 1) return 300;
         if (term_len <= 3) return 220;
@@ -26,6 +26,7 @@ pub fn routeIconForLeadingPrefix(query: []const u8) ?[]const u8 {
         '%' => "text-x-generic-symbolic",
         '&' => "edit-find-symbolic",
         '+' => "system-software-install-symbolic",
+        '^' => "image-x-generic-symbolic",
         '$' => "preferences-system-notifications-symbolic",
         '>' => "utilities-terminal-symbolic",
         '=' => "accessories-calculator-symbolic",
@@ -38,7 +39,7 @@ pub fn shouldAsyncRouteQuery(query_trimmed: []const u8) bool {
     if (query_trimmed.len < 2) return false;
     const route = query_trimmed[0];
     return switch (route) {
-        '%', '&', '+', '$', '=' => std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len > 0,
+        '%', '&', '+', '^', '$', '=' => std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len > 0,
         else => false,
     };
 }
@@ -53,6 +54,7 @@ pub fn routeHintForQuery(query_trimmed: []const u8) ?[]const u8 {
         '%' => "Files route active: find files and folders after %",
         '&' => "Grep route active: type text to search after &",
         '+' => "Packages route active: search yay/pacman packages after +",
+        '^' => "Icons route active: search icon filenames in installed themes after ^",
         '$' => "Notifications route active: search and dismiss notifications after $",
         '>' => "Run route active: type command after >",
         '=' => "Calc route active: type expression after =",
@@ -66,7 +68,7 @@ pub fn highlightTokenForQuery(query_trimmed: []const u8) []const u8 {
     if (token.len == 0) return "";
     if (token.len > 1) {
         token = switch (token[0]) {
-            '@', '#', '!', '~', '%', '&', '+', '$', '>', '=', '?' => std.mem.trim(u8, token[1..], " \t\r\n"),
+            '@', '#', '!', '~', '%', '&', '+', '^', '$', '>', '=', '?' => std.mem.trim(u8, token[1..], " \t\r\n"),
             else => token,
         };
     }
@@ -134,6 +136,7 @@ test "route query prefixes with heavy backends should be async" {
     try std.testing.expect(shouldAsyncRouteQuery("% files"));
     try std.testing.expect(shouldAsyncRouteQuery("& needle"));
     try std.testing.expect(shouldAsyncRouteQuery("+ ripgrep"));
+    try std.testing.expect(shouldAsyncRouteQuery("^ arch"));
     try std.testing.expect(shouldAsyncRouteQuery("$ one"));
     try std.testing.expect(shouldAsyncRouteQuery("= 2+2"));
 }

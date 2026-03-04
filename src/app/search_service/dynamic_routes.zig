@@ -5,6 +5,7 @@ const search = @import("../../search/mod.zig");
 
 const max_rg_capture_bytes = 64 * 1024 * 1024;
 const max_pkg_capture_bytes = 16 * 1024 * 1024;
+const max_icon_capture_bytes = 16 * 1024 * 1024;
 const tool_state_refresh_ttl_ns: i64 = 5 * std.time.ns_per_s;
 
 pub const ToolState = struct {
@@ -47,6 +48,7 @@ pub fn collectForRoute(
         .files => try collectFdCandidates(tool_state, dynamic_owned, allocator, term, out),
         .grep => try collectRgCandidates(tool_state, dynamic_owned, allocator, term, out),
         .packages => try collectPackageCandidates(tool_state, dynamic_owned, allocator, term, out),
+        .icons => try collectIconCandidates(tool_state, dynamic_owned, allocator, term, out),
         .notifications => try notifications.runtime.appendRouteCandidates(dynamic_owned, allocator, term, out),
         .calc => try collectCalcCandidates(dynamic_owned, allocator, term, out),
         else => {},
@@ -479,6 +481,48 @@ fn collectCalcCandidates(
         .action = kept_action,
         .icon = "accessories-calculator-symbolic",
     });
+}
+
+fn collectIconCandidates(
+    tool_state: *ToolState,
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    term: []const u8,
+    out: *search.CandidateList,
+) !void {
+    if (!fdAvailable(tool_state)) return;
+    const term_trimmed = std.mem.trim(u8, term, " \t\r\n");
+    if (term_trimmed.len == 0) return;
+
+    const term_q = try shellSingleQuote(allocator, term_trimmed);
+    defer allocator.free(term_q);
+    const cmd = try std.fmt.allocPrint(
+        allocator,
+        "for d in \"$HOME/.icons\" \"$HOME/.local/share/icons\" /usr/share/icons /usr/share/pixmaps; do [ -d \"$d\" ] || continue; fd --type f --hidden --follow --ignore-case --color never -e svg -e png -e xpm --max-results 250 {s} \"$d\"; done | awk '!seen[$0]++'",
+        .{term_q},
+    );
+    defer allocator.free(cmd);
+
+    const rows = runShellCaptureBounded(allocator, cmd, max_icon_capture_bytes) catch |err| {
+        std.log.warn("icons collect failed route=icons term={s} err={s}", .{ term_trimmed, @errorName(err) });
+        return;
+    };
+    defer allocator.free(rows);
+
+    var lines = std.mem.splitScalar(u8, rows, '\n');
+    var parsed_count: usize = 0;
+    var emitted_count: usize = 0;
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trim(u8, line_raw, " \t\r\n");
+        if (line.len == 0) continue;
+        parsed_count += 1;
+        const title = std.fs.path.basename(line);
+        const kept_title = try keepDynamicString(dynamic_owned, allocator, title);
+        const kept_path = try keepDynamicString(dynamic_owned, allocator, line);
+        try out.append(allocator, search.Candidate.initWithIcon(.file, kept_title, kept_path, kept_path, kept_path));
+        emitted_count += 1;
+    }
+    std.log.info("icons collect done term={s} parsed_lines={d} emitted={d}", .{ term_trimmed, parsed_count, emitted_count });
 }
 
 fn freeParsedRgRow(allocator: std.mem.Allocator, row: ParsedRgRow) void {

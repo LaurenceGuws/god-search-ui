@@ -296,7 +296,7 @@ pub fn renderRankedRows(
         }
         if (rows.len == 0 and !empty_query and route_hint == null) {
             gtk_widgets.appendInfoRow(ctx.list, "No results");
-            gtk_widgets.appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ! workspaces  ~ dirs  % files  & grep  + packages  > run  = calc  ? web");
+            gtk_widgets.appendInfoRow(ctx.list, "Try routes: @ apps  # windows  ! workspaces  ~ dirs  % files  & grep  + packages  ^ icons  > run  = calc  ? web");
         } else {
             if (empty_query and route_hint == null) {
                 gtk_render.appendOrderedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = gtk_icons.candidateIconWidget });
@@ -324,7 +324,7 @@ pub fn renderRankedRows(
     } else if (empty_query and has_app_glyph_fallback) {
         gtk_status.setStatus(ctx, "App icon fallback active (headless :icondiag for breakdown)");
     } else if (empty_query) {
-        gtk_status.setStatus(ctx, "Esc close | Ctrl+P preview | Ctrl+R refresh | @ apps # windows ! workspaces ~ dirs % files & grep + packages > run = calc ? web");
+        gtk_status.setStatus(ctx, "Esc close | Ctrl+P preview | Ctrl+R refresh | @ apps # windows ! workspaces ~ dirs % files & grep + packages ^ icons > run = calc ? web");
     } else {
         gtk_status.setStatus(ctx, "");
     }

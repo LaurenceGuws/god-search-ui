@@ -36,6 +36,15 @@ pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, ac
             return @ptrCast(image);
         }
     }
+    if (kind == .file) {
+        if (resolveIconFileForCandidate(allocator, icon, action)) |icon_path_z| {
+            defer allocator.free(icon_path_z);
+            const image = c.gtk_image_new_from_file(icon_path_z.ptr);
+            c.gtk_image_set_pixel_size(@ptrCast(image), 30);
+            c.gtk_widget_add_css_class(image, "gs-kind-icon");
+            return @ptrCast(image);
+        }
+    }
     if ((kind == .action or kind == .hint) and isPackageAction(action)) {
         if (resolvePackageIconName(allocator, icon, action)) |icon_name_z| {
             defer allocator.free(icon_name_z);
@@ -55,6 +64,31 @@ pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, ac
     const icon_label = c.gtk_label_new(fallback_icon_z.ptr);
     c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
     return @ptrCast(icon_label);
+}
+
+fn resolveIconFileForCandidate(allocator: std.mem.Allocator, icon: []const u8, action: []const u8) ?[:0]u8 {
+    const icon_trimmed = std.mem.trim(u8, icon, " \t\r\n\"'");
+    if (icon_trimmed.len > 0 and looksLikeImageFile(icon_trimmed)) {
+        const resolved = expandHomePath(allocator, icon_trimmed) catch return null;
+        defer allocator.free(resolved);
+        if (fileExistsAnyPath(resolved)) return allocator.dupeZ(u8, resolved) catch null;
+    }
+    const action_trimmed = std.mem.trim(u8, action, " \t\r\n\"'");
+    if (action_trimmed.len > 0 and looksLikeImageFile(action_trimmed)) {
+        const resolved = expandHomePath(allocator, action_trimmed) catch return null;
+        defer allocator.free(resolved);
+        if (fileExistsAnyPath(resolved)) return allocator.dupeZ(u8, resolved) catch null;
+    }
+    return null;
+}
+
+fn looksLikeImageFile(path: []const u8) bool {
+    return std.mem.endsWith(u8, path, ".png") or
+        std.mem.endsWith(u8, path, ".svg") or
+        std.mem.endsWith(u8, path, ".xpm") or
+        std.mem.endsWith(u8, path, ".PNG") or
+        std.mem.endsWith(u8, path, ".SVG") or
+        std.mem.endsWith(u8, path, ".XPM");
 }
 
 fn isPackageAction(action: []const u8) bool {
