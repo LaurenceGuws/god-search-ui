@@ -14,5 +14,5 @@ pub fn parseAndClassify(raw_query: []const u8) QueryDispatch {
 }
 
 fn isDynamicRoute(route: search.Route) bool {
-    return route == .files or route == .grep or route == .packages or route == .icons or route == .calc or route == .notifications;
+    return route == .files or route == .grep or route == .packages or route == .icons or route == .nerd_icons or route == .emoji or route == .calc or route == .notifications;
 }

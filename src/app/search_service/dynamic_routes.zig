@@ -6,6 +6,8 @@ const search = @import("../../search/mod.zig");
 const max_rg_capture_bytes = 64 * 1024 * 1024;
 const max_pkg_capture_bytes = 16 * 1024 * 1024;
 const max_icon_capture_bytes = 16 * 1024 * 1024;
+const nerd_icons_default_rel_path = "personal/bash_engine/src/modules/fun/nerd_icons_fzf/icons_simple.txt";
+const emoji_translit_path = "/usr/share/i18n/locales/translit_emojis";
 const tool_state_refresh_ttl_ns: i64 = 5 * std.time.ns_per_s;
 
 pub const ToolState = struct {
@@ -42,13 +44,15 @@ pub fn collectForRoute(
     out: *search.CandidateList,
 ) !void {
     const term = std.mem.trim(u8, query.term, " \t\r\n");
-    if (term.len == 0 and query.route != .notifications) return;
+    if (term.len == 0 and query.route != .notifications and query.route != .nerd_icons and query.route != .emoji) return;
 
     switch (query.route) {
         .files => try collectFdCandidates(tool_state, dynamic_owned, allocator, term, out),
         .grep => try collectRgCandidates(tool_state, dynamic_owned, allocator, term, out),
         .packages => try collectPackageCandidates(tool_state, dynamic_owned, allocator, term, out),
         .icons => try collectIconCandidates(tool_state, dynamic_owned, allocator, term, out),
+        .nerd_icons => try collectNerdIconCandidates(dynamic_owned, allocator, term, out),
+        .emoji => try collectEmojiCandidates(dynamic_owned, allocator, term, out),
         .notifications => try notifications.runtime.appendRouteCandidates(dynamic_owned, allocator, term, out),
         .calc => try collectCalcCandidates(dynamic_owned, allocator, term, out),
         else => {},
@@ -523,6 +527,117 @@ fn collectIconCandidates(
         emitted_count += 1;
     }
     std.log.info("icons collect done term={s} parsed_lines={d} emitted={d}", .{ term_trimmed, parsed_count, emitted_count });
+}
+
+fn collectNerdIconCandidates(
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    term: []const u8,
+    out: *search.CandidateList,
+) !void {
+    const term_trimmed = std.mem.trim(u8, term, " \t\r\n");
+    const path = resolveNerdIconSourcePath(allocator) catch return;
+    defer allocator.free(path);
+    const data = std.fs.openFileAbsolute(path, .{}) catch return;
+    defer data.close();
+    const content = data.readToEndAlloc(allocator, 8 * 1024 * 1024) catch return;
+    defer allocator.free(content);
+
+    var lines = std.mem.splitScalar(u8, content, '\n');
+    var parsed_count: usize = 0;
+    var emitted_count: usize = 0;
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trim(u8, line_raw, " \t\r\n");
+        if (line.len == 0 or line[0] == '#') continue;
+        parsed_count += 1;
+        if (term_trimmed.len > 0 and !containsAsciiCaseInsensitive(line, term_trimmed)) continue;
+        const glyph, const alias, const description = parseNerdIconLine(line) orelse continue;
+        const action = try std.fmt.allocPrint(allocator, "nerd-copy:{s}", .{glyph});
+        defer allocator.free(action);
+        const kept_title = try keepDynamicString(dynamic_owned, allocator, alias);
+        const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, description);
+        const kept_action = try keepDynamicString(dynamic_owned, allocator, action);
+        const kept_icon = try keepDynamicString(dynamic_owned, allocator, glyph);
+        try out.append(allocator, search.Candidate.initWithIcon(.hint, kept_title, kept_subtitle, kept_action, kept_icon));
+        emitted_count += 1;
+    }
+    std.log.info("nerd-icons collect done term={s} parsed_lines={d} emitted={d}", .{ term_trimmed, parsed_count, emitted_count });
+}
+
+fn collectEmojiCandidates(
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    term: []const u8,
+    out: *search.CandidateList,
+) !void {
+    const term_trimmed = std.mem.trim(u8, term, " \t\r\n");
+    const file = std.fs.openFileAbsolute(emoji_translit_path, .{}) catch return;
+    defer file.close();
+    const content = file.readToEndAlloc(allocator, 2 * 1024 * 1024) catch return;
+    defer allocator.free(content);
+
+    var lines = std.mem.splitScalar(u8, content, '\n');
+    var parsed_count: usize = 0;
+    var emitted_count: usize = 0;
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trim(u8, line_raw, " \t\r\n");
+        if (line.len == 0 or line[0] == '%' or std.mem.startsWith(u8, line, "translit_") or std.mem.startsWith(u8, line, "LC_") or std.mem.startsWith(u8, line, "END ")) continue;
+        parsed_count += 1;
+        const emoji, const alias, const name = parseEmojiTranslitLine(line) orelse continue;
+        if (term_trimmed.len > 0 and !containsAsciiCaseInsensitive(name, term_trimmed) and !containsAsciiCaseInsensitive(alias, term_trimmed)) continue;
+        const subtitle = if (alias.len > 0)
+            try std.fmt.allocPrint(allocator, "alias: {s}", .{alias})
+        else
+            try allocator.dupe(u8, "emoji");
+        defer allocator.free(subtitle);
+        const action = try std.fmt.allocPrint(allocator, "emoji-copy:{s}", .{emoji});
+        defer allocator.free(action);
+        const kept_title = try keepDynamicString(dynamic_owned, allocator, name);
+        const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, subtitle);
+        const kept_action = try keepDynamicString(dynamic_owned, allocator, action);
+        const kept_icon = try keepDynamicString(dynamic_owned, allocator, emoji);
+        try out.append(allocator, search.Candidate.initWithIcon(.hint, kept_title, kept_subtitle, kept_action, kept_icon));
+        emitted_count += 1;
+    }
+    std.log.info("emoji collect done term={s} parsed_lines={d} emitted={d}", .{ term_trimmed, parsed_count, emitted_count });
+}
+
+fn resolveNerdIconSourcePath(allocator: std.mem.Allocator) ![]u8 {
+    if (std.process.getEnvVarOwned(allocator, "GOD_SEARCH_NERD_ICONS_FILE")) |path| {
+        return path;
+    } else |_| {}
+    const home = try std.process.getEnvVarOwned(allocator, "HOME");
+    defer allocator.free(home);
+    return std.fs.path.join(allocator, &.{ home, nerd_icons_default_rel_path });
+}
+
+fn parseNerdIconLine(line: []const u8) ?struct { []const u8, []const u8, []const u8 } {
+    const sep = std.mem.indexOf(u8, line, " - ") orelse return null;
+    const left = std.mem.trim(u8, line[0..sep], " \t");
+    const right = std.mem.trim(u8, line[sep + 3 ..], " \t");
+    const first_space = std.mem.indexOfScalar(u8, left, ' ') orelse return null;
+    const glyph = std.mem.trim(u8, left[0..first_space], " \t");
+    const alias = std.mem.trim(u8, left[first_space + 1 ..], " \t");
+    if (glyph.len == 0 or alias.len == 0 or right.len == 0) return null;
+    return .{ glyph, alias, right };
+}
+
+fn parseEmojiTranslitLine(line: []const u8) ?struct { []const u8, []const u8, []const u8 } {
+    const pct_idx = std.mem.indexOfScalar(u8, line, '%') orelse return null;
+    const head = std.mem.trim(u8, line[0..pct_idx], " \t");
+    const name = std.mem.trim(u8, line[pct_idx + 1 ..], " \t");
+    if (head.len == 0 or name.len == 0) return null;
+    const first_space = std.mem.indexOfScalar(u8, head, ' ') orelse return null;
+    const emoji = std.mem.trim(u8, head[0..first_space], " \t");
+    const alias_part = std.mem.trim(u8, head[first_space + 1 ..], " \t");
+    const alias = std.mem.trim(u8, alias_part, "\"");
+    if (emoji.len == 0) return null;
+    return .{ emoji, alias, name };
+}
+
+fn containsAsciiCaseInsensitive(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len == 0) return true;
+    return std.ascii.indexOfIgnoreCase(haystack, needle) != null;
 }
 
 fn freeParsedRgRow(allocator: std.mem.Allocator, row: ParsedRgRow) void {

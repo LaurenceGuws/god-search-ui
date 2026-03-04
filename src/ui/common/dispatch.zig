@@ -270,6 +270,42 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                     .close_on_success = true,
                 };
             }
+            if (std.mem.startsWith(u8, action, "nerd-copy:")) {
+                const value = action["nerd-copy:".len..];
+                const value_q = try shellSingleQuote(allocator, value);
+                defer allocator.free(value_q);
+                const cmd = try std.fmt.allocPrint(
+                    allocator,
+                    "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
+                    .{value_q},
+                );
+                return .{
+                    .command = cmd,
+                    .owned_command = cmd,
+                    .telemetry_kind = "nerd-icon",
+                    .telemetry_ok_detail = "copy-glyph",
+                    .error_message = "Nerd icon copy failed",
+                    .close_on_success = true,
+                };
+            }
+            if (std.mem.startsWith(u8, action, "emoji-copy:")) {
+                const value = action["emoji-copy:".len..];
+                const value_q = try shellSingleQuote(allocator, value);
+                defer allocator.free(value_q);
+                const cmd = try std.fmt.allocPrint(
+                    allocator,
+                    "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
+                    .{value_q},
+                );
+                return .{
+                    .command = cmd,
+                    .owned_command = cmd,
+                    .telemetry_kind = "emoji",
+                    .telemetry_ok_detail = "copy-emoji",
+                    .error_message = "Emoji copy failed",
+                    .close_on_success = true,
+                };
+            }
         },
         else => {},
     }

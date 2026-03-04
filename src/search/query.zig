@@ -10,6 +10,8 @@ pub const Route = enum {
     grep,
     packages,
     icons,
+    nerd_icons,
+    emoji,
     notifications,
     run,
     calc,
@@ -43,6 +45,8 @@ pub fn parse(raw_query: []const u8) Query {
         '&' => .{ .raw = raw, .route = .grep, .term = rest },
         '+' => .{ .raw = raw, .route = .packages, .term = rest },
         '^' => .{ .raw = raw, .route = .icons, .term = rest },
+        '*' => .{ .raw = raw, .route = .nerd_icons, .term = rest },
+        ':' => .{ .raw = raw, .route = .emoji, .term = rest },
         '$' => .{ .raw = raw, .route = .notifications, .term = rest },
         '>' => .{ .raw = raw, .route = .run, .term = rest },
         '=' => .{ .raw = raw, .route = .calc, .term = rest },
@@ -79,6 +83,14 @@ test "parse files and grep routes correctly" {
     const icons = parse("^ arch");
     try std.testing.expectEqual(Route.icons, icons.route);
     try std.testing.expectEqualStrings("arch", icons.term);
+
+    const nerd_icons = parse("* git");
+    try std.testing.expectEqual(Route.nerd_icons, nerd_icons.route);
+    try std.testing.expectEqualStrings("git", nerd_icons.term);
+
+    const emoji = parse(": smile");
+    try std.testing.expectEqual(Route.emoji, emoji.route);
+    try std.testing.expectEqualStrings("smile", emoji.term);
 }
 
 test "parse workspaces route correctly" {

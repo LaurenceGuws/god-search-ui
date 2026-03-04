@@ -65,6 +65,20 @@ const icons_options = [_][]const u8{
     "Select a result to open the icon file path directly.",
 };
 
+const nerd_icons_options = [_][]const u8{
+    "Nerd Icons route: * <term>",
+    "Searches Nerd Font icon names from your icon_finder dataset.",
+    "Enter copies the selected glyph to clipboard.",
+    "Source file: ~/personal/bash_engine/src/modules/fun/nerd_icons_fzf/icons_simple.txt",
+};
+
+const emoji_options = [_][]const u8{
+    "Emoji route: : <term>",
+    "Searches emoji names from glibc transliteration data.",
+    "Enter copies the selected emoji to clipboard.",
+    "Source file: /usr/share/i18n/locales/translit_emojis",
+};
+
 pub const LaunchContext = struct {
     allocator: std.mem.Allocator,
     service: *app_mod.SearchService,
@@ -562,6 +576,8 @@ fn populateHelpMainMenu(ui_state: *HelpUiState) void {
     appendHelpItemWithDetails(ui_state.content, "&", "Grep matches", &grep_options, null, ui_state);
     appendHelpItemWithDetails(ui_state.content, "+", "Packages", &packages_options, null, ui_state);
     appendHelpItemWithDetails(ui_state.content, "^", "Icons", &icons_options, null, ui_state);
+    appendHelpItemWithDetails(ui_state.content, "*", "Nerd Icons", &nerd_icons_options, null, ui_state);
+    appendHelpItemWithDetails(ui_state.content, ":", "Emoji", &emoji_options, null, ui_state);
     appendHelpPrefixItem(ui_state.content, "$", "Notifications", ui_state);
     appendHelpSection(ui_state.content, "Commands");
     appendHelpPrefixItem(ui_state.content, ">", "Run shell command", ui_state);

@@ -7,6 +7,55 @@ const CandidateKind = gtk_types.CandidateKind;
 const ScoredCandidate = @import("../../search/mod.zig").ScoredCandidate;
 
 pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget {
+    if (kind == .hint and std.mem.startsWith(u8, action, "nerd-copy:")) {
+        const glyph = std.mem.trim(u8, icon, " \t\r\n");
+        if (glyph.len > 0) {
+            const glyph_z = allocator.dupeZ(u8, glyph) catch null;
+            if (glyph_z) |text| {
+                defer allocator.free(text);
+                const icon_label = c.gtk_label_new(text.ptr);
+                c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
+                c.gtk_widget_add_css_class(icon_label, "gs-nerd-glyph-icon");
+                return @ptrCast(icon_label);
+            }
+        }
+        const glyph_from_action = std.mem.trim(u8, action["nerd-copy:".len..], " \t\r\n");
+        if (glyph_from_action.len > 0) {
+            const glyph_z = allocator.dupeZ(u8, glyph_from_action) catch null;
+            if (glyph_z) |text| {
+                defer allocator.free(text);
+                const icon_label = c.gtk_label_new(text.ptr);
+                c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
+                c.gtk_widget_add_css_class(icon_label, "gs-nerd-glyph-icon");
+                return @ptrCast(icon_label);
+            }
+        }
+    }
+    if (kind == .hint and std.mem.startsWith(u8, action, "emoji-copy:")) {
+        const glyph = std.mem.trim(u8, icon, " \t\r\n");
+        if (glyph.len > 0) {
+            const glyph_z = allocator.dupeZ(u8, glyph) catch null;
+            if (glyph_z) |text| {
+                defer allocator.free(text);
+                const icon_label = c.gtk_label_new(text.ptr);
+                c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
+                c.gtk_widget_add_css_class(icon_label, "gs-emoji-glyph-icon");
+                return @ptrCast(icon_label);
+            }
+        }
+        const glyph_from_action = std.mem.trim(u8, action["emoji-copy:".len..], " \t\r\n");
+        if (glyph_from_action.len > 0) {
+            const glyph_z = allocator.dupeZ(u8, glyph_from_action) catch null;
+            if (glyph_z) |text| {
+                defer allocator.free(text);
+                const icon_label = c.gtk_label_new(text.ptr);
+                c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
+                c.gtk_widget_add_css_class(icon_label, "gs-emoji-glyph-icon");
+                return @ptrCast(icon_label);
+            }
+        }
+    }
+
     if (kind == .web) {
         const explicit = std.mem.trim(u8, icon, " \t\r\n");
         if (explicit.len > 0) {

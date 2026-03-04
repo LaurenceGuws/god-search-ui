@@ -48,7 +48,9 @@ pub fn rankDynamicRouteWithCollector(
     var dynamic_candidates = search.CandidateList.empty;
     defer dynamic_candidates.deinit(allocator);
     const term = std.mem.trim(u8, query.term, " \t\r\n");
-    if (term.len == 0 and query.route != .notifications) return allocator.alloc(search.ScoredCandidate, 0);
+    if (term.len == 0 and query.route != .notifications and query.route != .nerd_icons and query.route != .emoji) {
+        return allocator.alloc(search.ScoredCandidate, 0);
+    }
 
     const keep = @max(generation_keep, @as(usize, 1));
     const keep_bytes = if (generation_keep_bytes == 0) std.math.maxInt(usize) else generation_keep_bytes;

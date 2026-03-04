@@ -55,7 +55,10 @@ pub fn executeSelected(ctx: *UiContext, kind: UiKind, action: []const u8, hooks:
     var decision = common_execute.resolveSelectionKind(allocator, kind, action) catch return;
     defer decision.deinit(allocator);
 
-    if (decision.record_selection) {
+    const should_record_selection = decision.record_selection or
+        std.mem.startsWith(u8, action, "nerd-copy:") or
+        std.mem.startsWith(u8, action, "emoji-copy:");
+    if (should_record_selection) {
         ctx.service.recordSelection(allocator, action) catch |err| {
             std.log.warn("history recordSelection failed for action '{s}': {s}", .{ action, @errorName(err) });
             hooks.set_status(ctx, "History write failed");
