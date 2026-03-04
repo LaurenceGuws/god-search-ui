@@ -36,12 +36,76 @@ pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, ac
             return @ptrCast(image);
         }
     }
+    if ((kind == .action or kind == .hint) and isPackageAction(action)) {
+        if (resolvePackageIconName(allocator, icon, action)) |icon_name_z| {
+            defer allocator.free(icon_name_z);
+            const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
+            c.gtk_image_set_pixel_size(@ptrCast(image), 30);
+            c.gtk_widget_add_css_class(image, "gs-kind-icon");
+            return @ptrCast(image);
+        }
+        const fallback = c.gtk_image_new_from_icon_name("system-software-install-symbolic");
+        c.gtk_image_set_pixel_size(@ptrCast(fallback), 30);
+        c.gtk_widget_add_css_class(fallback, "gs-kind-icon");
+        return @ptrCast(fallback);
+    }
 
     const fallback_icon_z = allocator.dupeZ(u8, gtk_widgets.kindIcon(kind)) catch return c.gtk_label_new(null);
     defer allocator.free(fallback_icon_z);
     const icon_label = c.gtk_label_new(fallback_icon_z.ptr);
     c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
     return @ptrCast(icon_label);
+}
+
+fn isPackageAction(action: []const u8) bool {
+    return std.mem.startsWith(u8, action, "pkg-install:") or
+        std.mem.startsWith(u8, action, "pkg-update:") or
+        std.mem.startsWith(u8, action, "pkg-remove:");
+}
+
+fn parsePackageNameFromAction(action: []const u8) []const u8 {
+    if (std.mem.startsWith(u8, action, "pkg-install:")) return action["pkg-install:".len..];
+    if (std.mem.startsWith(u8, action, "pkg-update:")) return action["pkg-update:".len..];
+    if (std.mem.startsWith(u8, action, "pkg-remove:")) return action["pkg-remove:".len..];
+    return "";
+}
+
+fn resolvePackageIconName(allocator: std.mem.Allocator, icon: []const u8, action: []const u8) ?[:0]u8 {
+    const explicit = std.mem.trim(u8, icon, " \t\r\n");
+    if (explicit.len > 0) {
+        if (resolveIconVariant(allocator, explicit)) |name| return name;
+    }
+
+    const package_name = std.mem.trim(u8, parsePackageNameFromAction(action), " \t\r\n");
+    if (package_name.len == 0) return null;
+
+    var candidates: [8][]const u8 = undefined;
+    var count: usize = 0;
+    candidates[count] = package_name;
+    count += 1;
+
+    if (std.mem.endsWith(u8, package_name, "-bin") and package_name.len > "-bin".len) {
+        candidates[count] = package_name[0 .. package_name.len - "-bin".len];
+        count += 1;
+    }
+    if (std.mem.endsWith(u8, package_name, "-git") and package_name.len > "-git".len) {
+        candidates[count] = package_name[0 .. package_name.len - "-git".len];
+        count += 1;
+    }
+    if (std.mem.indexOfScalar(u8, package_name, '-')) |dash| {
+        if (dash > 0) {
+            candidates[count] = package_name[0..dash];
+            count += 1;
+        }
+    }
+
+    var idx: usize = 0;
+    while (idx < count) : (idx += 1) {
+        const name = candidates[idx];
+        if (name.len == 0) continue;
+        if (resolveIconVariant(allocator, name)) |resolved| return resolved;
+    }
+    return null;
 }
 
 pub fn hasAppGlyphFallback(rows: []const ScoredCandidate) bool {

@@ -72,6 +72,9 @@ pub const UiContext = extern struct {
     active_query_started_ns: i128,
     last_ui_query_total_ns: u64,
     last_query_dynamic: c.gboolean,
+    package_preview_timeout_id: c.guint,
+    package_preview_action_ptr: ?[*]u8,
+    package_preview_action_len: usize,
     async_worker_lock: c.GMutex,
     async_worker_cond: c.GCond,
 };

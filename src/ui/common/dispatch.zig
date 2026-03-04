@@ -76,6 +76,49 @@ pub fn planCommand(allocator: std.mem.Allocator, kind: []const u8, action: []con
 pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action: []const u8) !CommandPlan {
     switch (kind) {
         .action => {
+            if (std.mem.startsWith(u8, action, "pkg-install:") or
+                std.mem.startsWith(u8, action, "pkg-update:") or
+                std.mem.startsWith(u8, action, "pkg-remove:"))
+            {
+                const op: enum { install, update, remove } = if (std.mem.startsWith(u8, action, "pkg-remove:"))
+                    .remove
+                else if (std.mem.startsWith(u8, action, "pkg-update:"))
+                    .update
+                else
+                    .install;
+                const pkg = switch (op) {
+                    .install => action["pkg-install:".len..],
+                    .update => action["pkg-update:".len..],
+                    .remove => action["pkg-remove:".len..],
+                };
+                if (pkg.len == 0) {
+                    return .{
+                        .telemetry_kind = "package",
+                        .error_message = "Package action failed: invalid package",
+                        .unknown_action = true,
+                    };
+                }
+                const pkg_q = try shellSingleQuote(allocator, pkg);
+                defer allocator.free(pkg_q);
+                const install_expr = switch (op) {
+                    .install, .update => "if command -v yay >/dev/null 2>&1; then install_cmd=\"yay -S --needed -- \\\"$pkg\\\"\"; elif command -v pacman >/dev/null 2>&1; then install_cmd=\"sudo pacman -S --needed -- \\\"$pkg\\\"\"; else exit 127; fi",
+                    .remove => "if command -v yay >/dev/null 2>&1; then install_cmd=\"yay -Rns -- \\\"$pkg\\\"\"; elif command -v pacman >/dev/null 2>&1; then install_cmd=\"sudo pacman -Rns -- \\\"$pkg\\\"\"; else exit 127; fi",
+                };
+                const cmd = try std.fmt.allocPrint(
+                    allocator,
+                    "sh -lc 'pkg=\"$1\"; {s}; launch_term() {{ t=\"$1\"; case \"$t\" in kitty|alacritty|foot|footclient|wezterm) exec \"$t\" -e sh -lc \"$install_cmd\" ;; gnome-terminal|xfce4-terminal|tilix|konsole) exec \"$t\" -- sh -lc \"$install_cmd\" ;; xterm) exec \"$t\" -e sh -lc \"$install_cmd\" ;; *) return 1 ;; esac; }}; term=\"${{TERMINAL:-}}\"; if [ -n \"$term\" ] && command -v \"$term\" >/dev/null 2>&1; then launch_term \"$term\" && exit 0; fi; for t in kitty alacritty footclient foot wezterm gnome-terminal konsole xfce4-terminal tilix xterm; do if command -v \"$t\" >/dev/null 2>&1; then launch_term \"$t\" && exit 0; fi; done; exit 127' _ {s}",
+                    .{ install_expr, pkg_q },
+                );
+                return .{
+                    .command = cmd,
+                    .owned_command = cmd,
+                    .telemetry_kind = "package",
+                    .telemetry_ok_detail = pkg,
+                    .error_message = "Package install failed to launch",
+                    .close_on_success = true,
+                    .detach_command = true,
+                };
+            }
             const cmd = providers_mod.resolveActionCommand(action) orelse {
                 return .{
                     .telemetry_kind = "action",

@@ -8,6 +8,8 @@ BIN="${BIN:-./zig-out/bin/god_search_ui}"
 DAEMON_LOG="$HOME/.local/state/god-search-ui/daemon.log"
 OUT_CSV="${OUT_CSV:-/tmp/god-search-ui-ram-baseline.csv}"
 OUT_LOG="${OUT_LOG:-/tmp/god-search-ui-ram-daemon-log.txt}"
+QUERY_DELAY_SEC="${QUERY_DELAY_SEC:-10}"
+CLEAR_DELAY_SEC="${CLEAR_DELAY_SEC:-10}"
 
 if [[ ! -x "$BIN" ]]; then
   echo "missing binary: $BIN" >&2
@@ -28,20 +30,22 @@ collect() {
   local vmhwm
   local vmsize
   local pss
+  local query_escaped
   vmrss="$(awk '/VmRSS:/ {print $2}' "/proc/$pid/status")"
   vmhwm="$(awk '/VmHWM:/ {print $2}' "/proc/$pid/status")"
   vmsize="$(awk '/VmSize:/ {print $2}' "/proc/$pid/status")"
-  pss="$(awk '/Pss:/ {print $2}' "/proc/$pid/smaps_rollup" || true)"
+  pss="$(awk '/^Pss:/ {print $2}' "/proc/$pid/smaps_rollup" || true)"
   [[ -n "$pss" ]] || pss=0
+  query_escaped="${query//\"/\"\"}"
 
-  printf '%s,%s,%s,%s,%s,%s,%q,%d,"%s"\n' \
+  printf '%s,%s,%s,%s,%s,%s,"%s",%d,"%s"\n' \
     "$phase" \
     "$pid" \
     "${vmrss:-0}" \
     "${vmhwm:-0}" \
     "${vmsize:-0}" \
     "$pss" \
-    "$query" \
+    "$query_escaped" \
     "$visible" \
     "$(date --iso-8601=seconds)" \
     >>"$OUT_CSV"
@@ -94,15 +98,15 @@ tail_line="0"
 tail_line="$(emit_phase_log "startup" "$tail_line")"
 collect "startup" "" 1 "$PID"
 
-echo "Open UI and run one heavy query now (for example: & import)."
-echo "Press Enter here when results are visible to capture RAM after query." 
-read -r _
+echo "GUI started. Enter '& import' in the launcher."
+echo "First query snapshot starts in ${QUERY_DELAY_SEC}s."
+sleep "$QUERY_DELAY_SEC"
 tail_line="$(emit_phase_log "after_query" "$tail_line")"
 collect "after_query" "& import" 1 "$PID"
 
-echo "Clear query in the UI now (Esc or manual delete)"
-echo "Press Enter after clear to capture clear-state memory." 
-read -r _
+echo "Clear query now (backspace to empty)."
+echo "Clear-state snapshot starts in ${CLEAR_DELAY_SEC}s."
+sleep "$CLEAR_DELAY_SEC"
 tail_line="$(emit_phase_log "after_clear" "$tail_line")"
 collect "after_clear" "" 1 "$PID"
 

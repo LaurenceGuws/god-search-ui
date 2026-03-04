@@ -49,6 +49,15 @@ const grep_options = [_][]const u8{
     "Set GOD_SEARCH_RG_HIDDEN=1 in environment to include hidden files/dirs.",
 };
 
+const packages_options = [_][]const u8{
+    "Packages route: + <term>",
+    "Searches packages via yay when available, otherwise pacman.",
+    "Filter installed only: +i <term> (or +installed <term>).",
+    "Installed packages: Enter updates; extra Remove action is listed.",
+    "Install/update uses yay -S --needed or sudo pacman -S --needed.",
+    "Remove uses yay -Rns or sudo pacman -Rns.",
+};
+
 pub const LaunchContext = struct {
     allocator: std.mem.Allocator,
     service: *app_mod.SearchService,
@@ -313,6 +322,9 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.active_query_started_ns = 0;
     ctx.last_ui_query_total_ns = 0;
     ctx.last_query_dynamic = gtk_types.GFALSE;
+    ctx.package_preview_timeout_id = 0;
+    ctx.package_preview_action_ptr = null;
+    ctx.package_preview_action_len = 0;
     c.g_mutex_init(&ctx.async_worker_lock);
     c.g_cond_init(&ctx.async_worker_cond);
 
@@ -503,7 +515,7 @@ fn appendHelpItem(box: *c.GtkWidget, key_text: []const u8, description_text: []c
 }
 
 fn appendHelpPrefixItem(box: *c.GtkWidget, key_text: []const u8, description_text: []const u8, ui_state: *HelpUiState) void {
-    const insert_text: ?[]const u8 = if (std.mem.eql(u8, key_text, "@")) "@ " else if (std.mem.eql(u8, key_text, "#")) "# " else if (std.mem.eql(u8, key_text, "!")) "! " else if (std.mem.eql(u8, key_text, "~")) "~ " else if (std.mem.eql(u8, key_text, "$")) "$ " else if (std.mem.eql(u8, key_text, ">")) "> " else if (std.mem.eql(u8, key_text, "=")) "= " else if (std.mem.eql(u8, key_text, "?")) "? " else null;
+    const insert_text: ?[]const u8 = if (std.mem.eql(u8, key_text, "@")) "@ " else if (std.mem.eql(u8, key_text, "#")) "# " else if (std.mem.eql(u8, key_text, "!")) "! " else if (std.mem.eql(u8, key_text, "~")) "~ " else if (std.mem.eql(u8, key_text, "+")) "+ " else if (std.mem.eql(u8, key_text, "$")) "$ " else if (std.mem.eql(u8, key_text, ">")) "> " else if (std.mem.eql(u8, key_text, "=")) "= " else if (std.mem.eql(u8, key_text, "?")) "? " else null;
     appendHelpItemWithDetails(box, key_text, description_text, null, insert_text, ui_state);
 }
 
@@ -541,6 +553,7 @@ fn populateHelpMainMenu(ui_state: *HelpUiState) void {
     appendHelpPrefixItem(ui_state.content, "~", "Recent folders", ui_state);
     appendHelpItemWithDetails(ui_state.content, "%", "Files", &files_options, null, ui_state);
     appendHelpItemWithDetails(ui_state.content, "&", "Grep matches", &grep_options, null, ui_state);
+    appendHelpItemWithDetails(ui_state.content, "+", "Packages", &packages_options, null, ui_state);
     appendHelpPrefixItem(ui_state.content, "$", "Notifications", ui_state);
     appendHelpSection(ui_state.content, "Commands");
     appendHelpPrefixItem(ui_state.content, ">", "Run shell command", ui_state);

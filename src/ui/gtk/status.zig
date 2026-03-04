@@ -69,7 +69,7 @@ pub fn refreshStatusForCurrentQuery(ctx: *UiContext) void {
     const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
     const query_trimmed = std.mem.trim(u8, query, " \t\r\n");
     if (query_trimmed.len == 0) {
-        setStatus(ctx, "Esc close | Ctrl+P preview | Ctrl+R refresh | @ apps # windows ! workspaces ~ dirs % files & grep > run = calc ? web");
+        setStatus(ctx, "Esc close | Ctrl+P preview | Ctrl+R refresh | @ apps # windows ! workspaces ~ dirs % files & grep + packages > run = calc ? web");
     } else {
         setStatus(ctx, "");
     }

@@ -13,6 +13,8 @@ const UiKind = common_dispatch.kinds.UiKind;
 const max_file_preview_bytes: usize = 256 * 1024;
 const max_dir_preview_bytes: usize = 256 * 1024;
 const max_workspace_preview_bytes: usize = 8 * 1024 * 1024;
+const max_package_preview_bytes: usize = 1024 * 1024;
+const package_preview_debounce_ms: c.guint = 180;
 
 const PreviewDoc = struct {
     title: []u8,
@@ -37,12 +39,14 @@ pub fn setEnabled(ctx: *UiContext, enabled: bool) void {
     ctx.preview_enabled = if (enabled) GTRUE else GFALSE;
     c.gtk_widget_set_visible(ctx.preview_panel, ctx.preview_enabled);
     if (ctx.preview_enabled == GFALSE) {
+        cancelPendingWork(ctx);
         ctx.last_preview_hash = 0;
     }
 }
 
 pub fn clear(ctx: *UiContext) void {
     if (ctx.preview_enabled == GFALSE) return;
+    cancelPendingWork(ctx);
     const allocator = contextAllocator(ctx);
     const title = allocator.dupe(u8, "Preview") catch return;
     errdefer allocator.free(title);
@@ -63,11 +67,21 @@ pub fn refreshFromSelection(ctx: *UiContext) void {
 
 pub fn updateForRow(ctx: *UiContext, row: *c.GtkListBoxRow) void {
     if (ctx.preview_enabled == GFALSE) return;
+    cancelPendingWork(ctx);
 
     const kind = gtk_row_data.kind(row);
     const title = gtk_row_data.title(row) orelse "";
     const subtitle = gtk_row_data.subtitle(row) orelse "";
     const action = gtk_row_data.action(row) orelse "";
+
+    if (isPackagePreviewCandidate(kind, action)) {
+        const allocator = contextAllocator(ctx);
+        var placeholder = buildPackageLoadingDoc(allocator, title, subtitle, action) catch return;
+        defer placeholder.deinit(allocator);
+        setPreviewIfChanged(ctx, placeholder);
+        schedulePackagePreview(ctx, action);
+        return;
+    }
 
     const allocator = contextAllocator(ctx);
     var doc = buildPreviewDoc(ctx, allocator, kind, title, subtitle, action) catch return;
@@ -86,6 +100,14 @@ pub fn onPreviewToggleClicked(_: ?*c.GtkButton, user_data: ?*anyopaque) callconv
 fn contextAllocator(ctx: *UiContext) std.mem.Allocator {
     const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
     return allocator_ptr.*;
+}
+
+pub fn cancelPendingWork(ctx: *UiContext) void {
+    if (ctx.package_preview_timeout_id != 0) {
+        _ = c.g_source_remove(ctx.package_preview_timeout_id);
+        ctx.package_preview_timeout_id = 0;
+    }
+    clearPendingPackageAction(ctx);
 }
 
 fn setPreviewIfChanged(ctx: *UiContext, doc: PreviewDoc) void {
@@ -173,8 +195,156 @@ fn buildPreviewDoc(
         .dir => try buildDirPreviewDoc(ctx, allocator, title, subtitle, action),
         .workspace => (try buildWorkspacePreviewDoc(allocator, title, subtitle, action)) orelse try buildGenericPreviewDoc(allocator, kind, title, subtitle, action),
         .app => (try buildAppPreviewDoc(allocator, title, subtitle, action)) orelse try buildGenericPreviewDoc(allocator, kind, title, subtitle, action),
+        .action, .hint => (try buildPackagePreviewDoc(allocator, title, subtitle, action)) orelse try buildGenericPreviewDoc(allocator, kind, title, subtitle, action),
         else => try buildGenericPreviewDoc(allocator, kind, title, subtitle, action),
     };
+}
+
+fn isPackagePreviewCandidate(kind: UiKind, action: []const u8) bool {
+    if (kind != .action and kind != .hint) return false;
+    return parsePackageAction(action) != null;
+}
+
+fn buildPackageLoadingDoc(
+    allocator: std.mem.Allocator,
+    title: []const u8,
+    subtitle: []const u8,
+    action: []const u8,
+) !PreviewDoc {
+    const pkg = parsePackageAction(action) orelse "(unknown)";
+    var text = std.ArrayList(u8).empty;
+    defer text.deinit(allocator);
+    const w = text.writer(allocator);
+    try w.print("package: {s}\n", .{pkg});
+    if (title.len > 0) try w.print("title: {s}\n", .{title});
+    if (subtitle.len > 0) try w.print("summary: {s}\n", .{subtitle});
+    try w.writeAll("\nLoading package metadata...");
+    return .{
+        .title = try allocator.dupe(u8, "Package Preview"),
+        .text = try text.toOwnedSlice(allocator),
+    };
+}
+
+fn schedulePackagePreview(ctx: *UiContext, action: []const u8) void {
+    const allocator = contextAllocator(ctx);
+    const owned = allocator.dupe(u8, action) catch return;
+    clearPendingPackageAction(ctx);
+    ctx.package_preview_action_ptr = owned.ptr;
+    ctx.package_preview_action_len = owned.len;
+    ctx.package_preview_timeout_id = c.g_timeout_add(package_preview_debounce_ms, onPackagePreviewTimeout, ctx);
+}
+
+fn onPackagePreviewTimeout(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+    if (user_data == null) return GFALSE;
+    const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+    ctx.package_preview_timeout_id = 0;
+    if (ctx.preview_enabled == GFALSE) {
+        clearPendingPackageAction(ctx);
+        return GFALSE;
+    }
+
+    const pending = pendingPackageAction(ctx) orelse return GFALSE;
+    const row = c.gtk_list_box_get_selected_row(ctx.list) orelse {
+        clearPendingPackageAction(ctx);
+        return GFALSE;
+    };
+    const row_action = gtk_row_data.action(row) orelse "";
+    if (!std.mem.eql(u8, row_action, pending)) {
+        clearPendingPackageAction(ctx);
+        return GFALSE;
+    }
+
+    const kind = gtk_row_data.kind(row);
+    const title = gtk_row_data.title(row) orelse "";
+    const subtitle = gtk_row_data.subtitle(row) orelse "";
+    if (!isPackagePreviewCandidate(kind, row_action)) {
+        clearPendingPackageAction(ctx);
+        return GFALSE;
+    }
+
+    const allocator = contextAllocator(ctx);
+    if (buildPackagePreviewDoc(allocator, title, subtitle, row_action) catch null) |doc| {
+        defer doc.deinit(allocator);
+        setPreviewIfChanged(ctx, doc);
+    }
+    clearPendingPackageAction(ctx);
+    return GFALSE;
+}
+
+fn pendingPackageAction(ctx: *UiContext) ?[]const u8 {
+    const ptr = ctx.package_preview_action_ptr orelse return null;
+    if (ctx.package_preview_action_len == 0) return null;
+    return ptr[0..ctx.package_preview_action_len];
+}
+
+fn clearPendingPackageAction(ctx: *UiContext) void {
+    const ptr = ctx.package_preview_action_ptr orelse return;
+    const allocator = contextAllocator(ctx);
+    allocator.free(ptr[0..ctx.package_preview_action_len]);
+    ctx.package_preview_action_ptr = null;
+    ctx.package_preview_action_len = 0;
+}
+
+fn buildPackagePreviewDoc(
+    allocator: std.mem.Allocator,
+    title: []const u8,
+    subtitle: []const u8,
+    action: []const u8,
+) !?PreviewDoc {
+    const pkg = parsePackageAction(action) orelse return null;
+    const pkg_q = try shellSingleQuote(allocator, pkg);
+    defer allocator.free(pkg_q);
+    const cmd = try std.fmt.allocPrint(
+        allocator,
+        "sh -lc 'if command -v yay >/dev/null 2>&1; then yay -Si --color never \"$1\"; elif command -v pacman >/dev/null 2>&1; then pacman -Si --color never \"$1\"; else exit 127; fi' _ {s} 2>/dev/null || true",
+        .{pkg_q},
+    );
+    defer allocator.free(cmd);
+
+    const result = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "sh", "-lc", cmd },
+        .max_output_bytes = max_package_preview_bytes,
+    }) catch return null;
+    defer allocator.free(result.stderr);
+    defer allocator.free(result.stdout);
+
+    if (result.stdout.len == 0) return null;
+
+    var text = std.ArrayList(u8).empty;
+    defer text.deinit(allocator);
+    const w = text.writer(allocator);
+    try w.print("package: {s}\n", .{pkg});
+    if (title.len > 0) try w.print("title: {s}\n", .{title});
+    if (subtitle.len > 0) try w.print("summary: {s}\n", .{subtitle});
+    try w.print("\n{s}", .{result.stdout});
+
+    return .{
+        .title = try allocator.dupe(u8, "Package Preview"),
+        .text = try text.toOwnedSlice(allocator),
+    };
+}
+
+fn parsePackageAction(action: []const u8) ?[]const u8 {
+    if (std.mem.startsWith(u8, action, "pkg-install:")) return action["pkg-install:".len..];
+    if (std.mem.startsWith(u8, action, "pkg-update:")) return action["pkg-update:".len..];
+    if (std.mem.startsWith(u8, action, "pkg-remove:")) return action["pkg-remove:".len..];
+    return null;
+}
+
+fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+    try out.append(allocator, '\'');
+    for (value) |ch| {
+        if (ch == '\'') {
+            try out.appendSlice(allocator, "'\\''");
+        } else {
+            try out.append(allocator, ch);
+        }
+    }
+    try out.append(allocator, '\'');
+    return out.toOwnedSlice(allocator);
 }
 
 fn buildGenericPreviewDoc(

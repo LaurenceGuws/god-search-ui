@@ -67,6 +67,7 @@ fn matchesRoute(route: query_mod.Route, kind: types.CandidateKind) bool {
         .dirs => kind == .dir,
         .files => kind == .file or kind == .dir,
         .grep => kind == .grep,
+        .packages => kind == .action or kind == .hint,
         .notifications => kind == .notification or kind == .action or kind == .hint,
         .run, .calc => true,
         .web => kind == .web,

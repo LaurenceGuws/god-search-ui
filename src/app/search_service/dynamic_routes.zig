@@ -4,24 +4,33 @@ const notifications = @import("../../notifications/mod.zig");
 const search = @import("../../search/mod.zig");
 
 const max_rg_capture_bytes = 64 * 1024 * 1024;
+const max_pkg_capture_bytes = 16 * 1024 * 1024;
 const tool_state_refresh_ttl_ns: i64 = 5 * std.time.ns_per_s;
 
 pub const ToolState = struct {
     fd_available: ?bool = null,
     rg_available: ?bool = null,
     rg_include_hidden: ?bool = null,
+    yay_available: ?bool = null,
+    pacman_available: ?bool = null,
     fd_last_checked_ns: i128 = 0,
     rg_last_checked_ns: i128 = 0,
     rg_hidden_last_checked_ns: i128 = 0,
+    yay_last_checked_ns: i128 = 0,
+    pacman_last_checked_ns: i128 = 0,
 };
 
 pub fn invalidateToolStateCache(state: *ToolState) void {
     state.fd_available = null;
     state.rg_available = null;
     state.rg_include_hidden = null;
+    state.yay_available = null;
+    state.pacman_available = null;
     state.fd_last_checked_ns = 0;
     state.rg_last_checked_ns = 0;
     state.rg_hidden_last_checked_ns = 0;
+    state.yay_last_checked_ns = 0;
+    state.pacman_last_checked_ns = 0;
 }
 
 pub fn collectForRoute(
@@ -37,6 +46,7 @@ pub fn collectForRoute(
     switch (query.route) {
         .files => try collectFdCandidates(tool_state, dynamic_owned, allocator, term, out),
         .grep => try collectRgCandidates(tool_state, dynamic_owned, allocator, term, out),
+        .packages => try collectPackageCandidates(tool_state, dynamic_owned, allocator, term, out),
         .notifications => try notifications.runtime.appendRouteCandidates(dynamic_owned, allocator, term, out),
         .calc => try collectCalcCandidates(dynamic_owned, allocator, term, out),
         else => {},
@@ -157,6 +167,204 @@ fn collectRgCandidates(
         emitted_count += 1;
     }
     std.log.info("grep collect done term={s} parsed_lines={d} emitted={d}", .{ term, parsed_count, emitted_count });
+}
+
+const PackageRow = struct {
+    package_name: []const u8,
+    source_name: []const u8,
+    version: []const u8,
+    description: []const u8,
+    installed: bool,
+};
+
+fn collectPackageCandidates(
+    tool_state: *ToolState,
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    term: []const u8,
+    out: *search.CandidateList,
+) !void {
+    const pkg_query = parsePackageQuery(term);
+    const source_cmd = packageSearchCommand(tool_state) orelse return;
+    const term_q = try shellSingleQuote(allocator, pkg_query.term);
+    defer allocator.free(term_q);
+    const cmd = switch (source_cmd) {
+        .yay => if (pkg_query.term.len > 0)
+            try std.fmt.allocPrint(allocator, "yay -Ss --color never {s} 2>/dev/null || true", .{term_q})
+        else
+            try allocator.dupe(u8, "yay -Qq 2>/dev/null || true"),
+        .pacman => if (pkg_query.term.len > 0)
+            try std.fmt.allocPrint(allocator, "pacman -Ss --color never {s} 2>/dev/null || true", .{term_q})
+        else
+            try allocator.dupe(u8, "pacman -Qq 2>/dev/null || true"),
+    };
+    defer allocator.free(cmd);
+
+    std.log.info("packages collect start route=packages term={s} cmd={s}", .{ term, cmd });
+    const rows = runShellCaptureBounded(allocator, cmd, max_pkg_capture_bytes) catch |err| {
+        std.log.warn("packages collect failed route=packages term={s} err={s}", .{ term, @errorName(err) });
+        return;
+    };
+    defer allocator.free(rows);
+
+    var lines = std.mem.splitScalar(u8, rows, '\n');
+    var pending: ?PackageRow = null;
+    var parsed_count: usize = 0;
+    var emitted_count: usize = 0;
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trimRight(u8, line_raw, "\r");
+        if (line.len == 0) continue;
+        parsed_count += 1;
+        if (pkg_query.term.len == 0) {
+            // Installed listing mode returns one package name per line.
+            if (appendInstalledPackageCandidate(dynamic_owned, allocator, line, out)) |_| {
+                emitted_count += 1;
+            } else |_| {}
+            continue;
+        }
+        if (line[0] == ' ' or line[0] == '\t') {
+            if (pending) |*entry| {
+                entry.description = std.mem.trim(u8, line, " \t");
+            }
+            continue;
+        }
+
+        if (pending) |entry| {
+            if (!pkg_query.installed_only or entry.installed) {
+                try appendPackageCandidate(dynamic_owned, allocator, entry, entry.installed, out);
+                emitted_count += 1;
+                if (entry.installed) {
+                    try appendPackageRemoveAction(dynamic_owned, allocator, entry.package_name, out);
+                    emitted_count += 1;
+                }
+            }
+        }
+        pending = parsePackageHeaderLine(line) orelse null;
+    }
+    if (pending) |entry| {
+        if (!pkg_query.installed_only or entry.installed) {
+            try appendPackageCandidate(dynamic_owned, allocator, entry, entry.installed, out);
+            emitted_count += 1;
+            if (entry.installed) {
+                try appendPackageRemoveAction(dynamic_owned, allocator, entry.package_name, out);
+                emitted_count += 1;
+            }
+        }
+    }
+    std.log.info("packages collect done term={s} parsed_lines={d} emitted={d}", .{ term, parsed_count, emitted_count });
+}
+
+const PackageQuery = struct {
+    installed_only: bool,
+    term: []const u8,
+};
+
+fn parsePackageQuery(term: []const u8) PackageQuery {
+    const trimmed = std.mem.trim(u8, term, " \t\r\n");
+    if (std.mem.eql(u8, trimmed, "i") or std.mem.eql(u8, trimmed, "installed")) {
+        return .{ .installed_only = true, .term = "" };
+    }
+    if (std.mem.startsWith(u8, trimmed, "i ")) {
+        return .{ .installed_only = true, .term = std.mem.trim(u8, trimmed[2..], " \t\r\n") };
+    }
+    if (std.mem.startsWith(u8, trimmed, "installed ")) {
+        return .{ .installed_only = true, .term = std.mem.trim(u8, trimmed["installed ".len..], " \t\r\n") };
+    }
+    return .{ .installed_only = false, .term = trimmed };
+}
+
+fn appendInstalledPackageCandidate(
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    package_name_raw: []const u8,
+    out: *search.CandidateList,
+) !void {
+    const package_name = std.mem.trim(u8, package_name_raw, " \t\r\n");
+    if (package_name.len == 0) return;
+    const row = PackageRow{
+        .package_name = package_name,
+        .source_name = "local",
+        .version = "",
+        .description = "",
+        .installed = true,
+    };
+    try appendPackageCandidate(dynamic_owned, allocator, row, true, out);
+    try appendPackageRemoveAction(dynamic_owned, allocator, package_name, out);
+}
+
+fn parsePackageHeaderLine(line: []const u8) ?PackageRow {
+    var tokens = std.mem.tokenizeAny(u8, line, " \t");
+    const source_pkg = tokens.next() orelse return null;
+    const version = tokens.next() orelse "";
+    const installed = std.ascii.indexOfIgnoreCase(line, "[installed") != null;
+    const slash_idx = std.mem.indexOfScalar(u8, source_pkg, '/') orelse return null;
+    if (slash_idx == 0 or slash_idx + 1 >= source_pkg.len) return null;
+    const source_name = source_pkg[0..slash_idx];
+    const package_name = source_pkg[slash_idx + 1 ..];
+    return .{
+        .package_name = package_name,
+        .source_name = source_name,
+        .version = version,
+        .description = "",
+        .installed = installed,
+    };
+}
+
+fn appendPackageCandidate(
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    row: PackageRow,
+    installed: bool,
+    out: *search.CandidateList,
+) !void {
+    const title = try std.fmt.allocPrint(allocator, "{s} ({s})", .{ row.package_name, row.source_name });
+    defer allocator.free(title);
+    const subtitle = if (row.description.len > 0)
+        try std.fmt.allocPrint(allocator, "{s} {s} | {s}", .{ row.source_name, row.version, row.description })
+    else
+        try std.fmt.allocPrint(allocator, "{s} {s}", .{ row.source_name, row.version });
+    defer allocator.free(subtitle);
+    const action = if (installed)
+        try std.fmt.allocPrint(allocator, "pkg-update:{s}", .{row.package_name})
+    else
+        try std.fmt.allocPrint(allocator, "pkg-install:{s}", .{row.package_name});
+    defer allocator.free(action);
+
+    const kept_title = try keepDynamicString(dynamic_owned, allocator, title);
+    const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, subtitle);
+    const kept_action = try keepDynamicString(dynamic_owned, allocator, action);
+    const kept_icon = try keepDynamicString(dynamic_owned, allocator, row.package_name);
+    try out.append(allocator, search.Candidate.initWithIcon(
+        .action,
+        kept_title,
+        kept_subtitle,
+        kept_action,
+        kept_icon,
+    ));
+}
+
+fn appendPackageRemoveAction(
+    dynamic_owned: *std.ArrayListUnmanaged([]u8),
+    allocator: std.mem.Allocator,
+    package_name: []const u8,
+    out: *search.CandidateList,
+) !void {
+    const title = try std.fmt.allocPrint(allocator, "Remove {s}", .{package_name});
+    defer allocator.free(title);
+    const subtitle = try allocator.dupe(u8, "Uninstall package");
+    defer allocator.free(subtitle);
+    const action = try std.fmt.allocPrint(allocator, "pkg-remove:{s}", .{package_name});
+    defer allocator.free(action);
+    const kept_title = try keepDynamicString(dynamic_owned, allocator, title);
+    const kept_subtitle = try keepDynamicString(dynamic_owned, allocator, subtitle);
+    const kept_action = try keepDynamicString(dynamic_owned, allocator, action);
+    try out.append(allocator, search.Candidate.initWithIcon(
+        .hint,
+        kept_title,
+        kept_subtitle,
+        kept_action,
+        "user-trash-symbolic",
+    ));
 }
 
 fn parseFdOutputRow(line: []const u8) ?[]const u8 {
@@ -381,6 +589,43 @@ fn rgIncludeHidden(state: *ToolState) bool {
         std.log.info("dynamic hidden mode changed rg_hidden={}", .{value});
     }
     return value;
+}
+
+fn yayAvailable(state: *ToolState) bool {
+    const now_ns = std.time.nanoTimestamp();
+    if (state.yay_available) |value| {
+        if (isCacheFresh(state.yay_last_checked_ns, now_ns)) return value;
+    }
+    const value = commandExists("yay");
+    state.yay_available = value;
+    state.yay_last_checked_ns = now_ns;
+    return value;
+}
+
+fn pacmanAvailable(state: *ToolState) bool {
+    const now_ns = std.time.nanoTimestamp();
+    if (state.pacman_available) |value| {
+        if (isCacheFresh(state.pacman_last_checked_ns, now_ns)) return value;
+    }
+    const value = commandExists("pacman");
+    state.pacman_available = value;
+    state.pacman_last_checked_ns = now_ns;
+    return value;
+}
+
+const PackageSearchCmd = enum {
+    yay,
+    pacman,
+};
+
+fn packageSearchCommand(state: *ToolState) ?PackageSearchCmd {
+    if (pacmanAvailable(state)) {
+        return .pacman;
+    }
+    if (yayAvailable(state)) {
+        return .yay;
+    }
+    return null;
 }
 
 fn envFlagEnabled(name: []const u8) bool {

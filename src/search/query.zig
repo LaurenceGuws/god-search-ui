@@ -8,6 +8,7 @@ pub const Route = enum {
     dirs,
     files,
     grep,
+    packages,
     notifications,
     run,
     calc,
@@ -39,6 +40,7 @@ pub fn parse(raw_query: []const u8) Query {
         '~' => .{ .raw = raw, .route = .dirs, .term = rest },
         '%' => .{ .raw = raw, .route = .files, .term = rest },
         '&' => .{ .raw = raw, .route = .grep, .term = rest },
+        '+' => .{ .raw = raw, .route = .packages, .term = rest },
         '$' => .{ .raw = raw, .route = .notifications, .term = rest },
         '>' => .{ .raw = raw, .route = .run, .term = rest },
         '=' => .{ .raw = raw, .route = .calc, .term = rest },
@@ -67,6 +69,10 @@ test "parse files and grep routes correctly" {
     const grep = parse("& TODO");
     try std.testing.expectEqual(Route.grep, grep.route);
     try std.testing.expectEqualStrings("TODO", grep.term);
+
+    const packages = parse("+ ripgrep");
+    try std.testing.expectEqual(Route.packages, packages.route);
+    try std.testing.expectEqualStrings("ripgrep", packages.term);
 }
 
 test "parse workspaces route correctly" {

@@ -5,6 +5,7 @@ const gtk_async = @import("async_state.zig");
 const gtk_async_coord = @import("async_coordinator.zig");
 const gtk_controller = @import("controller.zig");
 const gtk_deferred_clear = @import("deferred_clear.zig");
+const gtk_preview = @import("preview.zig");
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -26,6 +27,7 @@ pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.g
             },
         );
         gtk_deferred_clear.request(ctx);
+        gtk_preview.cancelPendingWork(ctx);
         if (ctx.clear_query_on_close == GTRUE) {
             const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
             const allocator = allocator_ptr.*;
@@ -59,6 +61,7 @@ pub fn onWindowActiveNotify(window: ?*c.GtkWindow, _: ?*c.GParamSpec, user_data:
         .{ ctx.result_query_hash, ctx.result_window_limit },
     );
     gtk_deferred_clear.request(ctx);
+    gtk_preview.cancelPendingWork(ctx);
     c.gtk_widget_set_visible(ctx.window, GFALSE);
 }
 
@@ -90,6 +93,7 @@ pub fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
         _ = c.g_source_remove(ctx.status_reset_id);
         ctx.status_reset_id = 0;
     }
+    gtk_preview.cancelPendingWork(ctx);
     const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
     const allocator = allocator_ptr.*;
     if (ctx.last_query_text) |query_ptr| {
