@@ -5,6 +5,11 @@ const c = gtk_types.c;
 pub fn searchDebounceMsForQuery(query_trimmed: []const u8) c.guint {
     const query_len = query_trimmed.len;
     if (query_len == 0) return 110;
+    if (query_trimmed[0] == '?') {
+        const term_len = if (query_len > 1) std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len else 0;
+        if (term_len == 0) return 220;
+        return 800;
+    }
     if (query_len >= 1 and (query_trimmed[0] == '%' or query_trimmed[0] == '&' or query_trimmed[0] == '+' or query_trimmed[0] == '^' or query_trimmed[0] == '*' or query_trimmed[0] == ':')) {
         const term_len = if (query_len > 1) std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len else 0;
         if (term_len <= 1) return 300;
@@ -42,7 +47,7 @@ pub fn shouldAsyncRouteQuery(query_trimmed: []const u8) bool {
     if (query_trimmed.len < 2) return false;
     const route = query_trimmed[0];
     return switch (route) {
-        '%', '&', '+', '^', '*', ':', '$', '=' => std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len > 0,
+        '%', '&', '+', '^', '*', ':', '$', '=', '?' => std.mem.trim(u8, query_trimmed[1..], " \t\r\n").len > 0,
         else => false,
     };
 }
@@ -146,6 +151,7 @@ test "route query prefixes with heavy backends should be async" {
     try std.testing.expect(shouldAsyncRouteQuery(": smile"));
     try std.testing.expect(shouldAsyncRouteQuery("$ one"));
     try std.testing.expect(shouldAsyncRouteQuery("= 2+2"));
+    try std.testing.expect(shouldAsyncRouteQuery("? chatgpt"));
 }
 
 test "route query prefixes without term should stay sync for hint rendering" {

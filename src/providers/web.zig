@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const search = @import("../search/mod.zig");
 
 pub const WebEngine = enum {
@@ -26,12 +27,21 @@ const BrowserBookmark = struct {
     url: []const u8,
     subtitle: []const u8,
 };
+const ScrapedWebRow = struct {
+    title: []const u8,
+    subtitle: []const u8,
+    url: []const u8,
+};
 
 var browser_bookmarks_mu: std.Thread.Mutex = .{};
 var browser_bookmarks_loaded: bool = false;
 var browser_bookmarks: std.ArrayListUnmanaged(BrowserBookmark) = .{};
 var browser_bookmarks_owned: std.ArrayListUnmanaged([]u8) = .{};
 const browser_bookmark_limit: usize = 20_000;
+var web_scrape_mu: std.Thread.Mutex = .{};
+var web_scrape_rows: std.ArrayListUnmanaged(ScrapedWebRow) = .{};
+var web_scrape_owned: std.ArrayListUnmanaged([]u8) = .{};
+const web_scrape_limit: usize = 10;
 
 pub fn appendRouteCandidates(
     allocator: std.mem.Allocator,
@@ -43,6 +53,20 @@ pub fn appendRouteCandidates(
     const parsed_cmd = parseWebCommand(parsed.term) orelse return;
     switch (parsed_cmd) {
         .search => |parsed_web| {
+            if (!builtin.is_test and parsed_web.engine == .duckduckgo) {
+                const scraped_count = appendBraveScrapedResults(allocator, parsed_web.query, out) catch 0;
+                std.log.info("web scrape query={s} rows={d}", .{ parsed_web.query, scraped_count });
+                if (scraped_count > 0) {
+                    try out.append(allocator, .{
+                        .kind = .web,
+                        .title = "Open Search in Browser",
+                        .subtitle = parsed_web.query,
+                        .action = trimmed_term,
+                        .icon = "web-browser-symbolic",
+                    });
+                    return;
+                }
+            }
             const title = switch (parsed_web.engine) {
                 .duckduckgo => "Search Web",
                 .google => "Search Google",
@@ -61,6 +85,373 @@ pub fn appendRouteCandidates(
             appendBrowserBookmarkCandidates(allocator, parsed_web_query(parsed_cmd), out);
         },
     }
+}
+
+fn appendBraveScrapedResults(
+    allocator: std.mem.Allocator,
+    query: []const u8,
+    out: *search.CandidateList,
+) !usize {
+    const brave_rows = try scrapeBraveRows(allocator, query);
+    if (brave_rows == 0) {
+        _ = scrapeDuckDuckGoHtmlRows(allocator, query) catch 0;
+    }
+
+    web_scrape_mu.lock();
+    defer web_scrape_mu.unlock();
+    for (web_scrape_rows.items) |row| {
+        try out.append(allocator, .{
+            .kind = .web,
+            .title = row.title,
+            .subtitle = row.subtitle,
+            .action = row.url,
+            .icon = "web-browser-symbolic",
+        });
+    }
+    return web_scrape_rows.items.len;
+}
+
+fn scrapeBraveRows(allocator: std.mem.Allocator, query: []const u8) !usize {
+    const encoded = try percentEncodeQuery(allocator, query);
+    defer allocator.free(encoded);
+    const url = try std.fmt.allocPrint(allocator, "https://search.brave.com/search?q={s}&source=web", .{encoded});
+    defer allocator.free(url);
+
+    const result = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "curl", "-fsSL", "--connect-timeout", "3", "--max-time", "8", "-A", "Mozilla/5.0", url },
+        .max_output_bytes = 4 * 1024 * 1024,
+    }) catch return 0;
+    defer allocator.free(result.stderr);
+    defer allocator.free(result.stdout);
+    if (result.term != .Exited or result.term.Exited != 0) return 0;
+
+    const section = braveWebSection(result.stdout) orelse return 0;
+    web_scrape_mu.lock();
+    clearScrapedWebLocked();
+    web_scrape_mu.unlock();
+
+    var idx: usize = 0;
+    var parsed: usize = 0;
+    while (idx < section.len and parsed < web_scrape_limit) {
+        const title_key = std.mem.indexOfPos(u8, section, idx, "title:\"") orelse break;
+        const title_start = title_key + "title:\"".len;
+        const title, const title_next = parseJsQuoted(allocator, section, title_start) orelse break;
+        idx = title_next;
+
+        const url_key = std.mem.indexOfPos(u8, section, idx, "url:\"") orelse {
+            allocator.free(title);
+            continue;
+        };
+        const url_start = url_key + "url:\"".len;
+        const hit_url, const url_next = parseJsQuoted(allocator, section, url_start) orelse {
+            allocator.free(title);
+            continue;
+        };
+        idx = url_next;
+
+        const desc_key = std.mem.indexOfPos(u8, section, idx, "description:\"") orelse {
+            allocator.free(hit_url);
+            allocator.free(title);
+            continue;
+        };
+        const desc_start = desc_key + "description:\"".len;
+        const description, const desc_next = parseJsQuoted(allocator, section, desc_start) orelse {
+            allocator.free(hit_url);
+            allocator.free(title);
+            continue;
+        };
+        idx = desc_next;
+
+        if (!looksLikeUrl(hit_url) or title.len == 0) {
+            allocator.free(description);
+            allocator.free(hit_url);
+            allocator.free(title);
+            continue;
+        }
+
+        const subtitle = std.fmt.allocPrint(allocator, "{s} | {s}", .{ urlHost(hit_url), clampText(description, 180) }) catch {
+            allocator.free(description);
+            allocator.free(hit_url);
+            allocator.free(title);
+            continue;
+        };
+        web_scrape_mu.lock();
+        appendScrapedRowLocked(title, subtitle, hit_url) catch {
+            web_scrape_mu.unlock();
+            allocator.free(subtitle);
+            allocator.free(description);
+            allocator.free(hit_url);
+            allocator.free(title);
+            continue;
+        };
+        web_scrape_mu.unlock();
+        allocator.free(subtitle);
+        allocator.free(description);
+        allocator.free(hit_url);
+        allocator.free(title);
+        parsed += 1;
+    }
+    return parsed;
+}
+
+fn scrapeDuckDuckGoHtmlRows(allocator: std.mem.Allocator, query: []const u8) !usize {
+    const encoded = try percentEncodeQuery(allocator, query);
+    defer allocator.free(encoded);
+    const url = try std.fmt.allocPrint(allocator, "https://duckduckgo.com/html/?q={s}", .{encoded});
+    defer allocator.free(url);
+
+    const result = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "curl", "-fsSL", "--connect-timeout", "3", "--max-time", "8", "-A", "Mozilla/5.0", url },
+        .max_output_bytes = 4 * 1024 * 1024,
+    }) catch return 0;
+    defer allocator.free(result.stderr);
+    defer allocator.free(result.stdout);
+    if (result.term != .Exited or result.term.Exited != 0) return 0;
+
+    web_scrape_mu.lock();
+    clearScrapedWebLocked();
+    web_scrape_mu.unlock();
+
+    var cursor: usize = 0;
+    var parsed: usize = 0;
+    const href_marker = "uddg=";
+    while (parsed < web_scrape_limit and cursor < result.stdout.len) {
+        const href_rel = std.mem.indexOfPos(u8, result.stdout, cursor, href_marker) orelse break;
+        const href_start = href_rel + href_marker.len;
+        const href_end = std.mem.indexOfAnyPos(u8, result.stdout, href_start, "\"&") orelse break;
+        cursor = href_end;
+
+        const encoded_target = result.stdout[href_start..href_end];
+        const decoded_target = urlDecodeAlloc(allocator, encoded_target) catch continue;
+        defer allocator.free(decoded_target);
+        if (!looksLikeUrl(decoded_target)) continue;
+
+        const title_open = std.mem.lastIndexOf(u8, result.stdout[0..href_rel], "<a") orelse continue;
+        const gt_idx = std.mem.indexOfPos(u8, result.stdout, title_open, ">") orelse continue;
+        const title_end = std.mem.indexOfPos(u8, result.stdout, gt_idx + 1, "</a>") orelse continue;
+        const title_raw = result.stdout[gt_idx + 1 .. title_end];
+        const title = stripHtmlTagsAlloc(allocator, title_raw) catch continue;
+        defer allocator.free(title);
+        if (title.len == 0) continue;
+
+        const snippet_start = std.mem.indexOfPos(u8, result.stdout, title_end, "result__snippet") orelse title_end;
+        const snippet_gt = std.mem.indexOfPos(u8, result.stdout, snippet_start, ">") orelse title_end;
+        const snippet_end = std.mem.indexOfPos(u8, result.stdout, snippet_gt + 1, "</a>") orelse
+            std.mem.indexOfPos(u8, result.stdout, snippet_gt + 1, "</div>") orelse snippet_gt;
+        const snippet_raw = if (snippet_gt < snippet_end) result.stdout[snippet_gt + 1 .. snippet_end] else "";
+        const snippet_clean = stripHtmlTagsAlloc(allocator, snippet_raw) catch allocator.dupe(u8, "") catch continue;
+        defer allocator.free(snippet_clean);
+
+        const subtitle = std.fmt.allocPrint(allocator, "{s} | {s}", .{ urlHost(decoded_target), clampText(snippet_clean, 180) }) catch continue;
+        defer allocator.free(subtitle);
+
+        web_scrape_mu.lock();
+        appendScrapedRowLocked(title, subtitle, decoded_target) catch {
+            web_scrape_mu.unlock();
+            continue;
+        };
+        web_scrape_mu.unlock();
+        parsed += 1;
+    }
+
+    web_scrape_mu.lock();
+    const total = web_scrape_rows.items.len;
+    web_scrape_mu.unlock();
+    return total;
+}
+
+fn braveWebSection(html: []const u8) ?[]const u8 {
+    const marker = "web:{type:\"search\",results:[";
+    const start = std.mem.indexOf(u8, html, marker) orelse return null;
+    const from = html[start + marker.len ..];
+    const end_rel = std.mem.indexOf(u8, from, "],summarizer:") orelse
+        std.mem.indexOf(u8, from, "],locations:") orelse
+        std.mem.indexOf(u8, from, "],news:") orelse
+        return null;
+    return from[0..end_rel];
+}
+
+fn parseJsQuoted(allocator: std.mem.Allocator, input: []const u8, start: usize) ?struct { []u8, usize } {
+    if (start >= input.len) return null;
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+    var i = start;
+    while (i < input.len) : (i += 1) {
+        const ch = input[i];
+        if (ch == '"') {
+            return .{ out.toOwnedSlice(allocator) catch return null, i + 1 };
+        }
+        if (ch != '\\') {
+            out.append(allocator, ch) catch return null;
+            continue;
+        }
+        i += 1;
+        if (i >= input.len) return null;
+        const esc = input[i];
+        switch (esc) {
+            '"', '\\', '/' => out.append(allocator, esc) catch return null,
+            'b' => out.append(allocator, 0x08) catch return null,
+            'f' => out.append(allocator, 0x0c) catch return null,
+            'n' => out.append(allocator, '\n') catch return null,
+            'r' => out.append(allocator, '\r') catch return null,
+            't' => out.append(allocator, '\t') catch return null,
+            'u' => {
+                if (i + 4 >= input.len) return null;
+                const hex = input[i + 1 .. i + 5];
+                const cp = std.fmt.parseUnsigned(u21, hex, 16) catch return null;
+                var buf: [4]u8 = undefined;
+                const n = std.unicode.utf8Encode(cp, &buf) catch return null;
+                out.appendSlice(allocator, buf[0..n]) catch return null;
+                i += 4;
+            },
+            else => out.append(allocator, esc) catch return null,
+        }
+    }
+    return null;
+}
+
+fn urlHost(url: []const u8) []const u8 {
+    const stripped = if (std.mem.startsWith(u8, url, "https://"))
+        url["https://".len..]
+    else if (std.mem.startsWith(u8, url, "http://"))
+        url["http://".len..]
+    else
+        url;
+    const slash = std.mem.indexOfScalar(u8, stripped, '/') orelse stripped.len;
+    return stripped[0..slash];
+}
+
+fn clampText(text: []const u8, max_len: usize) []const u8 {
+    if (text.len <= max_len) return text;
+    return text[0..max_len];
+}
+
+fn keepScrapedStringLocked(value: []const u8) ![]const u8 {
+    const copy = try std.heap.page_allocator.dupe(u8, value);
+    try web_scrape_owned.append(std.heap.page_allocator, copy);
+    return copy;
+}
+
+fn appendScrapedRowLocked(title: []const u8, subtitle: []const u8, url: []const u8) !void {
+    const owned_len_before = web_scrape_owned.items.len;
+    errdefer {
+        while (web_scrape_owned.items.len > owned_len_before) {
+            const item = web_scrape_owned.pop() orelse break;
+            std.heap.page_allocator.free(item);
+        }
+    }
+    const kept_title = try keepScrapedStringLocked(title);
+    const kept_subtitle = try keepScrapedStringLocked(subtitle);
+    const kept_url = try keepScrapedStringLocked(url);
+    try web_scrape_rows.append(std.heap.page_allocator, .{
+        .title = kept_title,
+        .subtitle = kept_subtitle,
+        .url = kept_url,
+    });
+}
+
+fn clearScrapedWebLocked() void {
+    for (web_scrape_owned.items) |item| std.heap.page_allocator.free(item);
+    web_scrape_owned.clearRetainingCapacity();
+    web_scrape_rows.clearRetainingCapacity();
+}
+
+fn stripHtmlTagsAlloc(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+    var inside_tag = false;
+    var i: usize = 0;
+    while (i < input.len) : (i += 1) {
+        const ch = input[i];
+        if (ch == '<') {
+            inside_tag = true;
+            continue;
+        }
+        if (ch == '>') {
+            inside_tag = false;
+            continue;
+        }
+        if (inside_tag) continue;
+        try out.append(allocator, ch);
+    }
+    const compact = std.mem.trim(u8, out.items, " \t\r\n");
+    const decoded = try htmlDecodeAlloc(allocator, compact);
+    return decoded;
+}
+
+fn htmlDecodeAlloc(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+    var i: usize = 0;
+    while (i < input.len) : (i += 1) {
+        if (input[i] != '&') {
+            try out.append(allocator, input[i]);
+            continue;
+        }
+        if (std.mem.startsWith(u8, input[i..], "&amp;")) {
+            try out.append(allocator, '&');
+            i += "&amp;".len - 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, input[i..], "&quot;")) {
+            try out.append(allocator, '"');
+            i += "&quot;".len - 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, input[i..], "&#x27;")) {
+            try out.append(allocator, '\'');
+            i += "&#x27;".len - 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, input[i..], "&#39;")) {
+            try out.append(allocator, '\'');
+            i += "&#39;".len - 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, input[i..], "&lt;")) {
+            try out.append(allocator, '<');
+            i += "&lt;".len - 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, input[i..], "&gt;")) {
+            try out.append(allocator, '>');
+            i += "&gt;".len - 1;
+            continue;
+        }
+        try out.append(allocator, '&');
+    }
+    return out.toOwnedSlice(allocator);
+}
+
+fn urlDecodeAlloc(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+    var i: usize = 0;
+    while (i < input.len) : (i += 1) {
+        const ch = input[i];
+        if (ch == '+') {
+            try out.append(allocator, ' ');
+            continue;
+        }
+        if (ch == '%' and i + 2 < input.len) {
+            const hi = std.fmt.charToDigit(input[i + 1], 16) catch {
+                try out.append(allocator, ch);
+                continue;
+            };
+            const lo = std.fmt.charToDigit(input[i + 2], 16) catch {
+                try out.append(allocator, ch);
+                continue;
+            };
+            const byte: u8 = @intCast((hi << 4) | lo);
+            try out.append(allocator, byte);
+            i += 2;
+            continue;
+        }
+        try out.append(allocator, ch);
+    }
+    return out.toOwnedSlice(allocator);
 }
 
 fn parsed_web_query(cmd: ParsedWebCommand) []const u8 {
