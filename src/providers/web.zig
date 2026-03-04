@@ -31,6 +31,7 @@ const ScrapedWebRow = struct {
     title: []const u8,
     subtitle: []const u8,
     url: []const u8,
+    icon: []const u8,
 };
 
 var browser_bookmarks_mu: std.Thread.Mutex = .{};
@@ -42,6 +43,7 @@ var web_scrape_mu: std.Thread.Mutex = .{};
 var web_scrape_rows: std.ArrayListUnmanaged(ScrapedWebRow) = .{};
 var web_scrape_owned: std.ArrayListUnmanaged([]u8) = .{};
 const web_scrape_limit: usize = 10;
+const web_favicon_probe_limit: usize = 5;
 
 pub fn appendRouteCandidates(
     allocator: std.mem.Allocator,
@@ -54,7 +56,7 @@ pub fn appendRouteCandidates(
     switch (parsed_cmd) {
         .search => |parsed_web| {
             if (!builtin.is_test and parsed_web.engine == .duckduckgo) {
-                const scraped_count = appendBraveScrapedResults(allocator, parsed_web.query, out) catch 0;
+                const scraped_count = appendScrapedWebResults(allocator, parsed_web.query, out) catch 0;
                 std.log.info("web scrape query={s} rows={d}", .{ parsed_web.query, scraped_count });
                 if (scraped_count > 0) {
                     try out.append(allocator, .{
@@ -87,15 +89,12 @@ pub fn appendRouteCandidates(
     }
 }
 
-fn appendBraveScrapedResults(
+fn appendScrapedWebResults(
     allocator: std.mem.Allocator,
     query: []const u8,
     out: *search.CandidateList,
 ) !usize {
-    const brave_rows = try scrapeBraveRows(allocator, query);
-    if (brave_rows == 0) {
-        _ = scrapeDuckDuckGoHtmlRows(allocator, query) catch 0;
-    }
+    _ = try scrapeDuckDuckGoHtmlRows(allocator, query);
 
     web_scrape_mu.lock();
     defer web_scrape_mu.unlock();
@@ -105,7 +104,7 @@ fn appendBraveScrapedResults(
             .title = row.title,
             .subtitle = row.subtitle,
             .action = row.url,
-            .icon = "web-browser-symbolic",
+            .icon = row.icon,
         });
     }
     return web_scrape_rows.items.len;
@@ -133,6 +132,7 @@ fn scrapeBraveRows(allocator: std.mem.Allocator, query: []const u8) !usize {
 
     var idx: usize = 0;
     var parsed: usize = 0;
+    var favicon_probed: usize = 0;
     while (idx < section.len and parsed < web_scrape_limit) {
         const title_key = std.mem.indexOfPos(u8, section, idx, "title:\"") orelse break;
         const title_start = title_key + "title:\"".len;
@@ -176,8 +176,15 @@ fn scrapeBraveRows(allocator: std.mem.Allocator, query: []const u8) !usize {
             allocator.free(title);
             continue;
         };
+        const icon_value = if (favicon_probed < web_favicon_probe_limit) blk: {
+            favicon_probed += 1;
+            if (probeFaviconPath(allocator, hit_url)) |path| {
+                break :blk path;
+            }
+            break :blk "web-browser-symbolic";
+        } else "web-browser-symbolic";
         web_scrape_mu.lock();
-        appendScrapedRowLocked(title, subtitle, hit_url) catch {
+        appendScrapedRowLocked(title, subtitle, hit_url, icon_value) catch {
             web_scrape_mu.unlock();
             allocator.free(subtitle);
             allocator.free(description);
@@ -208,7 +215,10 @@ fn scrapeDuckDuckGoHtmlRows(allocator: std.mem.Allocator, query: []const u8) !us
     }) catch return 0;
     defer allocator.free(result.stderr);
     defer allocator.free(result.stdout);
-    if (result.term != .Exited or result.term.Exited != 0) return 0;
+    if (result.term != .Exited or result.term.Exited != 0) {
+        std.log.warn("web scrape ddg curl failed query={s} term={any}", .{ query, result.term });
+        return 0;
+    }
 
     web_scrape_mu.lock();
     clearScrapedWebLocked();
@@ -216,9 +226,14 @@ fn scrapeDuckDuckGoHtmlRows(allocator: std.mem.Allocator, query: []const u8) !us
 
     var cursor: usize = 0;
     var parsed: usize = 0;
+    var favicon_probed: usize = 0;
+    var marker_hits: usize = 0;
+    var valid_urls: usize = 0;
+    var titled_rows: usize = 0;
     const href_marker = "uddg=";
     while (parsed < web_scrape_limit and cursor < result.stdout.len) {
         const href_rel = std.mem.indexOfPos(u8, result.stdout, cursor, href_marker) orelse break;
+        marker_hits += 1;
         const href_start = href_rel + href_marker.len;
         const href_end = std.mem.indexOfAnyPos(u8, result.stdout, href_start, "\"&") orelse break;
         cursor = href_end;
@@ -227,6 +242,7 @@ fn scrapeDuckDuckGoHtmlRows(allocator: std.mem.Allocator, query: []const u8) !us
         const decoded_target = urlDecodeAlloc(allocator, encoded_target) catch continue;
         defer allocator.free(decoded_target);
         if (!looksLikeUrl(decoded_target)) continue;
+        valid_urls += 1;
 
         const title_open = std.mem.lastIndexOf(u8, result.stdout[0..href_rel], "<a") orelse continue;
         const gt_idx = std.mem.indexOfPos(u8, result.stdout, title_open, ">") orelse continue;
@@ -235,6 +251,7 @@ fn scrapeDuckDuckGoHtmlRows(allocator: std.mem.Allocator, query: []const u8) !us
         const title = stripHtmlTagsAlloc(allocator, title_raw) catch continue;
         defer allocator.free(title);
         if (title.len == 0) continue;
+        titled_rows += 1;
 
         const snippet_start = std.mem.indexOfPos(u8, result.stdout, title_end, "result__snippet") orelse title_end;
         const snippet_gt = std.mem.indexOfPos(u8, result.stdout, snippet_start, ">") orelse title_end;
@@ -246,9 +263,16 @@ fn scrapeDuckDuckGoHtmlRows(allocator: std.mem.Allocator, query: []const u8) !us
 
         const subtitle = std.fmt.allocPrint(allocator, "{s} | {s}", .{ urlHost(decoded_target), clampText(snippet_clean, 180) }) catch continue;
         defer allocator.free(subtitle);
+        const icon_value = if (favicon_probed < web_favicon_probe_limit) blk: {
+            favicon_probed += 1;
+            if (probeFaviconPath(allocator, decoded_target)) |path| {
+                break :blk path;
+            }
+            break :blk "web-browser-symbolic";
+        } else "web-browser-symbolic";
 
         web_scrape_mu.lock();
-        appendScrapedRowLocked(title, subtitle, decoded_target) catch {
+        appendScrapedRowLocked(title, subtitle, decoded_target, icon_value) catch {
             web_scrape_mu.unlock();
             continue;
         };
@@ -259,6 +283,10 @@ fn scrapeDuckDuckGoHtmlRows(allocator: std.mem.Allocator, query: []const u8) !us
     web_scrape_mu.lock();
     const total = web_scrape_rows.items.len;
     web_scrape_mu.unlock();
+    std.log.info(
+        "web scrape ddg done query={s} bytes={d} markers={d} valid_urls={d} titled={d} accepted={d}",
+        .{ query, result.stdout.len, marker_hits, valid_urls, titled_rows, total },
+    );
     return total;
 }
 
@@ -334,7 +362,7 @@ fn keepScrapedStringLocked(value: []const u8) ![]const u8 {
     return copy;
 }
 
-fn appendScrapedRowLocked(title: []const u8, subtitle: []const u8, url: []const u8) !void {
+fn appendScrapedRowLocked(title: []const u8, subtitle: []const u8, url: []const u8, icon: []const u8) !void {
     const owned_len_before = web_scrape_owned.items.len;
     errdefer {
         while (web_scrape_owned.items.len > owned_len_before) {
@@ -345,10 +373,12 @@ fn appendScrapedRowLocked(title: []const u8, subtitle: []const u8, url: []const 
     const kept_title = try keepScrapedStringLocked(title);
     const kept_subtitle = try keepScrapedStringLocked(subtitle);
     const kept_url = try keepScrapedStringLocked(url);
+    const kept_icon = try keepScrapedStringLocked(icon);
     try web_scrape_rows.append(std.heap.page_allocator, .{
         .title = kept_title,
         .subtitle = kept_subtitle,
         .url = kept_url,
+        .icon = kept_icon,
     });
 }
 
@@ -452,6 +482,69 @@ fn urlDecodeAlloc(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
         try out.append(allocator, ch);
     }
     return out.toOwnedSlice(allocator);
+}
+
+fn probeFaviconPath(allocator: std.mem.Allocator, url: []const u8) ?[]const u8 {
+    const host = std.mem.trim(u8, urlHost(url), " \t\r\n");
+    if (host.len == 0) return null;
+
+    const cache_dir = "/tmp/god-search-ui-favicons";
+    std.fs.makeDirAbsolute(cache_dir) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return null,
+    };
+
+    const host_hash = std.hash.Wyhash.hash(0x7f11f9, host);
+    const target = std.fmt.allocPrint(allocator, "{s}/{x}.png", .{ cache_dir, host_hash }) catch return null;
+    defer allocator.free(target);
+
+    if (fileExistsPath(target)) {
+        return std.heap.page_allocator.dupe(u8, target) catch null;
+    }
+
+    const fetch_url = std.fmt.allocPrint(allocator, "https://www.google.com/s2/favicons?domain={s}&sz=64", .{host}) catch return null;
+    defer allocator.free(fetch_url);
+    const tmp_target = std.fmt.allocPrint(allocator, "{s}.tmp", .{target}) catch return null;
+    defer allocator.free(tmp_target);
+
+    const result = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{
+            "curl",
+            "-fsSL",
+            "--connect-timeout",
+            "2",
+            "--max-time",
+            "3",
+            "-A",
+            "Mozilla/5.0",
+            "-o",
+            tmp_target,
+            fetch_url,
+        },
+        .max_output_bytes = 256 * 1024,
+    }) catch return null;
+    defer allocator.free(result.stderr);
+    defer allocator.free(result.stdout);
+    if (result.term != .Exited or result.term.Exited != 0) {
+        if (fileExistsPath(tmp_target)) {
+            std.fs.deleteFileAbsolute(tmp_target) catch {};
+        }
+        return null;
+    }
+
+    const file = std.fs.openFileAbsolute(tmp_target, .{}) catch return null;
+    defer file.close();
+    const stat = file.stat() catch return null;
+    if (stat.size == 0) {
+        std.fs.deleteFileAbsolute(tmp_target) catch {};
+        return null;
+    }
+    std.fs.renameAbsolute(tmp_target, target) catch {
+        std.fs.deleteFileAbsolute(tmp_target) catch {};
+        return null;
+    };
+    return std.heap.page_allocator.dupe(u8, target) catch null;
 }
 
 fn parsed_web_query(cmd: ParsedWebCommand) []const u8 {
@@ -570,6 +663,11 @@ fn readFileAnyPath(allocator: std.mem.Allocator, path: []const u8, max_bytes: us
         return file.readToEndAlloc(allocator, max_bytes);
     }
     return std.fs.cwd().readFileAlloc(allocator, path, max_bytes);
+}
+
+fn fileExistsPath(path: []const u8) bool {
+    std.fs.accessAbsolute(path, .{}) catch return false;
+    return true;
 }
 
 fn lookupBookmarkUrlFromTsv(allocator: std.mem.Allocator, data: []const u8, alias_query: []const u8) !?[]u8 {

@@ -59,6 +59,13 @@ pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, ac
     if (kind == .web) {
         const explicit = std.mem.trim(u8, icon, " \t\r\n");
         if (explicit.len > 0) {
+            if (resolveIconFileForCandidate(allocator, explicit, "")) |icon_path_z| {
+                defer allocator.free(icon_path_z);
+                const image = c.gtk_image_new_from_file(icon_path_z.ptr);
+                c.gtk_image_set_pixel_size(@ptrCast(image), 30);
+                c.gtk_widget_add_css_class(image, "gs-kind-icon");
+                return @ptrCast(image);
+            }
             const icon_name_z = allocator.dupeZ(u8, explicit) catch null;
             if (icon_name_z) |name| {
                 defer allocator.free(name);
@@ -133,9 +140,11 @@ fn resolveIconFileForCandidate(allocator: std.mem.Allocator, icon: []const u8, a
 
 fn looksLikeImageFile(path: []const u8) bool {
     return std.mem.endsWith(u8, path, ".png") or
+        std.mem.endsWith(u8, path, ".ico") or
         std.mem.endsWith(u8, path, ".svg") or
         std.mem.endsWith(u8, path, ".xpm") or
         std.mem.endsWith(u8, path, ".PNG") or
+        std.mem.endsWith(u8, path, ".ICO") or
         std.mem.endsWith(u8, path, ".SVG") or
         std.mem.endsWith(u8, path, ".XPM");
 }
