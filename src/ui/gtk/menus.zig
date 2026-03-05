@@ -40,7 +40,7 @@ pub fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path
     const editor_cmd = gtk_actions.buildDirEditorCommand(allocator, dir_path) catch null;
     if (editor_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .dir, "DIR", .dir_option, "Open in Editor", "Use $VISUAL/$EDITOR fallback", cmd);
+        appendOptionRow(ctx.list, allocator, .dir, "DIR", .dir_option, "Open in Editor", "Use configured tools.editor_tool", cmd);
     }
 
     const copy_cmd = gtk_actions.buildDirCopyPathCommand(allocator, dir_path) catch null;
@@ -66,7 +66,7 @@ pub fn showFileActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, file_ac
     const edit_cmd = gtk_actions.buildFileEditCommand(allocator, parsed.path, parsed.line) catch null;
     if (edit_cmd) |cmd| {
         defer allocator.free(cmd);
-        appendOptionRow(ctx.list, allocator, .file, "FILE", .file_option, "Open in Editor", "Use $VISUAL/$EDITOR (line-aware when possible)", cmd);
+        appendOptionRow(ctx.list, allocator, .file, "FILE", .file_option, "Open in Editor", "Use configured tools.editor_tool (line-aware when supported)", cmd);
     }
 
     const open_cmd = gtk_actions.buildFileOpenCommand(allocator, parsed.path) catch null;

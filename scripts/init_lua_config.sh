@@ -51,6 +51,7 @@ return {
     terminal = "kitty", -- kitty | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
     grep_include_hidden = false, -- true includes hidden files/dirs for & route
     clipboard_tool = "wl-copy", -- wl-copy | xclip
+    editor_tool = "xdg-open", -- nvim | vim | vi | helix | hx | kak | nano | code | codium | code-insiders | subl | xdg-open
   },
 }
 EOF

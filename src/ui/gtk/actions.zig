@@ -65,10 +65,11 @@ pub fn buildDirExplorerCommand(allocator: std.mem.Allocator, dir_path: []const u
 pub fn buildDirEditorCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
     const quoted = try shellSingleQuote(allocator, dir_path);
     defer allocator.free(quoted);
+    const editor_cmd = runtime_tools.editorTool().command();
     return std.fmt.allocPrint(
         allocator,
-        "sh -lc 'if [ -n \"$VISUAL\" ]; then exec \"$VISUAL\" \"$1\"; elif [ -n \"$EDITOR\" ]; then exec \"$EDITOR\" \"$1\"; else exec xdg-open \"$1\"; fi' _ {s}",
-        .{quoted},
+        "sh -lc 'exec {s} \"$1\"' _ {s}",
+        .{ editor_cmd, quoted },
     );
 }
 
@@ -112,19 +113,38 @@ pub fn buildFileCopyPathCommand(allocator: std.mem.Allocator, file_path: []const
 pub fn buildFileEditCommand(allocator: std.mem.Allocator, file_path: []const u8, line: ?[]const u8) ![]u8 {
     const quoted = try shellSingleQuote(allocator, file_path);
     defer allocator.free(quoted);
+    const editor_tool = runtime_tools.editorTool();
+    const editor_cmd = editor_tool.command();
     if (line) |line_num| {
         const line_q = try shellSingleQuote(allocator, line_num);
         defer allocator.free(line_q);
-        return std.fmt.allocPrint(
-            allocator,
-            "sh -lc 'editor=\"${{VISUAL:-${{EDITOR:-}}}}\"; if [ -z \"$editor\" ]; then exec xdg-open \"$1\"; fi; case \"$editor\" in nvim|vim|vi|helix|hx|kak|nano) exec \"$editor\" +\"$2\" \"$1\" ;; code|codium|code-insiders) exec \"$editor\" --goto \"$1:$2\" ;; subl) exec \"$editor\" \"$1:$2\" ;; *) exec \"$editor\" \"$1\" ;; esac' _ {s} {s}",
-            .{ quoted, line_q },
-        );
+        return switch (editor_tool) {
+            .nvim, .vim, .vi, .helix, .hx, .kak, .nano => std.fmt.allocPrint(
+                allocator,
+                "sh -lc 'exec {s} +\"$2\" \"$1\"' _ {s} {s}",
+                .{ editor_cmd, quoted, line_q },
+            ),
+            .code, .codium, .code_insiders => std.fmt.allocPrint(
+                allocator,
+                "sh -lc 'exec {s} --goto \"$1:$2\"' _ {s} {s}",
+                .{ editor_cmd, quoted, line_q },
+            ),
+            .subl => std.fmt.allocPrint(
+                allocator,
+                "sh -lc 'exec {s} \"$1:$2\"' _ {s} {s}",
+                .{ editor_cmd, quoted, line_q },
+            ),
+            .xdg_open => std.fmt.allocPrint(
+                allocator,
+                "sh -lc 'exec {s} \"$1\"' _ {s}",
+                .{ editor_cmd, quoted },
+            ),
+        };
     }
     return std.fmt.allocPrint(
         allocator,
-        "sh -lc 'if [ -n \"$VISUAL\" ]; then exec \"$VISUAL\" \"$1\"; elif [ -n \"$EDITOR\" ]; then exec \"$EDITOR\" \"$1\"; else exec xdg-open \"$1\"; fi' _ {s}",
-        .{quoted},
+        "sh -lc 'exec {s} \"$1\"' _ {s}",
+        .{ editor_cmd, quoted },
     );
 }
 
@@ -191,4 +211,17 @@ test "buildFileCopyPathCommand uses configured clipboard tool only" {
     try std.testing.expect(std.mem.indexOf(u8, cmd, "xclip -selection clipboard") != null);
     try std.testing.expect(std.mem.indexOf(u8, cmd, "wl-copy") == null);
     try std.testing.expect(std.mem.indexOf(u8, cmd, "copyq add") == null);
+}
+
+test "buildFileEditCommand uses configured editor tool only" {
+    runtime_tools.apply(.{
+        .tools = .{
+            .editor_tool = .code,
+        },
+    });
+    const cmd = try buildFileEditCommand(std.testing.allocator, "/tmp/file.txt", "42");
+    defer std.testing.allocator.free(cmd);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "exec code --goto") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "VISUAL") == null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "EDITOR") == null);
 }

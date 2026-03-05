@@ -201,6 +201,7 @@ if conf.tools ~= nil then
       terminal = true,
       grep_include_hidden = true,
       clipboard_tool = true,
+      editor_tool = true,
     })
     check_enum("tools.package_manager", conf.tools.package_manager, {
       ["yay"] = true,
@@ -221,6 +222,20 @@ if conf.tools ~= nil then
     check_enum("tools.clipboard_tool", conf.tools.clipboard_tool, {
       ["wl-copy"] = true,
       ["xclip"] = true,
+    })
+    check_enum("tools.editor_tool", conf.tools.editor_tool, {
+      ["nvim"] = true,
+      ["vim"] = true,
+      ["vi"] = true,
+      ["helix"] = true,
+      ["hx"] = true,
+      ["kak"] = true,
+      ["nano"] = true,
+      ["code"] = true,
+      ["codium"] = true,
+      ["code-insiders"] = true,
+      ["subl"] = true,
+      ["xdg-open"] = true,
     })
     if conf.tools.grep_include_hidden ~= nil and type(conf.tools.grep_include_hidden) ~= "boolean" then
       err("tools.grep_include_hidden must be a boolean")

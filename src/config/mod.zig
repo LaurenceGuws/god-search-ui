@@ -59,6 +59,38 @@ pub const ClipboardTool = enum {
     }
 };
 
+pub const EditorTool = enum {
+    nvim,
+    vim,
+    vi,
+    helix,
+    hx,
+    kak,
+    nano,
+    code,
+    codium,
+    code_insiders,
+    subl,
+    xdg_open,
+
+    pub fn command(self: EditorTool) []const u8 {
+        return switch (self) {
+            .nvim => "nvim",
+            .vim => "vim",
+            .vi => "vi",
+            .helix => "helix",
+            .hx => "hx",
+            .kak => "kak",
+            .nano => "nano",
+            .code => "code",
+            .codium => "codium",
+            .code_insiders => "code-insiders",
+            .subl => "subl",
+            .xdg_open => "xdg-open",
+        };
+    }
+};
+
 pub const Settings = struct {
     pub const UiPolicy = struct {
         show_nerd_stats: bool = true,
@@ -74,6 +106,7 @@ pub const Settings = struct {
         terminal: TerminalTool = .kitty,
         grep_include_hidden: bool = false,
         clipboard_tool: ClipboardTool = .wl_copy,
+        editor_tool: EditorTool = .xdg_open,
     };
 
     surface_mode: ?@import("../ui/surfaces/mod.zig").SurfaceMode = null,

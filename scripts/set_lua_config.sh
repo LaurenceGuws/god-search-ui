@@ -19,6 +19,7 @@ Keys:
   tools.terminal                kitty | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
   tools.grep_include_hidden     true | false
   tools.clipboard_tool          wl-copy | xclip
+  tools.editor_tool             nvim | vim | vi | helix | hx | kak | nano | code | codium | code-insiders | subl | xdg-open
   notifications.actions.show_close_button  true | false
   notifications.actions.show_dbus_actions  true | false
 EOF
@@ -97,6 +98,13 @@ case "$KEY" in
       exit 1
     fi
     perl -0777 -i -pe "s/(tools\\s*=\\s*\\{.*?\\n\\s*)clipboard_tool\\s*=\\s*\"[^\"]*\"/\${1}clipboard_tool = \"${V_ESC}\"/s" "$CFG"
+    ;;
+  tools.editor_tool)
+    if ! [[ "$VALUE" =~ ^(nvim|vim|vi|helix|hx|kak|nano|code|codium|code-insiders|subl|xdg-open)$ ]]; then
+      echo "value for $KEY is not a supported editor tool" >&2
+      exit 1
+    fi
+    perl -0777 -i -pe "s/(tools\\s*=\\s*\\{.*?\\n\\s*)editor_tool\\s*=\\s*\"[^\"]*\"/\${1}editor_tool = \"${V_ESC}\"/s" "$CFG"
     ;;
   notifications.actions.show_close_button)
     require_bool

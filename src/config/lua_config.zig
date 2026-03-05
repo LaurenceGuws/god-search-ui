@@ -174,6 +174,18 @@ fn parseToolsTable(
     }
     c.lua_pop(lua, 1);
 
+    _ = c.lua_getfield(lua, idx, "editor_tool");
+    if (c.lua_type(lua, -1) == c.LUA_TSTRING) {
+        if (readLuaString(lua, -1)) |raw| {
+            if (parseEditorTool(raw)) |value| {
+                out.editor_tool = value;
+            } else {
+                log.warn("ignoring invalid lua tools.editor_tool: {s}", .{raw});
+            }
+        }
+    }
+    c.lua_pop(lua, 1);
+
     return out;
 }
 
@@ -349,6 +361,22 @@ fn parseTerminalTool(raw: []const u8) ?config.TerminalTool {
 fn parseClipboardTool(raw: []const u8) ?config.ClipboardTool {
     if (std.ascii.eqlIgnoreCase(raw, "wl-copy") or std.ascii.eqlIgnoreCase(raw, "wl_copy")) return .wl_copy;
     if (std.ascii.eqlIgnoreCase(raw, "xclip")) return .xclip;
+    return null;
+}
+
+fn parseEditorTool(raw: []const u8) ?config.EditorTool {
+    if (std.ascii.eqlIgnoreCase(raw, "nvim")) return .nvim;
+    if (std.ascii.eqlIgnoreCase(raw, "vim")) return .vim;
+    if (std.ascii.eqlIgnoreCase(raw, "vi")) return .vi;
+    if (std.ascii.eqlIgnoreCase(raw, "helix")) return .helix;
+    if (std.ascii.eqlIgnoreCase(raw, "hx")) return .hx;
+    if (std.ascii.eqlIgnoreCase(raw, "kak")) return .kak;
+    if (std.ascii.eqlIgnoreCase(raw, "nano")) return .nano;
+    if (std.ascii.eqlIgnoreCase(raw, "code")) return .code;
+    if (std.ascii.eqlIgnoreCase(raw, "codium")) return .codium;
+    if (std.ascii.eqlIgnoreCase(raw, "code-insiders") or std.ascii.eqlIgnoreCase(raw, "code_insiders")) return .code_insiders;
+    if (std.ascii.eqlIgnoreCase(raw, "subl")) return .subl;
+    if (std.ascii.eqlIgnoreCase(raw, "xdg-open") or std.ascii.eqlIgnoreCase(raw, "xdg_open")) return .xdg_open;
     return null;
 }
 
