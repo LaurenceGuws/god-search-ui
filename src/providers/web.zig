@@ -695,53 +695,9 @@ pub fn engineLabel(engine: WebEngine) []const u8 {
     };
 }
 
-fn bookmarksPath(allocator: std.mem.Allocator) ![]u8 {
-    if (std.process.getEnvVarOwned(allocator, "XDG_CONFIG_HOME")) |xdg| {
-        defer allocator.free(xdg);
-        return std.fmt.allocPrint(allocator, "{s}/god-search-ui/web-bookmarks.tsv", .{xdg});
-    } else |_| {}
-    const home = try std.process.getEnvVarOwned(allocator, "HOME");
-    defer allocator.free(home);
-    return std.fmt.allocPrint(allocator, "{s}/.config/god-search-ui/web-bookmarks.tsv", .{home});
-}
-
-fn readFileAnyPath(allocator: std.mem.Allocator, path: []const u8, max_bytes: usize) ![]u8 {
-    if (std.fs.path.isAbsolute(path)) {
-        const file = try std.fs.openFileAbsolute(path, .{});
-        defer file.close();
-        return file.readToEndAlloc(allocator, max_bytes);
-    }
-    return std.fs.cwd().readFileAlloc(allocator, path, max_bytes);
-}
-
 fn fileExistsPath(path: []const u8) bool {
     std.fs.accessAbsolute(path, .{}) catch return false;
     return true;
-}
-
-fn lookupBookmarkUrlFromTsv(allocator: std.mem.Allocator, data: []const u8, alias_query: []const u8) !?[]u8 {
-    const alias_trimmed = std.mem.trim(u8, alias_query, " \t\r\n");
-    if (alias_trimmed.len == 0) return null;
-
-    var lines = std.mem.splitScalar(u8, data, '\n');
-    while (lines.next()) |line| {
-        const row = std.mem.trimRight(u8, line, "\r");
-        if (row.len == 0) continue;
-        if (row[0] == '#') continue;
-
-        var fields = std.mem.splitScalar(u8, row, '\t');
-        const alias = std.mem.trim(u8, fields.next() orelse continue, " \t");
-        if (alias.len == 0) continue;
-        if (!std.ascii.eqlIgnoreCase(alias, alias_trimmed)) continue;
-
-        const second = std.mem.trim(u8, fields.next() orelse continue, " \t");
-        const third = std.mem.trim(u8, fields.next() orelse "", " \t");
-        const url = if (third.len > 0) third else second;
-        if (!looksLikeUrl(url)) continue;
-        const dup = try allocator.dupe(u8, url);
-        return dup;
-    }
-    return null;
 }
 
 fn looksLikeUrl(value: []const u8) bool {
@@ -1084,27 +1040,6 @@ test "parseWebCommand routes bookmark subcommand and search commands" {
         .bookmark => |b| try std.testing.expectEqualStrings("", b.query),
         else => return std.testing.expect(false),
     }
-}
-
-test "lookupBookmarkUrlFromTsv supports two and three column rows" {
-    const data =
-        "# alias<TAB>url or alias<TAB>title<TAB>url\n" ++
-        "gh\thttps://github.com\n" ++
-        "docs\tProject Docs\thttps://example.com/docs\n" ++
-        "bad\tftp://example.com\n";
-
-    const gh = try lookupBookmarkUrlFromTsv(std.testing.allocator, data, "GH");
-    defer if (gh) |v| std.testing.allocator.free(v);
-    try std.testing.expect(gh != null);
-    try std.testing.expectEqualStrings("https://github.com", gh.?);
-
-    const docs = try lookupBookmarkUrlFromTsv(std.testing.allocator, data, "docs");
-    defer if (docs) |v| std.testing.allocator.free(v);
-    try std.testing.expect(docs != null);
-    try std.testing.expectEqualStrings("https://example.com/docs", docs.?);
-
-    const missing = try lookupBookmarkUrlFromTsv(std.testing.allocator, data, "missing");
-    try std.testing.expect(missing == null);
 }
 
 test "buildSearchUrl uses selected engine" {
