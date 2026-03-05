@@ -436,11 +436,17 @@ fn writeResponse(
             "ipc response too large for client protocol cmd={s} bytes={d} max={d}",
             .{ endpoint, output.items.len, max_response_bytes },
         );
-        const fallback = "{\"ok\":false,\"code\":\"response_too_large\",\"message\":\"response exceeded ipc limit\"}";
-        _ = std.posix.write(fd, fallback) catch {};
+        const error_payload = "{\"ok\":false,\"code\":\"response_too_large\",\"message\":\"response exceeded ipc limit\"}";
+        _ = std.posix.write(fd, error_payload) catch |err| {
+            std.log.warn("ipc response write failed cmd={s} err={s}", .{ endpoint, @errorName(err) });
+            return;
+        };
         return;
     }
-    _ = std.posix.write(fd, output.items) catch {};
+    _ = std.posix.write(fd, output.items) catch |err| {
+        std.log.warn("ipc response write failed cmd={s} err={s}", .{ endpoint, @errorName(err) });
+        return;
+    };
 }
 
 fn connectWithRetryTimeout(fd: std.posix.socket_t, sockaddr: *const std.posix.sockaddr, socklen: std.posix.socklen_t, timeout_ms: u64) !bool {
