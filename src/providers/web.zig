@@ -663,17 +663,7 @@ pub fn buildSearchUrl(allocator: std.mem.Allocator, parsed: ParsedWebQuery) ![]u
 }
 
 pub fn resolveBookmarkUrl(allocator: std.mem.Allocator, alias: []const u8) !?[]u8 {
-    const direct = try resolveBrowserBookmarkUrl(allocator, alias);
-    if (direct != null) return direct;
-
-    const path = try bookmarksPath(allocator);
-    defer allocator.free(path);
-    const data = readFileAnyPath(allocator, path, 1024 * 1024) catch |err| switch (err) {
-        error.FileNotFound => return null,
-        else => return err,
-    };
-    defer allocator.free(data);
-    return lookupBookmarkUrlFromTsv(allocator, data, alias);
+    return resolveBrowserBookmarkUrl(allocator, alias);
 }
 
 pub fn resolveBrowserBookmarkUrl(allocator: std.mem.Allocator, query: []const u8) !?[]u8 {
