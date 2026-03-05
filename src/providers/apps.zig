@@ -76,16 +76,8 @@ pub const AppsProvider = struct {
         }
 
         if (count == 0) {
-            const fallback_count = self.collectFromDesktopFiles(allocator, out) catch |scan_err| {
-                self.had_runtime_failure = true;
-                std.log.warn("apps provider desktop scan failed after empty cache: {s}", .{@errorName(scan_err)});
-                return;
-            };
-            if (fallback_count == 0) {
-                self.had_runtime_failure = true;
-                return;
-            }
-            self.had_runtime_failure = false;
+            self.had_runtime_failure = true;
+            std.log.warn("apps provider cache contained no parsable rows path={s}", .{self.cache_path});
             return;
         }
         self.had_runtime_failure = false;
