@@ -200,6 +200,7 @@ if conf.tools ~= nil then
       package_manager = true,
       terminal = true,
       grep_include_hidden = true,
+      clipboard_tool = true,
     })
     check_enum("tools.package_manager", conf.tools.package_manager, {
       ["yay"] = true,
@@ -216,6 +217,10 @@ if conf.tools ~= nil then
       ["xfce4-terminal"] = true,
       ["tilix"] = true,
       ["xterm"] = true,
+    })
+    check_enum("tools.clipboard_tool", conf.tools.clipboard_tool, {
+      ["wl-copy"] = true,
+      ["xclip"] = true,
     })
     if conf.tools.grep_include_hidden ~= nil and type(conf.tools.grep_include_hidden) ~= "boolean" then
       err("tools.grep_include_hidden must be a boolean")

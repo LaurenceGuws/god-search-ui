@@ -269,11 +269,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 const value = action["calc-copy:".len..];
                 const value_q = try shellSingleQuote(allocator, value);
                 defer allocator.free(value_q);
-                const cmd = try std.fmt.allocPrint(
-                    allocator,
-                    "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
-                    .{value_q},
-                );
+                const cmd = try buildClipboardCopyCommand(allocator, value_q);
                 return .{
                     .command = cmd,
                     .owned_command = cmd,
@@ -287,11 +283,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 const value = action["nerd-copy:".len..];
                 const value_q = try shellSingleQuote(allocator, value);
                 defer allocator.free(value_q);
-                const cmd = try std.fmt.allocPrint(
-                    allocator,
-                    "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
-                    .{value_q},
-                );
+                const cmd = try buildClipboardCopyCommand(allocator, value_q);
                 return .{
                     .command = cmd,
                     .owned_command = cmd,
@@ -305,11 +297,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 const value = action["emoji-copy:".len..];
                 const value_q = try shellSingleQuote(allocator, value);
                 defer allocator.free(value_q);
-                const cmd = try std.fmt.allocPrint(
-                    allocator,
-                    "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
-                    .{value_q},
-                );
+                const cmd = try buildClipboardCopyCommand(allocator, value_q);
                 return .{
                     .command = cmd,
                     .owned_command = cmd,
@@ -338,6 +326,15 @@ fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
     }
     try out.append(allocator, '\'');
     return out.toOwnedSlice(allocator);
+}
+
+fn buildClipboardCopyCommand(allocator: std.mem.Allocator, value_q: []const u8) ![]u8 {
+    const clip_cmd = runtime_tools.clipboardTool().command();
+    return std.fmt.allocPrint(
+        allocator,
+        "sh -lc 'printf %s \"$1\" | {s}' _ {s}",
+        .{ clip_cmd, value_q },
+    );
 }
 
 test "window focus command shell-quotes metacharacters in address" {
@@ -379,7 +376,7 @@ test "calculator hint copy command builds clipboard shell command" {
 
     try std.testing.expect(plan.command != null);
     try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "wl-copy") != null);
-    try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "copyq add") != null);
+    try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "copyq add") == null);
     try std.testing.expect(std.mem.indexOf(u8, plan.command.?, "3.14") != null);
     try std.testing.expectEqualStrings("calc", plan.telemetry_kind);
 }
@@ -468,4 +465,18 @@ test "package action uses configured terminal and package manager only" {
     try std.testing.expect(std.mem.indexOf(u8, cmd, "sudo pacman -S --needed") != null);
     try std.testing.expect(std.mem.indexOf(u8, cmd, "term=\"xterm\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, cmd, "command -v") == null);
+}
+
+test "clipboard copy uses configured clipboard tool only" {
+    runtime_tools.apply(.{
+        .tools = .{
+            .clipboard_tool = .xclip,
+        },
+    });
+    var plan = try planCommandKind(std.testing.allocator, .hint, "emoji-copy:hi");
+    defer plan.deinit(std.testing.allocator);
+    try std.testing.expect(plan.command != null);
+    const cmd = plan.command.?;
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "xclip -selection clipboard") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "wl-copy") == null);
 }

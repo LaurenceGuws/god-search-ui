@@ -162,6 +162,18 @@ fn parseToolsTable(
 
     maybeBoolField(lua, idx, "grep_include_hidden", &out.grep_include_hidden);
 
+    _ = c.lua_getfield(lua, idx, "clipboard_tool");
+    if (c.lua_type(lua, -1) == c.LUA_TSTRING) {
+        if (readLuaString(lua, -1)) |raw| {
+            if (parseClipboardTool(raw)) |value| {
+                out.clipboard_tool = value;
+            } else {
+                log.warn("ignoring invalid lua tools.clipboard_tool: {s}", .{raw});
+            }
+        }
+    }
+    c.lua_pop(lua, 1);
+
     return out;
 }
 
@@ -331,6 +343,12 @@ fn parseTerminalTool(raw: []const u8) ?config.TerminalTool {
     if (std.ascii.eqlIgnoreCase(raw, "xfce4-terminal") or std.ascii.eqlIgnoreCase(raw, "xfce4_terminal")) return .xfce4_terminal;
     if (std.ascii.eqlIgnoreCase(raw, "tilix")) return .tilix;
     if (std.ascii.eqlIgnoreCase(raw, "xterm")) return .xterm;
+    return null;
+}
+
+fn parseClipboardTool(raw: []const u8) ?config.ClipboardTool {
+    if (std.ascii.eqlIgnoreCase(raw, "wl-copy") or std.ascii.eqlIgnoreCase(raw, "wl_copy")) return .wl_copy;
+    if (std.ascii.eqlIgnoreCase(raw, "xclip")) return .xclip;
     return null;
 }
 

@@ -47,6 +47,18 @@ pub const TerminalTool = enum {
     }
 };
 
+pub const ClipboardTool = enum {
+    wl_copy,
+    xclip,
+
+    pub fn command(self: ClipboardTool) []const u8 {
+        return switch (self) {
+            .wl_copy => "wl-copy",
+            .xclip => "xclip -selection clipboard",
+        };
+    }
+};
+
 pub const Settings = struct {
     pub const UiPolicy = struct {
         show_nerd_stats: bool = true,
@@ -61,6 +73,7 @@ pub const Settings = struct {
         package_manager: PackageManager = .yay,
         terminal: TerminalTool = .kitty,
         grep_include_hidden: bool = false,
+        clipboard_tool: ClipboardTool = .wl_copy,
     };
 
     surface_mode: ?@import("../ui/surfaces/mod.zig").SurfaceMode = null,
