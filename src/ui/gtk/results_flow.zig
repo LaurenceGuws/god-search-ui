@@ -18,6 +18,7 @@ const GTRUE = gtk_types.GTRUE;
 const hot_render_rows: usize = 20;
 const max_poll_windows: usize = 10;
 const max_polled_rows: usize = hot_render_rows * max_poll_windows;
+const async_cache_ttl_ns: i128 = 10 * std.time.ns_per_s;
 
 pub const AsyncHooks = struct {
     start_async_route_search: *const fn (*UiContext, std.mem.Allocator, []const u8) void,
@@ -82,6 +83,16 @@ fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_tri
         rows
     else
         &[_]search_mod.ScoredCandidate{};
+    const created_ns = gtk_async_state.asyncCacheCreatedNs(ctx, hash);
+    const now_ns = std.time.nanoTimestamp();
+    if (created_ns > 0 and now_ns > created_ns and now_ns - created_ns > async_cache_ttl_ns) {
+        std.log.info("results_flow.cache invalidated query={s} reason=ttl_expired age_ns={d}", .{
+            query_trimmed,
+            now_ns - created_ns,
+        });
+        gtk_async_state.clearAsyncSearchCache(ctx, allocator);
+        return false;
+    }
     const parsed_query = search_mod.parseQuery(query_trimmed);
     if ((parsed_query.route == .grep or parsed_query.route == .files) and cachedRowsContainMissingPaths(cached_rows)) {
         std.log.info("results_flow.cache invalidated query={s} reason=missing_paths", .{query_trimmed});

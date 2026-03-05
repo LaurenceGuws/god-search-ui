@@ -51,6 +51,7 @@ pub fn clearAsyncSearchCache(ctx: *UiContext, allocator: std.mem.Allocator) void
     }
     ctx.async_cached_query_hash = 0;
     ctx.async_cached_total_len = 0;
+    ctx.async_cached_created_ns = 0;
 }
 
 pub fn cacheAsyncSearchRows(
@@ -71,6 +72,7 @@ pub fn cacheAsyncSearchRows(
     if (keep_rows == 0) {
         ctx.async_cached_query_hash = query_hash;
         ctx.async_cached_total_len = total_len;
+        ctx.async_cached_created_ns = std.time.nanoTimestamp();
         return;
     }
     const cached_rows = allocator.alloc(search_mod.ScoredCandidate, keep_rows) catch return;
@@ -143,6 +145,7 @@ pub fn cacheAsyncSearchRows(
     ctx.async_cached_rows_len = copied;
     ctx.async_cached_query_hash = query_hash;
     ctx.async_cached_total_len = total_len;
+    ctx.async_cached_created_ns = std.time.nanoTimestamp();
     std.log.info(
         "ram_event=async_cache_store query_hash={d} route={s} query_term_len={d} emitted_rows={d} owned_item_count={d} owned_bytes={d} generation_count={d} pruned_count={d} window_limit={d} cached_rows={d} cached_bytes={d}",
         .{
@@ -174,6 +177,11 @@ pub fn asyncCachedTotalLen(ctx: *UiContext, query_hash: u64) usize {
 
 pub fn asyncCacheKnownForQuery(ctx: *UiContext, query_hash: u64) bool {
     return ctx.async_cached_query_hash == query_hash;
+}
+
+pub fn asyncCacheCreatedNs(ctx: *UiContext, query_hash: u64) i128 {
+    if (ctx.async_cached_query_hash != query_hash) return 0;
+    return ctx.async_cached_created_ns;
 }
 
 pub fn takePendingAsyncQuery(ctx: *UiContext) ?[]u8 {
