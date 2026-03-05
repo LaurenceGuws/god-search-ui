@@ -301,7 +301,7 @@ fn buildPackagePreviewDoc(
     };
     const cmd = try std.fmt.allocPrint(
         allocator,
-        "sh -lc '{s}' _ {s} 2>/dev/null || true",
+        "sh -lc '{s}' _ {s} 2>/dev/null",
         .{ pkg_cmd, pkg_q },
     );
     defer allocator.free(cmd);
@@ -313,6 +313,11 @@ fn buildPackagePreviewDoc(
     }) catch return null;
     defer allocator.free(result.stderr);
     defer allocator.free(result.stdout);
+
+    if (result.term != .Exited or result.term.Exited != 0) {
+        std.log.warn("package preview command failed pkg={s} exit={any}", .{ pkg, result.term });
+        return null;
+    }
 
     if (result.stdout.len == 0) return null;
 
