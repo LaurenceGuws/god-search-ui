@@ -143,13 +143,13 @@ fn collectRgCandidates(
     const hidden_flag = if (rgIncludeHidden(tool_state)) "--hidden" else "";
     const cmd = try std.fmt.allocPrint(
         allocator,
-        "rg --json --line-number --color never --smart-case {s} --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null || true",
+        "rg --json --line-number --color never --smart-case {s} --max-columns 300 --max-columns-preview --glob '!.git' --glob '!node_modules' --glob '!.cache/**' --glob '!.codex/**' --glob '!.local/share/Trash/**' --glob '!.local/share/opencode/**' --glob '!.local/share/containers/**' {s} {s} 2>/dev/null",
         .{ hidden_flag, term_q, home_q },
     );
     defer allocator.free(cmd);
 
     std.log.info("grep collect start route=grep term={s} cmd={s}", .{ term, cmd });
-    const rows = runShellCaptureBounded(allocator, cmd, max_rg_capture_bytes) catch |err| {
+    const rows = runShellCaptureBoundedWithAllowExitOne(allocator, cmd, max_rg_capture_bytes, true) catch |err| {
         std.log.warn("grep collect failed route=grep term={s} err={s}", .{ term, @errorName(err) });
         return err;
     };
