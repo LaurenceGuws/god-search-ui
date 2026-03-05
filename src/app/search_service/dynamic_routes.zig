@@ -190,18 +190,24 @@ fn collectPackageCandidates(
     defer allocator.free(term_q);
     const cmd = switch (source_cmd) {
         .yay => if (pkg_query.term.len > 0)
-            try std.fmt.allocPrint(allocator, "yay -Ss --color never {s} 2>/dev/null || true", .{term_q})
+            try std.fmt.allocPrint(allocator, "yay -Ss --color never {s} 2>/dev/null", .{term_q})
         else
-            try allocator.dupe(u8, "yay -Qq 2>/dev/null || true"),
+            try allocator.dupe(u8, "yay -Qq 2>/dev/null"),
         .pacman => if (pkg_query.term.len > 0)
-            try std.fmt.allocPrint(allocator, "pacman -Ss --color never {s} 2>/dev/null || true", .{term_q})
+            try std.fmt.allocPrint(allocator, "pacman -Ss --color never {s} 2>/dev/null", .{term_q})
         else
-            try allocator.dupe(u8, "pacman -Qq 2>/dev/null || true"),
+            try allocator.dupe(u8, "pacman -Qq 2>/dev/null"),
     };
     defer allocator.free(cmd);
 
     std.log.info("packages collect start route=packages term={s} cmd={s}", .{ term, cmd });
-    const rows = runShellCaptureBounded(allocator, cmd, max_pkg_capture_bytes) catch |err| {
+    const allow_no_match_exit = pkg_query.term.len > 0;
+    const rows = runShellCaptureBoundedWithAllowExitOne(
+        allocator,
+        cmd,
+        max_pkg_capture_bytes,
+        allow_no_match_exit,
+    ) catch |err| {
         std.log.warn("packages collect failed route=packages term={s} err={s}", .{ term, @errorName(err) });
         return err;
     };
@@ -776,13 +782,26 @@ fn runShellCapture(allocator: std.mem.Allocator, command: []const u8) ![]u8 {
 }
 
 fn runShellCaptureBounded(allocator: std.mem.Allocator, command: []const u8, max_output_bytes: usize) ![]u8 {
+    return runShellCaptureBoundedWithAllowExitOne(allocator, command, max_output_bytes, false);
+}
+
+fn runShellCaptureBoundedWithAllowExitOne(
+    allocator: std.mem.Allocator,
+    command: []const u8,
+    max_output_bytes: usize,
+    allow_exit_one: bool,
+) ![]u8 {
     const result = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &.{ "sh", "-lc", command },
         .max_output_bytes = max_output_bytes,
     });
     defer allocator.free(result.stderr);
-    if (result.term != .Exited or result.term.Exited != 0) {
+    if (result.term != .Exited) {
+        allocator.free(result.stdout);
+        return error.CommandFailed;
+    }
+    if (result.term.Exited != 0 and !(allow_exit_one and result.term.Exited == 1)) {
         allocator.free(result.stdout);
         return error.CommandFailed;
     }
@@ -810,6 +829,12 @@ test "runShellCapture returns stdout for successful command" {
 
 test "runShellCapture returns CommandFailed on non-zero exit" {
     try std.testing.expectError(error.CommandFailed, runShellCapture(std.testing.allocator, "exit 7"));
+}
+
+test "runShellCaptureBoundedWithAllowExitOne accepts exit code 1 when enabled" {
+    const out = try runShellCaptureBoundedWithAllowExitOne(std.testing.allocator, "exit 1", 1024, true);
+    defer std.testing.allocator.free(out);
+    try std.testing.expectEqual(@as(usize, 0), out.len);
 }
 
 test "clearOwned frees entries and resets logical length" {
