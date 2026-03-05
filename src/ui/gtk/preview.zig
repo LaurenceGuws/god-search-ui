@@ -310,7 +310,10 @@ fn buildPackagePreviewDoc(
         .allocator = allocator,
         .argv = &.{ "sh", "-lc", cmd },
         .max_output_bytes = max_package_preview_bytes,
-    }) catch return null;
+    }) catch |err| {
+        std.log.warn("package preview spawn failed pkg={s} err={s}", .{ pkg, @errorName(err) });
+        return null;
+    };
     defer allocator.free(result.stderr);
     defer allocator.free(result.stdout);
 

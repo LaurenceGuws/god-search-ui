@@ -2,7 +2,11 @@ const std = @import("std");
 
 var cache_lock: std.Thread.Mutex = .{};
 var cache: std.StringHashMapUnmanaged(bool) = .{};
-var command_exists_runner: *const fn (name: []const u8) bool = commandExistsUncached;
+var command_exists_runner: *const fn (name: []const u8) bool = commandExistsViaShell;
+
+pub fn commandExists(name: []const u8) bool {
+    return command_exists_runner(name);
+}
 
 pub fn commandExistsCached(name: []const u8) bool {
     cache_lock.lock();
@@ -25,18 +29,16 @@ pub fn commandExistsCached(name: []const u8) bool {
     return value;
 }
 
-fn commandExistsUncached(name: []const u8) bool {
+fn commandExistsViaShell(name: []const u8) bool {
     const result = std.process.Child.run(.{
         .allocator = std.heap.page_allocator,
-        .argv = &.{ name, "--help" },
+        .argv = &.{ "sh", "-lc", "command -v \"$1\" >/dev/null 2>&1", "_", name },
     }) catch return false;
     defer {
         std.heap.page_allocator.free(result.stdout);
         std.heap.page_allocator.free(result.stderr);
     }
-    // Some CLIs (including `hyprctl`) return non-zero for `--help` while still being present.
-    // Existence check only needs a successful spawn/exec, not a zero help exit code.
-    return true;
+    return result.term == .Exited and result.term.Exited == 0;
 }
 
 fn clearCacheForTests() void {
@@ -64,7 +66,7 @@ test "commandExistsCached reuses prior command result for repeated checks" {
     clearCacheForTests();
     command_exists_runner = Fake.run;
     defer {
-        command_exists_runner = commandExistsUncached;
+        command_exists_runner = commandExistsViaShell;
         clearCacheForTests();
     }
 
@@ -86,7 +88,7 @@ test "commandExistsCached tracks each command key independently" {
     clearCacheForTests();
     command_exists_runner = Fake.run;
     defer {
-        command_exists_runner = commandExistsUncached;
+        command_exists_runner = commandExistsViaShell;
         clearCacheForTests();
     }
 

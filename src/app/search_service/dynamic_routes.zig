@@ -1,5 +1,6 @@
 const std = @import("std");
 const providers = @import("../../providers/mod.zig");
+const tool_check = @import("../../providers/tool_check.zig");
 const notifications = @import("../../notifications/mod.zig");
 const search = @import("../../search/mod.zig");
 const runtime_tools = @import("../../config/runtime_tools.zig");
@@ -684,21 +685,6 @@ test "collectForRoute returns notifications candidates for notifications route" 
     try std.testing.expect(out.items.len >= 1);
 }
 
-fn commandExists(name: []const u8) bool {
-    const check_cmd = std.fmt.allocPrint(std.heap.page_allocator, "{s} --help >/dev/null 2>&1", .{name}) catch return false;
-    defer std.heap.page_allocator.free(check_cmd);
-
-    const result = std.process.Child.run(.{
-        .allocator = std.heap.page_allocator,
-        .argv = &.{ "sh", "-lc", check_cmd },
-    }) catch return false;
-    defer {
-        std.heap.page_allocator.free(result.stdout);
-        std.heap.page_allocator.free(result.stderr);
-    }
-    return result.term == .Exited and result.term.Exited == 0;
-}
-
 fn isCacheFresh(last_checked_ns: i128, now_ns: i128) bool {
     if (last_checked_ns <= 0 or now_ns <= 0) return false;
     const elapsed = now_ns - last_checked_ns;
@@ -711,7 +697,7 @@ fn fdAvailable(state: *ToolState) bool {
         if (isCacheFresh(state.fd_last_checked_ns, now_ns)) return value;
     }
     const previous = state.fd_available;
-    const value = commandExists("fd");
+    const value = tool_check.commandExists("fd");
     state.fd_available = value;
     state.fd_last_checked_ns = now_ns;
     if (previous != null and previous.? != value) {
@@ -726,7 +712,7 @@ fn rgAvailable(state: *ToolState) bool {
         if (isCacheFresh(state.rg_last_checked_ns, now_ns)) return value;
     }
     const previous = state.rg_available;
-    const value = commandExists("rg");
+    const value = tool_check.commandExists("rg");
     state.rg_available = value;
     state.rg_last_checked_ns = now_ns;
     if (previous != null and previous.? != value) {
