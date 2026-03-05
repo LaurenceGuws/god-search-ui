@@ -38,13 +38,11 @@ pub const AppsProvider = struct {
             error.FileNotFound => {
                 const count = self.collectFromDesktopFiles(allocator, out) catch |scan_err| {
                     self.had_runtime_failure = true;
-                    std.log.warn("apps provider desktop fallback failed: {s}", .{@errorName(scan_err)});
-                    try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
+                    std.log.warn("apps provider desktop scan failed: {s}", .{@errorName(scan_err)});
                     return;
                 };
                 if (count == 0) {
                     self.had_runtime_failure = true;
-                    try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
                     return;
                 }
                 self.had_runtime_failure = false;
@@ -53,7 +51,6 @@ pub const AppsProvider = struct {
             else => {
                 self.had_runtime_failure = true;
                 std.log.warn("apps provider cache read failed: {s}", .{@errorName(err)});
-                try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
                 return;
             },
         };
@@ -81,13 +78,11 @@ pub const AppsProvider = struct {
         if (count == 0) {
             const fallback_count = self.collectFromDesktopFiles(allocator, out) catch |scan_err| {
                 self.had_runtime_failure = true;
-                std.log.warn("apps provider desktop fallback failed after empty cache: {s}", .{@errorName(scan_err)});
-                try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
+                std.log.warn("apps provider desktop scan failed after empty cache: {s}", .{@errorName(scan_err)});
                 return;
             };
             if (fallback_count == 0) {
                 self.had_runtime_failure = true;
-                try out.append(allocator, search.Candidate.init(.app, "App launcher", "Fallback", "__drun__"));
                 return;
             }
             self.had_runtime_failure = false;
@@ -429,8 +424,7 @@ test "apps provider falls back when cache is missing" {
     try provider.collect(std.testing.allocator, &list);
 
     try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
-    try std.testing.expectEqual(@as(usize, 1), list.items.len);
-    try std.testing.expectEqualStrings("__drun__", list.items[0].action);
+    try std.testing.expectEqual(@as(usize, 0), list.items.len);
 }
 
 test "apps provider degrades when cache exists but no valid rows are parsed" {
@@ -458,8 +452,7 @@ test "apps provider degrades when cache exists but no valid rows are parsed" {
     const provider = apps.provider();
     try provider.collect(std.testing.allocator, &list);
 
-    try std.testing.expectEqual(@as(usize, 1), list.items.len);
-    try std.testing.expectEqualStrings("__drun__", list.items[0].action);
+    try std.testing.expectEqual(@as(usize, 0), list.items.len);
     try std.testing.expectEqual(search.ProviderHealth.degraded, provider.health());
 }
 
