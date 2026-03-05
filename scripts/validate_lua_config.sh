@@ -69,6 +69,8 @@ check_unknown("root", conf, {
   surface_mode = true,
   placement = true,
   notifications = true,
+  ui = true,
+  tools = true,
 })
 
 check_enum("surface_mode", conf.surface_mode, {
@@ -178,6 +180,42 @@ if conf.notifications ~= nil then
         end
       end
     end
+  end
+end
+
+if conf.ui ~= nil then
+  if expect_table("ui", conf.ui) then
+    check_unknown("ui", conf.ui, {
+      show_nerd_stats = true,
+    })
+    if conf.ui.show_nerd_stats ~= nil and type(conf.ui.show_nerd_stats) ~= "boolean" then
+      err("ui.show_nerd_stats must be a boolean")
+    end
+  end
+end
+
+if conf.tools ~= nil then
+  if expect_table("tools", conf.tools) then
+    check_unknown("tools", conf.tools, {
+      package_manager = true,
+      terminal = true,
+    })
+    check_enum("tools.package_manager", conf.tools.package_manager, {
+      ["yay"] = true,
+      ["pacman"] = true,
+    })
+    check_enum("tools.terminal", conf.tools.terminal, {
+      ["kitty"] = true,
+      ["alacritty"] = true,
+      ["footclient"] = true,
+      ["foot"] = true,
+      ["wezterm"] = true,
+      ["gnome-terminal"] = true,
+      ["konsole"] = true,
+      ["xfce4-terminal"] = true,
+      ["tilix"] = true,
+      ["xterm"] = true,
+    })
   end
 end
 

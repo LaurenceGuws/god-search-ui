@@ -2,6 +2,7 @@ const std = @import("std");
 const providers = @import("../../providers/mod.zig");
 const notifications = @import("../../notifications/mod.zig");
 const search = @import("../../search/mod.zig");
+const runtime_tools = @import("../../config/runtime_tools.zig");
 
 const max_rg_capture_bytes = 64 * 1024 * 1024;
 const max_pkg_capture_bytes = 16 * 1024 * 1024;
@@ -14,26 +15,18 @@ pub const ToolState = struct {
     fd_available: ?bool = null,
     rg_available: ?bool = null,
     rg_include_hidden: ?bool = null,
-    yay_available: ?bool = null,
-    pacman_available: ?bool = null,
     fd_last_checked_ns: i128 = 0,
     rg_last_checked_ns: i128 = 0,
     rg_hidden_last_checked_ns: i128 = 0,
-    yay_last_checked_ns: i128 = 0,
-    pacman_last_checked_ns: i128 = 0,
 };
 
 pub fn invalidateToolStateCache(state: *ToolState) void {
     state.fd_available = null;
     state.rg_available = null;
     state.rg_include_hidden = null;
-    state.yay_available = null;
-    state.pacman_available = null;
     state.fd_last_checked_ns = 0;
     state.rg_last_checked_ns = 0;
     state.rg_hidden_last_checked_ns = 0;
-    state.yay_last_checked_ns = 0;
-    state.pacman_last_checked_ns = 0;
 }
 
 pub fn collectForRoute(
@@ -191,7 +184,8 @@ fn collectPackageCandidates(
     out: *search.CandidateList,
 ) !void {
     const pkg_query = parsePackageQuery(term);
-    const source_cmd = packageSearchCommand(tool_state) orelse return;
+    _ = tool_state;
+    const source_cmd = packageSearchCommand();
     const term_q = try shellSingleQuote(allocator, pkg_query.term);
     defer allocator.free(term_q);
     const cmd = switch (source_cmd) {
@@ -750,41 +744,16 @@ fn rgIncludeHidden(state: *ToolState) bool {
     return value;
 }
 
-fn yayAvailable(state: *ToolState) bool {
-    const now_ns = std.time.nanoTimestamp();
-    if (state.yay_available) |value| {
-        if (isCacheFresh(state.yay_last_checked_ns, now_ns)) return value;
-    }
-    const value = commandExists("yay");
-    state.yay_available = value;
-    state.yay_last_checked_ns = now_ns;
-    return value;
-}
-
-fn pacmanAvailable(state: *ToolState) bool {
-    const now_ns = std.time.nanoTimestamp();
-    if (state.pacman_available) |value| {
-        if (isCacheFresh(state.pacman_last_checked_ns, now_ns)) return value;
-    }
-    const value = commandExists("pacman");
-    state.pacman_available = value;
-    state.pacman_last_checked_ns = now_ns;
-    return value;
-}
-
 const PackageSearchCmd = enum {
     yay,
     pacman,
 };
 
-fn packageSearchCommand(state: *ToolState) ?PackageSearchCmd {
-    if (pacmanAvailable(state)) {
-        return .pacman;
-    }
-    if (yayAvailable(state)) {
-        return .yay;
-    }
-    return null;
+fn packageSearchCommand() PackageSearchCmd {
+    return switch (runtime_tools.packageManager()) {
+        .yay => .yay,
+        .pacman => .pacman,
+    };
 }
 
 fn envFlagEnabled(name: []const u8) bool {

@@ -3,6 +3,7 @@ const common_dispatch = @import("../common/dispatch.zig");
 const gtk_types = @import("types.zig");
 const gtk_actions = @import("actions.zig");
 const gtk_row_data = @import("row_data.zig");
+const runtime_tools = @import("../../config/runtime_tools.zig");
 
 const c = gtk_types.c;
 const UiContext = gtk_types.UiContext;
@@ -294,10 +295,14 @@ fn buildPackagePreviewDoc(
     const pkg = parsePackageAction(action) orelse return null;
     const pkg_q = try shellSingleQuote(allocator, pkg);
     defer allocator.free(pkg_q);
+    const pkg_cmd = switch (runtime_tools.packageManager()) {
+        .yay => "yay -Si --color never \"$1\"",
+        .pacman => "pacman -Si --color never \"$1\"",
+    };
     const cmd = try std.fmt.allocPrint(
         allocator,
-        "sh -lc 'if command -v yay >/dev/null 2>&1; then yay -Si --color never \"$1\"; elif command -v pacman >/dev/null 2>&1; then pacman -Si --color never \"$1\"; else exit 127; fi' _ {s} 2>/dev/null || true",
-        .{pkg_q},
+        "sh -lc '{s}' _ {s} 2>/dev/null || true",
+        .{ pkg_cmd, pkg_q },
     );
     defer allocator.free(cmd);
 

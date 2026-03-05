@@ -55,6 +55,8 @@ Patch common Lua config keys quickly:
 ```bash
 scripts/set_lua_config.sh surface_mode layer-shell
 scripts/set_lua_config.sh launcher.monitor_name DP-1
+scripts/set_lua_config.sh tools.package_manager yay
+scripts/set_lua_config.sh tools.terminal kitty
 ```
 Docs:
 - docs index: `docs/INDEX.md`

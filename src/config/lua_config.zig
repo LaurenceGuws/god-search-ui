@@ -96,6 +96,12 @@ fn parseSettingsFromTop(lua: *c.lua_State, allocator: std.mem.Allocator, initial
     }
     c.lua_pop(lua, 1);
 
+    _ = c.lua_getfield(lua, -1, "tools");
+    if (c.lua_istable(lua, -1)) {
+        out.tools = parseToolsTable(lua, -1, out.tools);
+    }
+    c.lua_pop(lua, 1);
+
     return out;
 }
 
@@ -121,6 +127,39 @@ fn parseUiTable(
 ) config.Settings.UiPolicy {
     var out = initial;
     maybeBoolField(lua, idx, "show_nerd_stats", &out.show_nerd_stats);
+    return out;
+}
+
+fn parseToolsTable(
+    lua: *c.lua_State,
+    idx: c_int,
+    initial: config.Settings.ToolsPolicy,
+) config.Settings.ToolsPolicy {
+    var out = initial;
+    _ = c.lua_getfield(lua, idx, "package_manager");
+    if (c.lua_type(lua, -1) == c.LUA_TSTRING) {
+        if (readLuaString(lua, -1)) |raw| {
+            if (parsePackageManager(raw)) |value| {
+                out.package_manager = value;
+            } else {
+                log.warn("ignoring invalid lua tools.package_manager: {s}", .{raw});
+            }
+        }
+    }
+    c.lua_pop(lua, 1);
+
+    _ = c.lua_getfield(lua, idx, "terminal");
+    if (c.lua_type(lua, -1) == c.LUA_TSTRING) {
+        if (readLuaString(lua, -1)) |raw| {
+            if (parseTerminalTool(raw)) |value| {
+                out.terminal = value;
+            } else {
+                log.warn("ignoring invalid lua tools.terminal: {s}", .{raw});
+            }
+        }
+    }
+    c.lua_pop(lua, 1);
+
     return out;
 }
 
@@ -270,6 +309,26 @@ fn parseAnchor(raw: []const u8) ?placement.Anchor {
 fn parseMonitorPolicy(raw: []const u8) ?wm_adapter.MonitorPolicy {
     if (std.ascii.eqlIgnoreCase(raw, "focused")) return .focused;
     if (std.ascii.eqlIgnoreCase(raw, "primary")) return .primary;
+    return null;
+}
+
+fn parsePackageManager(raw: []const u8) ?config.PackageManager {
+    if (std.ascii.eqlIgnoreCase(raw, "yay")) return .yay;
+    if (std.ascii.eqlIgnoreCase(raw, "pacman")) return .pacman;
+    return null;
+}
+
+fn parseTerminalTool(raw: []const u8) ?config.TerminalTool {
+    if (std.ascii.eqlIgnoreCase(raw, "kitty")) return .kitty;
+    if (std.ascii.eqlIgnoreCase(raw, "alacritty")) return .alacritty;
+    if (std.ascii.eqlIgnoreCase(raw, "footclient")) return .footclient;
+    if (std.ascii.eqlIgnoreCase(raw, "foot")) return .foot;
+    if (std.ascii.eqlIgnoreCase(raw, "wezterm")) return .wezterm;
+    if (std.ascii.eqlIgnoreCase(raw, "gnome-terminal") or std.ascii.eqlIgnoreCase(raw, "gnome_terminal")) return .gnome_terminal;
+    if (std.ascii.eqlIgnoreCase(raw, "konsole")) return .konsole;
+    if (std.ascii.eqlIgnoreCase(raw, "xfce4-terminal") or std.ascii.eqlIgnoreCase(raw, "xfce4_terminal")) return .xfce4_terminal;
+    if (std.ascii.eqlIgnoreCase(raw, "tilix")) return .tilix;
+    if (std.ascii.eqlIgnoreCase(raw, "xterm")) return .xterm;
     return null;
 }
 

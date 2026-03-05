@@ -1,4 +1,5 @@
 const std = @import("std");
+const runtime_tools = @import("../../config/runtime_tools.zig");
 
 pub const ParsedFileAction = struct {
     path: []const u8,
@@ -47,10 +48,11 @@ pub fn runDetachedShellCommand(command: []const u8) !void {
 pub fn buildDirTerminalCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
     const quoted = try shellSingleQuote(allocator, dir_path);
     defer allocator.free(quoted);
+    const term_cmd = runtime_tools.terminalTool().command();
     return std.fmt.allocPrint(
         allocator,
-        "sh -lc 'cd -- \"$1\" || exit 1; term=\"${{TERMINAL:-}}\"; if [ -n \"$term\" ] && command -v \"$term\" >/dev/null 2>&1; then exec \"$term\"; fi; for t in kitty alacritty footclient foot wezterm gnome-terminal konsole xfce4-terminal tilix xterm; do if command -v \"$t\" >/dev/null 2>&1; then exec \"$t\"; fi; done; exit 127' _ {s}",
-        .{quoted},
+        "sh -lc 'cd -- \"$1\" || exit 1; exec {s}' _ {s}",
+        .{ term_cmd, quoted },
     );
 }
 
@@ -163,4 +165,16 @@ test "runShellCommand reports non-zero exits as CommandFailed" {
 
 test "runShellCommand still returns for long-running launches" {
     try runShellCommand("sleep 1");
+}
+
+test "buildDirTerminalCommand uses configured terminal without fallback probes" {
+    runtime_tools.apply(.{
+        .tools = .{
+            .terminal = .alacritty,
+        },
+    });
+    const cmd = try buildDirTerminalCommand(std.testing.allocator, "/tmp");
+    defer std.testing.allocator.free(cmd);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "exec alacritty") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "command -v") == null);
 }

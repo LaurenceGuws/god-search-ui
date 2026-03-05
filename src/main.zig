@@ -72,6 +72,7 @@ pub fn main() !void {
     if (hasArg(args, "--print-config")) {
         var cfg = god_search_ui.config.load(allocator);
         defer cfg.deinit(allocator);
+        god_search_ui.config.runtime_tools.apply(cfg);
         const surface_mode = resolveSurfaceMode(args, cfg);
         try printResolvedConfig(cfg, surface_mode);
         return;
@@ -105,6 +106,7 @@ pub fn main() !void {
     if (ui_mode) {
         var cfg = god_search_ui.config.load(allocator);
         defer cfg.deinit(allocator);
+        god_search_ui.config.runtime_tools.apply(cfg);
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
         if (!god_search_ui.ui.gtk_enabled and resident_mode) {

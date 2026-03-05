@@ -37,6 +37,19 @@ return {
       max_height_px = 620,
     },
   },
+  notifications = {
+    actions = {
+      show_close_button = true,
+      show_dbus_actions = true,
+    },
+  },
+  ui = {
+    show_nerd_stats = true,
+  },
+  tools = {
+    package_manager = "yay", -- yay | pacman
+    terminal = "kitty", -- kitty | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
+  },
 }
 EOF
 

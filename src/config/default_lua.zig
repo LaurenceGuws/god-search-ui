@@ -78,6 +78,10 @@ pub const template =
     \\  ui = {
     \\    show_nerd_stats = true,
     \\  },
+    \\  tools = {
+    \\    package_manager = "yay", -- yay | pacman
+    \\    terminal = "kitty", -- kitty | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
+    \\  },
     \\}
     \\
 ;

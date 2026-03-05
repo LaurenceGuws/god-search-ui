@@ -15,6 +15,8 @@ Keys:
   notifications.anchor          center | top_left | top_center | top_right | bottom_left | bottom_center | bottom_right
   launcher.monitor_name         output name (e.g. DP-1)
   notifications.monitor_name    output name (e.g. HDMI-A-1)
+  tools.package_manager         yay | pacman
+  tools.terminal                kitty | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
   notifications.actions.show_close_button  true | false
   notifications.actions.show_dbus_actions  true | false
 EOF
@@ -68,6 +70,20 @@ case "$KEY" in
     ;;
   notifications.monitor_name)
     perl -0777 -i -pe "s/(notifications\\s*=\\s*\\{.*?\\n\\s*)(?:--\\s*)?monitor_name\\s*=\\s*\"[^\"]*\",[^\\n]*\\n/\${1}monitor_name = \"${V_ESC}\",\\n/s" "$CFG"
+    ;;
+  tools.package_manager)
+    if ! [[ "$VALUE" =~ ^(yay|pacman)$ ]]; then
+      echo "value for $KEY must be yay or pacman" >&2
+      exit 1
+    fi
+    perl -0777 -i -pe "s/(tools\\s*=\\s*\\{.*?\\n\\s*)package_manager\\s*=\\s*\"[^\"]*\"/\${1}package_manager = \"${V_ESC}\"/s" "$CFG"
+    ;;
+  tools.terminal)
+    if ! [[ "$VALUE" =~ ^(kitty|alacritty|footclient|foot|wezterm|gnome-terminal|konsole|xfce4-terminal|tilix|xterm)$ ]]; then
+      echo "value for $KEY is not a supported terminal" >&2
+      exit 1
+    fi
+    perl -0777 -i -pe "s/(tools\\s*=\\s*\\{.*?\\n\\s*)terminal\\s*=\\s*\"[^\"]*\"/\${1}terminal = \"${V_ESC}\"/s" "$CFG"
     ;;
   notifications.actions.show_close_button)
     require_bool

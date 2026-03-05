@@ -51,11 +51,10 @@ const grep_options = [_][]const u8{
 
 const packages_options = [_][]const u8{
     "Packages route: + <term>",
-    "Searches packages via yay when available, otherwise pacman.",
+    "Searches packages via configured tools.package_manager (Lua).",
     "Filter installed only: +i <term> (or +installed <term>).",
     "Installed packages: Enter updates; extra Remove action is listed.",
-    "Install/update uses yay -S --needed or sudo pacman -S --needed.",
-    "Remove uses yay -Rns or sudo pacman -Rns.",
+    "Install/update/remove use configured package_manager + terminal tools.",
 };
 
 const icons_options = [_][]const u8{

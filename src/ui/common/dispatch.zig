@@ -1,6 +1,7 @@
 const std = @import("std");
 const providers_mod = @import("../../providers/mod.zig");
 const search = @import("../../search/mod.zig");
+const runtime_tools = @import("../../config/runtime_tools.zig");
 pub const kinds = @import("kinds.zig");
 
 pub const CommandPlan = struct {
@@ -100,14 +101,26 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 }
                 const pkg_q = try shellSingleQuote(allocator, pkg);
                 defer allocator.free(pkg_q);
-                const install_expr = switch (op) {
-                    .install, .update => "if command -v yay >/dev/null 2>&1; then install_cmd=\"yay -S --needed -- \\\"$pkg\\\"\"; elif command -v pacman >/dev/null 2>&1; then install_cmd=\"sudo pacman -S --needed -- \\\"$pkg\\\"\"; else exit 127; fi",
-                    .remove => "if command -v yay >/dev/null 2>&1; then install_cmd=\"yay -Rns -- \\\"$pkg\\\"\"; elif command -v pacman >/dev/null 2>&1; then install_cmd=\"sudo pacman -Rns -- \\\"$pkg\\\"\"; else exit 127; fi",
+                const pkg_tool = runtime_tools.packageManager();
+                const pkg_cmd = switch (pkg_tool) {
+                    .yay => switch (op) {
+                        .install, .update => "yay -S --needed -- \"$pkg\"",
+                        .remove => "yay -Rns -- \"$pkg\"",
+                    },
+                    .pacman => switch (op) {
+                        .install, .update => "sudo pacman -S --needed -- \"$pkg\"",
+                        .remove => "sudo pacman -Rns -- \"$pkg\"",
+                    },
+                };
+                const term_cmd = runtime_tools.terminalTool().command();
+                const launch_expr = switch (runtime_tools.terminalTool()) {
+                    .kitty, .alacritty, .footclient, .foot, .wezterm, .xterm => "exec \"$term\" -e sh -lc \"$install_cmd\"",
+                    .gnome_terminal, .konsole, .xfce4_terminal, .tilix => "exec \"$term\" -- sh -lc \"$install_cmd\"",
                 };
                 const cmd = try std.fmt.allocPrint(
                     allocator,
-                    "sh -lc 'pkg=\"$1\"; {s}; launch_term() {{ t=\"$1\"; case \"$t\" in kitty|alacritty|foot|footclient|wezterm) exec \"$t\" -e sh -lc \"$install_cmd\" ;; gnome-terminal|xfce4-terminal|tilix|konsole) exec \"$t\" -- sh -lc \"$install_cmd\" ;; xterm) exec \"$t\" -e sh -lc \"$install_cmd\" ;; *) return 1 ;; esac; }}; term=\"${{TERMINAL:-}}\"; if [ -n \"$term\" ] && command -v \"$term\" >/dev/null 2>&1; then launch_term \"$term\" && exit 0; fi; for t in kitty alacritty footclient foot wezterm gnome-terminal konsole xfce4-terminal tilix xterm; do if command -v \"$t\" >/dev/null 2>&1; then launch_term \"$t\" && exit 0; fi; done; exit 127' _ {s}",
-                    .{ install_expr, pkg_q },
+                    "sh -lc 'pkg=\"$1\"; term=\"{s}\"; install_cmd=\"{s}\"; {s}' _ {s}",
+                    .{ term_cmd, pkg_cmd, launch_expr, pkg_q },
                 );
                 return .{
                     .command = cmd,
@@ -439,4 +452,20 @@ test "web bookmark command returns unknown_action when bookmark is missing" {
     try std.testing.expect(plan.command == null);
     try std.testing.expect(plan.unknown_action);
     try std.testing.expectEqualStrings("Bookmark not found", plan.error_message);
+}
+
+test "package action uses configured terminal and package manager only" {
+    runtime_tools.apply(.{
+        .tools = .{
+            .package_manager = .pacman,
+            .terminal = .xterm,
+        },
+    });
+    var plan = try planCommandKind(std.testing.allocator, .action, "pkg-install:ripgrep");
+    defer plan.deinit(std.testing.allocator);
+    try std.testing.expect(plan.command != null);
+    const cmd = plan.command.?;
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "sudo pacman -S --needed") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "term=\"xterm\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "command -v") == null);
 }
