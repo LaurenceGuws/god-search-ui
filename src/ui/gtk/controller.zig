@@ -14,6 +14,7 @@ const GFALSE = gtk_types.GFALSE;
 
 pub const InputHooks = struct {
     refresh_snapshot: *const fn (*UiContext) void,
+    reload_config: *const fn (*UiContext) void,
     toggle_preview: *const fn (*UiContext) void,
     set_status: *const fn (*UiContext, []const u8) void,
 };
@@ -53,6 +54,10 @@ pub fn handleKeyPressed(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierTy
         },
         c.GDK_KEY_r, c.GDK_KEY_R => {
             if ((state & c.GDK_CONTROL_MASK) != 0) {
+                if ((state & c.GDK_SHIFT_MASK) != 0) {
+                    hooks.reload_config(ctx);
+                    return GTRUE;
+                }
                 hooks.refresh_snapshot(ctx);
                 return GTRUE;
             }

@@ -586,6 +586,7 @@ fn populateHelpMainMenu(ui_state: *HelpUiState) void {
     appendHelpSection(ui_state.content, "Hotkeys");
     appendHelpItem(ui_state.content, "Enter", "Launch selected item", ui_state);
     appendHelpItem(ui_state.content, "Ctrl+P", "Toggle preview panel", ui_state);
+    appendHelpItem(ui_state.content, "Ctrl+Shift+R", "Reload Lua config", ui_state);
     appendHelpItem(ui_state.content, "Ctrl+R", "Refresh providers", ui_state);
     appendHelpItem(ui_state.content, "PgUp/PgDn", "Move selection", ui_state);
     appendHelpItem(ui_state.content, "Esc", "Close launcher", ui_state);

@@ -107,6 +107,11 @@ pub fn main() !void {
         var cfg = god_search_ui.config.load(allocator);
         defer cfg.deinit(allocator);
         god_search_ui.config.runtime_tools.apply(cfg);
+        const cfg_issue = god_search_ui.config.consumeLastLoadIssue(allocator);
+        defer if (cfg_issue) |msg| allocator.free(msg);
+        if (cfg_issue == null) {
+            god_search_ui.config.issue_notice.clearIfActive();
+        }
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
         if (!god_search_ui.ui.gtk_enabled and resident_mode) {
@@ -138,6 +143,9 @@ pub fn main() !void {
             logger.err("failed to save history: {s}", .{@errorName(err)});
         };
         logger.info("runtime ready in {d:.2} ms", .{startup_sw.elapsedMs()});
+        if (cfg_issue) |msg| {
+            god_search_ui.config.issue_notice.show(msg, "Fix config.lua and reload (restart daemon or run re-run.sh).");
+        }
         try god_search_ui.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry, .{
             .resident_mode = resident_mode,
             .start_hidden = start_hidden,

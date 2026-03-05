@@ -18,6 +18,8 @@ const gtk_controller = @import("gtk/controller.zig");
 const gtk_results_flow = @import("gtk/results_flow.zig");
 const gtk_widgets = @import("gtk/widgets.zig");
 const ipc_control = @import("../ipc/control.zig");
+const config_mod = @import("../config/mod.zig");
+const runtime_tools = @import("../config/runtime_tools.zig");
 const notifications_mod = @import("../notifications/mod.zig");
 const shell_mod = @import("../shell/mod.zig");
 const gtk_shell_control = @import("gtk/shell_control.zig");
@@ -146,6 +148,7 @@ pub const Shell = struct {
         }
         return gtk_controller.handleKeyPressed(ctx, keyval, state, .{
             .refresh_snapshot = refreshSnapshot,
+            .reload_config = reloadConfig,
             .toggle_preview = togglePreview,
             .set_status = setStatus,
         });
@@ -335,6 +338,8 @@ pub const Shell = struct {
             _ = c.g_main_context_iteration(null, GFALSE);
         }
 
+        gtk_async.clearAsyncSearchCache(ctx, allocator);
+        ctx.service.clearDynamicState(allocator);
         ctx.service.invalidateSnapshot();
         ctx.service.prewarmProviders(allocator) catch {
             gtk_widgets.clearAsyncRows(ctx.list);
@@ -344,6 +349,26 @@ pub const Shell = struct {
 
         gtk_widgets.clearAsyncRows(ctx.list);
         populateResults(ctx, query);
+    }
+
+    fn reloadConfig(ctx: *UiContext) void {
+        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
+        const allocator = allocator_ptr.*;
+        var cfg = config_mod.load(allocator);
+        defer cfg.deinit(allocator);
+        runtime_tools.apply(cfg);
+        ctx.show_nerd_stats = if (cfg.ui.show_nerd_stats) GTRUE else GFALSE;
+        gtk_async.clearAsyncSearchCache(ctx, allocator);
+        ctx.service.clearDynamicState(allocator);
+
+        if (config_mod.consumeLastLoadIssue(allocator)) |issue| {
+            defer allocator.free(issue);
+            config_mod.issue_notice.show(issue, "Fix config.lua and reload config (Ctrl+Shift+R).");
+            setStatus(ctx, "Config reloaded with fallback defaults (check notification)");
+            return;
+        }
+        config_mod.issue_notice.clearIfActive();
+        setStatus(ctx, "Config reloaded");
     }
 
     fn showRefreshSpinnerFeedback(ctx: *UiContext) void {

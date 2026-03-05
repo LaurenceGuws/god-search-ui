@@ -141,7 +141,16 @@ pub const Settings = struct {
 
 const impl = @import("lua_config.zig");
 pub const runtime_tools = @import("runtime_tools.zig");
+pub const issue_notice = @import("issue_notice.zig");
 
 pub fn load(allocator: std.mem.Allocator) Settings {
     return impl.load(allocator);
+}
+
+pub fn loadStrict(allocator: std.mem.Allocator) !Settings {
+    return impl.loadStrict(allocator);
+}
+
+pub fn consumeLastLoadIssue(allocator: std.mem.Allocator) ?[]u8 {
+    return impl.consumeLastLoadIssue(allocator);
 }

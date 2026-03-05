@@ -12,26 +12,79 @@ const c = @cImport({
 });
 
 const log = std.log.scoped(.config);
+var issue_lock: std.Thread.Mutex = .{};
+var last_load_issue: ?[]u8 = null;
+
+fn clearLastIssue() void {
+    issue_lock.lock();
+    defer issue_lock.unlock();
+    if (last_load_issue) |msg| std.heap.page_allocator.free(msg);
+    last_load_issue = null;
+}
+
+fn noteIssue(message: []const u8) void {
+    issue_lock.lock();
+    defer issue_lock.unlock();
+    if (last_load_issue != null) return;
+    last_load_issue = std.heap.page_allocator.dupe(u8, message) catch null;
+}
+
+pub fn consumeLastLoadIssue(allocator: std.mem.Allocator) ?[]u8 {
+    issue_lock.lock();
+    defer issue_lock.unlock();
+    const msg = last_load_issue orelse return null;
+    defer {
+        std.heap.page_allocator.free(msg);
+        last_load_issue = null;
+    }
+    return allocator.dupe(u8, msg) catch null;
+}
 
 pub fn load(allocator: std.mem.Allocator) config.Settings {
-    const path = default_lua.resolvePath(allocator) catch return .{};
+    clearLastIssue();
+    return loadStrict(allocator) catch |err| {
+        log.warn("config load fallback to defaults: {s}", .{@errorName(err)});
+        noteIssue("Config load failed. Using defaults for this session.");
+        return .{};
+    };
+}
+
+pub fn loadStrict(allocator: std.mem.Allocator) !config.Settings {
+    const path = default_lua.resolvePath(allocator) catch |err| {
+        log.err("lua config path resolution failed: {s}", .{@errorName(err)});
+        noteIssue("Failed to resolve config path. Using defaults.");
+        return err;
+    };
     defer allocator.free(path);
 
     std.fs.cwd().access(path, .{}) catch |err| switch (err) {
         error.FileNotFound => {
             _ = default_lua.ensureDefaultConfigAtPath(path) catch |write_err| {
-                log.warn("lua config missing and default bootstrap failed ({s}): {s}", .{ path, @errorName(write_err) });
-                return .{};
+                log.err("lua config missing and default bootstrap failed ({s}): {s}", .{ path, @errorName(write_err) });
+                noteIssue("Config bootstrap failed. Using defaults.");
+                return write_err;
             };
             log.info("created default lua config: {s}", .{path});
         },
-        else => return .{},
+        else => {
+            log.err("lua config access failed ({s}): {s}", .{ path, @errorName(err) });
+            noteIssue("Config file access failed. Using defaults.");
+            return err;
+        },
     };
 
-    const path_z = allocator.dupeZ(u8, path) catch return .{};
+    const path_z = allocator.dupeZ(u8, path) catch |err| {
+        log.err("lua config path allocation failed ({s}): {s}", .{ path, @errorName(err) });
+        noteIssue("Config path allocation failed. Using defaults.");
+        return err;
+    };
     defer allocator.free(path_z);
 
-    const lua = c.luaL_newstate() orelse return .{};
+    const lua = c.luaL_newstate() orelse {
+        log.err("lua state initialization failed", .{});
+        noteIssue("Lua initialization failed. Using defaults.");
+        return error.OutOfMemory;
+    };
     defer c.lua_close(lua);
     c.luaL_openlibs(lua);
 
@@ -40,9 +93,10 @@ pub fn load(allocator: std.mem.Allocator) config.Settings {
         c.lua_pcallk(lua, 0, c.LUA_MULTRET, 0, @as(c.lua_KContext, 0), null) != c.LUA_OK)
     {
         if (readLuaString(lua, -1)) |msg| {
-            log.warn("lua config load failed ({s}): {s}", .{ path, msg });
+            log.err("lua config load failed ({s}): {s}", .{ path, msg });
         }
-        return .{};
+        noteIssue("Config syntax/runtime error detected. Using defaults.");
+        return error.InvalidConfig;
     }
 
     var settings = config.Settings{};
@@ -73,6 +127,7 @@ fn parseSettingsFromTop(lua: *c.lua_State, allocator: std.mem.Allocator, initial
                 out.surface_mode = mode;
             } else {
                 log.warn("ignoring invalid lua surface_mode: {s}", .{raw});
+                noteIssue("Invalid config values detected. Defaults were applied for invalid fields.");
             }
         }
     }
@@ -143,6 +198,7 @@ fn parseToolsTable(
                 out.package_manager = value;
             } else {
                 log.warn("ignoring invalid lua tools.package_manager: {s}", .{raw});
+                noteIssue("Invalid config values detected. Defaults were applied for invalid fields.");
             }
         }
     }
@@ -155,6 +211,7 @@ fn parseToolsTable(
                 out.terminal = value;
             } else {
                 log.warn("ignoring invalid lua tools.terminal: {s}", .{raw});
+                noteIssue("Invalid config values detected. Defaults were applied for invalid fields.");
             }
         }
     }
@@ -169,6 +226,7 @@ fn parseToolsTable(
                 out.clipboard_tool = value;
             } else {
                 log.warn("ignoring invalid lua tools.clipboard_tool: {s}", .{raw});
+                noteIssue("Invalid config values detected. Defaults were applied for invalid fields.");
             }
         }
     }
@@ -181,6 +239,7 @@ fn parseToolsTable(
                 out.editor_tool = value;
             } else {
                 log.warn("ignoring invalid lua tools.editor_tool: {s}", .{raw});
+                noteIssue("Invalid config values detected. Defaults were applied for invalid fields.");
             }
         }
     }
@@ -266,6 +325,7 @@ fn parseWindowPolicy(
                 out.anchor = anchor;
             } else {
                 log.warn("ignoring invalid lua anchor: {s}", .{raw});
+                noteIssue("Invalid config values detected. Defaults were applied for invalid fields.");
             }
         }
     }
@@ -278,6 +338,7 @@ fn parseWindowPolicy(
                 out.monitor.policy = policy;
             } else {
                 log.warn("ignoring invalid lua monitor_policy: {s}", .{raw});
+                noteIssue("Invalid config values detected. Defaults were applied for invalid fields.");
             }
         }
     }
