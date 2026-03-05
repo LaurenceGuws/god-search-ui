@@ -735,7 +735,7 @@ fn rgIncludeHidden(state: *ToolState) bool {
         if (isCacheFresh(state.rg_hidden_last_checked_ns, now_ns)) return value;
     }
     const previous = state.rg_include_hidden;
-    const value = envFlagEnabled("GOD_SEARCH_RG_HIDDEN");
+    const value = runtime_tools.grepIncludeHidden();
     state.rg_include_hidden = value;
     state.rg_hidden_last_checked_ns = now_ns;
     if (previous != null and previous.? != value) {
@@ -754,18 +754,6 @@ fn packageSearchCommand() PackageSearchCmd {
         .yay => .yay,
         .pacman => .pacman,
     };
-}
-
-fn envFlagEnabled(name: []const u8) bool {
-    const raw = std.process.getEnvVarOwned(std.heap.page_allocator, name) catch return false;
-    defer std.heap.page_allocator.free(raw);
-    const trimmed = std.mem.trim(u8, raw, " \t\r\n");
-    if (trimmed.len == 0) return false;
-    if (std.ascii.eqlIgnoreCase(trimmed, "1")) return true;
-    if (std.ascii.eqlIgnoreCase(trimmed, "true")) return true;
-    if (std.ascii.eqlIgnoreCase(trimmed, "yes")) return true;
-    if (std.ascii.eqlIgnoreCase(trimmed, "on")) return true;
-    return false;
 }
 
 fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {

@@ -17,6 +17,7 @@ Keys:
   notifications.monitor_name    output name (e.g. HDMI-A-1)
   tools.package_manager         yay | pacman
   tools.terminal                kitty | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
+  tools.grep_include_hidden     true | false
   notifications.actions.show_close_button  true | false
   notifications.actions.show_dbus_actions  true | false
 EOF
@@ -84,6 +85,10 @@ case "$KEY" in
       exit 1
     fi
     perl -0777 -i -pe "s/(tools\\s*=\\s*\\{.*?\\n\\s*)terminal\\s*=\\s*\"[^\"]*\"/\${1}terminal = \"${V_ESC}\"/s" "$CFG"
+    ;;
+  tools.grep_include_hidden)
+    require_bool
+    perl -0777 -i -pe "s/(tools\\s*=\\s*\\{.*?\\n\\s*)grep_include_hidden\\s*=\\s*(?:true|false)/\${1}grep_include_hidden = ${V_ESC}/s" "$CFG"
     ;;
   notifications.actions.show_close_button)
     require_bool

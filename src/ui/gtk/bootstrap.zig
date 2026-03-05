@@ -46,7 +46,7 @@ const grep_options = [_][]const u8{
     "Grep route: & <term>",
     "Uses rg to search file contents.",
     "Default: ignore hidden entries.",
-    "Set GOD_SEARCH_RG_HIDDEN=1 in environment to include hidden files/dirs.",
+    "Set tools.grep_include_hidden = true in Lua config to include hidden files/dirs.",
 };
 
 const packages_options = [_][]const u8{

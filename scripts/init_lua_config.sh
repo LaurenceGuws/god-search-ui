@@ -49,6 +49,7 @@ return {
   tools = {
     package_manager = "yay", -- yay | pacman
     terminal = "kitty", -- kitty | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
+    grep_include_hidden = false, -- true includes hidden files/dirs for & route
   },
 }
 EOF

@@ -199,6 +199,7 @@ if conf.tools ~= nil then
     check_unknown("tools", conf.tools, {
       package_manager = true,
       terminal = true,
+      grep_include_hidden = true,
     })
     check_enum("tools.package_manager", conf.tools.package_manager, {
       ["yay"] = true,
@@ -216,6 +217,9 @@ if conf.tools ~= nil then
       ["tilix"] = true,
       ["xterm"] = true,
     })
+    if conf.tools.grep_include_hidden ~= nil and type(conf.tools.grep_include_hidden) ~= "boolean" then
+      err("tools.grep_include_hidden must be a boolean")
+    end
   end
 end
 

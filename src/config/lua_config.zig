@@ -160,6 +160,8 @@ fn parseToolsTable(
     }
     c.lua_pop(lua, 1);
 
+    maybeBoolField(lua, idx, "grep_include_hidden", &out.grep_include_hidden);
+
     return out;
 }
 

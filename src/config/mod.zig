@@ -60,6 +60,7 @@ pub const Settings = struct {
     pub const ToolsPolicy = struct {
         package_manager: PackageManager = .yay,
         terminal: TerminalTool = .kitty,
+        grep_include_hidden: bool = false,
     };
 
     surface_mode: ?@import("../ui/surfaces/mod.zig").SurfaceMode = null,
