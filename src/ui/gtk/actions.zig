@@ -75,11 +75,7 @@ pub fn buildDirEditorCommand(allocator: std.mem.Allocator, dir_path: []const u8)
 pub fn buildDirCopyPathCommand(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
     const quoted = try shellSingleQuote(allocator, dir_path);
     defer allocator.free(quoted);
-    return std.fmt.allocPrint(
-        allocator,
-        "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
-        .{quoted},
-    );
+    return buildClipboardCopyCommand(allocator, quoted);
 }
 
 pub fn parseFileAction(file_action: []const u8) ParsedFileAction {
@@ -110,11 +106,7 @@ pub fn buildFileRevealCommand(allocator: std.mem.Allocator, file_path: []const u
 pub fn buildFileCopyPathCommand(allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
     const quoted = try shellSingleQuote(allocator, file_path);
     defer allocator.free(quoted);
-    return std.fmt.allocPrint(
-        allocator,
-        "sh -lc 'printf %s \"$1\" | wl-copy 2>/dev/null || printf %s \"$1\" | xclip -selection clipboard; if command -v copyq >/dev/null 2>&1; then copyq add -- \"$1\" >/dev/null 2>&1 || true; fi' _ {s}",
-        .{quoted},
-    );
+    return buildClipboardCopyCommand(allocator, quoted);
 }
 
 pub fn buildFileEditCommand(allocator: std.mem.Allocator, file_path: []const u8, line: ?[]const u8) ![]u8 {
@@ -159,6 +151,15 @@ fn shellSingleQuote(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
     return out.toOwnedSlice(allocator);
 }
 
+fn buildClipboardCopyCommand(allocator: std.mem.Allocator, quoted_value: []const u8) ![]u8 {
+    const clip_cmd = runtime_tools.clipboardTool().command();
+    return std.fmt.allocPrint(
+        allocator,
+        "sh -lc 'printf %s \"$1\" | {s}' _ {s}",
+        .{ clip_cmd, quoted_value },
+    );
+}
+
 test "runShellCommand reports non-zero exits as CommandFailed" {
     try std.testing.expectError(error.CommandFailed, runShellCommand("exit 7"));
 }
@@ -177,4 +178,17 @@ test "buildDirTerminalCommand uses configured terminal without fallback probes" 
     defer std.testing.allocator.free(cmd);
     try std.testing.expect(std.mem.indexOf(u8, cmd, "exec alacritty") != null);
     try std.testing.expect(std.mem.indexOf(u8, cmd, "command -v") == null);
+}
+
+test "buildFileCopyPathCommand uses configured clipboard tool only" {
+    runtime_tools.apply(.{
+        .tools = .{
+            .clipboard_tool = .xclip,
+        },
+    });
+    const cmd = try buildFileCopyPathCommand(std.testing.allocator, "/tmp/file.txt");
+    defer std.testing.allocator.free(cmd);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "xclip -selection clipboard") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "wl-copy") == null);
+    try std.testing.expect(std.mem.indexOf(u8, cmd, "copyq add") == null);
 }
