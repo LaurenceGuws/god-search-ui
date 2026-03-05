@@ -424,11 +424,7 @@ fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
 
 fn resolveSurfaceMode(args: []const []const u8, cfg: god_search_ui.config.Settings) god_search_ui.ui.surfaces.SurfaceMode {
     _ = args;
-    const mode = cfg.surface_mode orelse .layer_shell;
-    return switch (mode) {
-        .auto => .layer_shell,
-        else => mode,
-    };
+    return cfg.surface_mode orelse .layer_shell;
 }
 
 fn printResolvedConfig(cfg: god_search_ui.config.Settings, surface_mode: god_search_ui.ui.surfaces.SurfaceMode) !void {

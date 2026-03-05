@@ -44,7 +44,7 @@ const enabled = struct {
     pub fn shouldUseLayerShell(surface_mode: SurfaceMode) bool {
         return switch (surface_mode) {
             .layer_shell => true,
-            .auto, .toplevel => false,
+            .toplevel => false,
         };
     }
 

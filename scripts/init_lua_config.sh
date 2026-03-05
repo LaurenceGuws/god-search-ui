@@ -8,7 +8,7 @@ mkdir -p "${DIR}"
 
 cat >"${TARGET}" <<'EOF'
 return {
-  surface_mode = "auto", -- auto | toplevel | layer-shell
+  surface_mode = "layer-shell", -- toplevel | layer-shell
   placement = {
     launcher = {
       anchor = "center",

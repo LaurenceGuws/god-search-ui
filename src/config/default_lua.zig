@@ -40,7 +40,7 @@ pub fn ensureDefaultConfigAtPath(path: []const u8) !bool {
 
 pub const template =
     \\return {
-    \\  surface_mode = "layer-shell", -- auto | toplevel | layer-shell
+    \\  surface_mode = "layer-shell", -- toplevel | layer-shell
     \\  placement = {
     \\    launcher = {
     \\      anchor = "center",

@@ -72,7 +72,6 @@ check_unknown("root", conf, {
 })
 
 check_enum("surface_mode", conf.surface_mode, {
-  ["auto"] = true,
   ["toplevel"] = true,
   ["layer-shell"] = true,
 })

@@ -10,7 +10,7 @@ Usage:
   scripts/set_lua_config.sh <key> <value>
 
 Keys:
-  surface_mode                  auto | toplevel | layer-shell
+  surface_mode                  toplevel | layer-shell
   launcher.anchor               center | top_left | top_center | top_right | bottom_left | bottom_center | bottom_right
   notifications.anchor          center | top_left | top_center | top_right | bottom_left | bottom_center | bottom_right
   launcher.monitor_name         output name (e.g. DP-1)

@@ -39,7 +39,7 @@ Optional deterministic Wayland anchoring via layer-shell:
 zig build run -- --ui
 ```
 Surface mode is configured via Lua config only (`~/.config/god-search-ui/config.lua`).
-Accepted values in Lua: `layer-shell` (recommended), `toplevel` (`auto` is treated as `layer-shell`).
+Accepted values in Lua: `layer-shell` (recommended), `toplevel`.
 
 Lua config:
 ```bash
