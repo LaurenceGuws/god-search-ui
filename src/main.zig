@@ -425,18 +425,12 @@ fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
 }
 
 fn resolveSurfaceMode(args: []const []const u8, cfg: god_search_ui.config.Settings) god_search_ui.ui.surfaces.SurfaceMode {
-    if (argValueAfterFlag(args, "--surface-mode")) |raw| {
-        if (god_search_ui.ui.surfaces.SurfaceMode.parse(raw)) |mode| return mode;
-    }
-    const env = std.process.getEnvVarOwned(std.heap.page_allocator, "GOD_SEARCH_SURFACE_MODE") catch null;
-    if (env) |value| {
-        defer std.heap.page_allocator.free(value);
-        const trimmed = std.mem.trim(u8, value, " \t\r\n");
-        if (trimmed.len > 0) {
-            return god_search_ui.ui.surfaces.SurfaceMode.parse(trimmed) orelse .auto;
-        }
-    }
-    return cfg.surface_mode orelse .auto;
+    _ = args;
+    const mode = cfg.surface_mode orelse .layer_shell;
+    return switch (mode) {
+        .auto => .layer_shell,
+        else => mode,
+    };
 }
 
 fn printResolvedConfig(cfg: god_search_ui.config.Settings, surface_mode: god_search_ui.ui.surfaces.SurfaceMode) !void {

@@ -10,6 +10,7 @@ pub const Shell = struct {
         start_hidden: bool = false,
         surface_mode: SurfaceMode = .auto,
         placement_policy: PlacementPolicy = .{},
+        show_nerd_stats: bool = true,
         notifications_show_close_button: bool = true,
         notifications_show_dbus_actions: bool = true,
     };

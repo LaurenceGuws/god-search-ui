@@ -271,10 +271,12 @@ pub const PopupManager = struct {
         const window = c.gtk_application_window_new(self.gtk_app);
         c.gtk_window_set_title(@ptrCast(window), "God Search Notifications");
         c.gtk_widget_add_css_class(window, "gs-notify-window");
-        _ = if (layer_shell.shouldUseLayerShell(self.surface_mode))
-            layer_shell.applyNotifications(window, self.placement_policy)
-        else
-            false;
+        const use_layer_notifications = layer_shell.shouldUseLayerShell(self.surface_mode);
+        if (use_layer_notifications and !layer_shell.applyNotifications(window, self.placement_policy)) {
+            std.log.err("notifications: layer-shell requested but unavailable", .{});
+            c.gtk_window_destroy(@ptrCast(window));
+            return false;
+        }
         placement_bridge.configureNotificationPopupWindow(window, self.placement_policy);
         c.gtk_window_set_resizable(@ptrCast(window), GFALSE);
         c.gtk_window_set_decorated(@ptrCast(window), GFALSE);

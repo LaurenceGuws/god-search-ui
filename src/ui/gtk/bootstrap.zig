@@ -117,11 +117,12 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     const launch_start_ns = std.time.nanoTimestamp();
     const window = c.gtk_application_window_new(gtk_app);
     c.gtk_window_set_title(@ptrCast(window), "God Search");
-    const use_layer_launcher = switch (launch.surface_mode) {
-        .layer_shell => layer_shell.shouldUseLayerShell(.layer_shell),
-        else => false,
-    };
-    _ = if (use_layer_launcher) layer_shell.applyLauncher(window) else false;
+    const use_layer_launcher = layer_shell.shouldUseLayerShell(launch.surface_mode);
+    if (use_layer_launcher and !layer_shell.applyLauncher(window, launch.placement_policy.launcher)) {
+        std.log.err("launcher: layer-shell requested but unavailable", .{});
+        c.gtk_window_destroy(@ptrCast(window));
+        return;
+    }
     configureInitialWindowSize(window, launch.placement_policy);
     hooks.install_css(window);
 

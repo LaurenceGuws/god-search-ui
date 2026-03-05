@@ -3,7 +3,6 @@ set -euo pipefail
 
 BIN="${BIN:-./zig-out/bin/god_search_ui}"
 MODE="${1:-start}"
-SURFACE_MODE="${GOD_SEARCH_SURFACE_MODE:-layer-shell}"
 WAIT_SECS="${WAIT_SECS:-6}"
 LOG_PATH="${LOG_PATH:-$HOME/.local/state/god-search-ui/daemon.log}"
 MASK_SWAYNC="${MASK_SWAYNC:-0}"
@@ -22,8 +21,6 @@ Options:
 
 Environment:
   BIN            Path to god_search_ui binary (default: ./zig-out/bin/god_search_ui)
-  GOD_SEARCH_SURFACE_MODE
-                 Surface mode for daemon start (default: layer-shell)
   WAIT_SECS      Max seconds to wait for bus ownership (default: 6)
   LOG_PATH       Daemon log path (default: ~/.local/state/god-search-ui/daemon.log)
   MASK_SWAYNC    Same as --mask-swaync when set to 1
@@ -65,7 +62,7 @@ stop_competitors() {
 start_daemon() {
   mkdir -p "$(dirname "$LOG_PATH")"
   pkill -x god_search_ui >/dev/null 2>&1 || true
-  nohup env GOD_SEARCH_SURFACE_MODE="$SURFACE_MODE" "$BIN" --ui-daemon >"$LOG_PATH" 2>&1 & disown
+  nohup "$BIN" --ui-daemon >"$LOG_PATH" 2>&1 & disown
 }
 
 if [[ "$MODE" == "--help" || "$MODE" == "-h" || "$MODE" == "help" ]]; then
@@ -89,7 +86,7 @@ case "$MODE" in
     fi
     echo "[dev-notif-start] stopping competing notification daemons"
     stop_competitors
-    echo "[dev-notif-start] starting god-search-ui daemon (surface=${SURFACE_MODE})"
+    echo "[dev-notif-start] starting god-search-ui daemon"
     start_daemon
     if info="$(wait_for_owner)"; then
       echo "[dev-notif-start] owner ready: $info"

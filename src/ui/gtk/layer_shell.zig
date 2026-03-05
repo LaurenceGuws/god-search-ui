@@ -9,8 +9,8 @@ pub fn shouldUseLayerShell(surface_mode: SurfaceMode) bool {
     return impl.shouldUseLayerShell(surface_mode);
 }
 
-pub fn applyLauncher(window: *gtk_types.c.GtkWidget) bool {
-    return impl.applyLauncher(window);
+pub fn applyLauncher(window: *gtk_types.c.GtkWidget, policy: placement.LauncherPolicy) bool {
+    return impl.applyLauncher(window, policy);
 }
 
 pub fn applyNotifications(window: *gtk_types.c.GtkWidget, policy: placement.NotificationPolicy) bool {
@@ -19,12 +19,12 @@ pub fn applyNotifications(window: *gtk_types.c.GtkWidget, policy: placement.Noti
 
 const disabled = struct {
     pub fn shouldUseLayerShell(surface_mode: SurfaceMode) bool {
-        _ = surface_mode;
-        return false;
+        return surface_mode == .layer_shell;
     }
 
-    pub fn applyLauncher(window: *gtk_types.c.GtkWidget) bool {
+    pub fn applyLauncher(window: *gtk_types.c.GtkWidget, policy: placement.LauncherPolicy) bool {
         _ = window;
+        _ = policy;
         return false;
     }
 
@@ -43,24 +43,23 @@ const enabled = struct {
 
     pub fn shouldUseLayerShell(surface_mode: SurfaceMode) bool {
         return switch (surface_mode) {
-            .toplevel => false,
-            .layer_shell => runtimeAvailable(),
-            .auto => runtimeAvailable(),
+            .layer_shell => true,
+            .auto, .toplevel => false,
         };
     }
 
-    pub fn applyLauncher(window: *gtk_types.c.GtkWidget) bool {
+    pub fn applyLauncher(window: *gtk_types.c.GtkWidget, policy: placement.LauncherPolicy) bool {
         if (!runtimeAvailable()) return false;
         const win: *c.GtkWindow = @ptrCast(@alignCast(window));
         c.gtk_layer_init_for_window(win);
         c.gtk_layer_set_namespace(win, "god-search-ui-launcher");
         c.gtk_layer_set_layer(win, c.GTK_LAYER_SHELL_LAYER_TOP);
         c.gtk_layer_set_keyboard_mode(win, c.GTK_LAYER_SHELL_KEYBOARD_MODE_EXCLUSIVE);
-        c.gtk_layer_set_anchor(win, c.GTK_LAYER_SHELL_EDGE_TOP, 1);
-        c.gtk_layer_set_anchor(win, c.GTK_LAYER_SHELL_EDGE_BOTTOM, 0);
-        c.gtk_layer_set_anchor(win, c.GTK_LAYER_SHELL_EDGE_LEFT, 0);
-        c.gtk_layer_set_anchor(win, c.GTK_LAYER_SHELL_EDGE_RIGHT, 0);
-        c.gtk_layer_set_margin(win, c.GTK_LAYER_SHELL_EDGE_TOP, 36);
+        applyAnchor(win, policy.window.anchor);
+        c.gtk_layer_set_margin(win, c.GTK_LAYER_SHELL_EDGE_TOP, policy.window.margins.top);
+        c.gtk_layer_set_margin(win, c.GTK_LAYER_SHELL_EDGE_RIGHT, policy.window.margins.right);
+        c.gtk_layer_set_margin(win, c.GTK_LAYER_SHELL_EDGE_BOTTOM, policy.window.margins.bottom);
+        c.gtk_layer_set_margin(win, c.GTK_LAYER_SHELL_EDGE_LEFT, policy.window.margins.left);
         return true;
     }
 

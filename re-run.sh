@@ -5,8 +5,7 @@ set -euo pipefail
 # Keep runtime/build flags in one place below (or override via env vars).
 #
 # Optional overrides:
-#   RERUN_BUILD_FLAGS="-Doptimize=ReleaseFast -Denable_gtk=true -Denable_lua_config=true -Denable_layer_shell=true"
-#   RERUN_SURFACE_MODE="layer-shell"
+#   RERUN_BUILD_FLAGS="-Doptimize=ReleaseFast"
 #   RERUN_DAEMON_ARGS="--ui-daemon"
 #   RERUN_BIN="./zig-out/bin/god_search_ui"
 #   RERUN_LOG="$HOME/.local/state/god-search-ui/daemon.log"
@@ -14,8 +13,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
-: "${RERUN_BUILD_FLAGS:=-Doptimize=ReleaseFast -Denable_gtk=true -Denable_lua_config=true -Denable_layer_shell=true}"
-: "${RERUN_SURFACE_MODE:=layer-shell}"
+: "${RERUN_BUILD_FLAGS:=-Doptimize=ReleaseFast}"
 : "${RERUN_DAEMON_ARGS:=--ui-daemon}"
 : "${RERUN_BIN:=./zig-out/bin/god_search_ui}"
 : "${RERUN_LOG:=$HOME/.local/state/god-search-ui/daemon.log}"
@@ -61,8 +59,8 @@ else
 fi
 rm -f "$sock" 2>/dev/null || true
 
-echo "[re-run] starting daemon: GOD_SEARCH_SURFACE_MODE=$RERUN_SURFACE_MODE $RERUN_BIN ${daemon_args[*]}"
-nohup env GOD_SEARCH_SURFACE_MODE="$RERUN_SURFACE_MODE" "$RERUN_BIN" "${daemon_args[@]}" >"$RERUN_LOG" 2>&1 &
+echo "[re-run] starting daemon: $RERUN_BIN ${daemon_args[*]}"
+nohup "$RERUN_BIN" "${daemon_args[@]}" >"$RERUN_LOG" 2>&1 &
 disown
 
 echo "[re-run] waiting for control socket"

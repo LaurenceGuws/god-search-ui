@@ -16,14 +16,12 @@ pub fn build(b: *std.Build) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
-    const enable_gtk = b.option(bool, "enable_gtk", "Enable GTK4 UI shell") orelse false;
-    const enable_layer_shell = b.option(bool, "enable_layer_shell", "Enable gtk4-layer-shell integration") orelse false;
-    // Deprecated compatibility flag. Lua config is always enabled now.
-    const enable_lua_config = b.option(bool, "enable_lua_config", "Deprecated: Lua-backed runtime config is always enabled") orelse true;
+    const enable_headless = b.option(bool, "enable_headless", "Build headless-only binary (disable GTK/layer-shell)") orelse false;
+    const enable_gtk = !enable_headless;
+    const enable_layer_shell = !enable_headless;
     const build_options = b.addOptions();
     build_options.addOption(bool, "enable_gtk", enable_gtk);
     build_options.addOption(bool, "enable_layer_shell", enable_layer_shell);
-    _ = enable_lua_config;
     // It's also possible to define more custom flags to toggle optional features
     // of this build script using `b.option()`. All defined flags (including
     // target and optimize options) will be listed when running `zig build --help`

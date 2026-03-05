@@ -30,23 +30,20 @@ In headless mode, type queries and press Enter. Commands:
 
 GTK4 shell (requires GTK4 dev libraries):
 ```bash
-zig build -Denable_gtk=true run -- --ui
+zig build run -- --ui
 ```
 In GTK mode, use `Ctrl+R` to refresh provider snapshot cache.
 Route prefixes include `@ # ! ~ % & $ > = ?` (`$` = notifications history/dismiss route).
 Optional deterministic Wayland anchoring via layer-shell:
 ```bash
-zig build -Denable_gtk=true -Denable_layer_shell=true run -- --ui --surface-mode layer-shell
+zig build run -- --ui
 ```
-Surface mode can also be set by env:
-```bash
-GOD_SEARCH_SURFACE_MODE=layer-shell god-search-ui --ui
-```
-Accepted values: `auto` (default), `toplevel`, `layer-shell`.
+Surface mode is configured via Lua config only (`~/.config/god-search-ui/config.lua`).
+Accepted values in Lua: `layer-shell` (recommended), `toplevel` (`auto` is treated as `layer-shell`).
 
 Lua config:
 ```bash
-zig build -Denable_gtk=true
+zig build
 ```
 Config file path defaults to `~/.config/god-search-ui/config.lua` (override with `GOD_SEARCH_CONFIG_LUA`).
 When missing, a default config file is auto-created on app startup paths that load runtime config.
