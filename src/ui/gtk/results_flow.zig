@@ -82,6 +82,12 @@ fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_tri
         rows
     else
         &[_]search_mod.ScoredCandidate{};
+    const parsed_query = search_mod.parseQuery(query_trimmed);
+    if ((parsed_query.route == .grep or parsed_query.route == .files) and cachedRowsContainMissingPaths(cached_rows)) {
+        std.log.info("results_flow.cache invalidated query={s} reason=missing_paths", .{query_trimmed});
+        gtk_async_state.clearAsyncSearchCache(ctx, allocator);
+        return false;
+    }
     const total_len = gtk_async_state.asyncCachedTotalLen(ctx, hash);
     const route_hint = gtk_query.routeHintForQuery(query_trimmed);
     std.log.info(
@@ -95,6 +101,48 @@ fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_tri
         },
     );
     renderWithScrollRetention(ctx, allocator, query_trimmed, cached_rows, total_len);
+    return true;
+}
+
+fn cachedRowsContainMissingPaths(rows: []const search_mod.ScoredCandidate) bool {
+    for (rows) |row| {
+        const candidate = row.candidate;
+        const path = switch (candidate.kind) {
+            .grep => grepActionPath(candidate.action),
+            .file, .dir => std.mem.trim(u8, candidate.action, " \t\r\n"),
+            else => "",
+        };
+        if (path.len == 0) continue;
+        if (!pathExists(path)) return true;
+    }
+    return false;
+}
+
+fn grepActionPath(action: []const u8) []const u8 {
+    const trimmed = std.mem.trim(u8, action, " \t\r\n");
+    if (trimmed.len == 0) return "";
+    if (std.mem.lastIndexOfScalar(u8, trimmed, ':')) |idx| {
+        if (idx + 1 < trimmed.len and isDigitsOnly(trimmed[idx + 1 ..])) {
+            return trimmed[0..idx];
+        }
+    }
+    return trimmed;
+}
+
+fn isDigitsOnly(value: []const u8) bool {
+    if (value.len == 0) return false;
+    for (value) |ch| {
+        if (!std.ascii.isDigit(ch)) return false;
+    }
+    return true;
+}
+
+fn pathExists(path: []const u8) bool {
+    if (std.fs.path.isAbsolute(path)) {
+        std.fs.accessAbsolute(path, .{}) catch return false;
+        return true;
+    }
+    std.fs.cwd().access(path, .{}) catch return false;
     return true;
 }
 
