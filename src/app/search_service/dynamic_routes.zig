@@ -151,7 +151,7 @@ fn collectRgCandidates(
     std.log.info("grep collect start route=grep term={s} cmd={s}", .{ term, cmd });
     const rows = runShellCaptureBounded(allocator, cmd, max_rg_capture_bytes) catch |err| {
         std.log.warn("grep collect failed route=grep term={s} err={s}", .{ term, @errorName(err) });
-        return;
+        return err;
     };
     defer allocator.free(rows);
     var lines = std.mem.splitScalar(u8, rows, '\n');
@@ -203,7 +203,7 @@ fn collectPackageCandidates(
     std.log.info("packages collect start route=packages term={s} cmd={s}", .{ term, cmd });
     const rows = runShellCaptureBounded(allocator, cmd, max_pkg_capture_bytes) catch |err| {
         std.log.warn("packages collect failed route=packages term={s} err={s}", .{ term, @errorName(err) });
-        return;
+        return err;
     };
     defer allocator.free(rows);
 

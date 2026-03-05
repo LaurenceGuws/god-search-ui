@@ -181,7 +181,13 @@ pub const SearchService = struct {
             allocator,
             query,
             recent,
-        );
+        ) catch |err| {
+            self.query_mu.lock();
+            self.last_query_had_provider_runtime_failure = true;
+            self.query_mu.unlock();
+            std.log.warn("dynamic route query failed route={s} err={s}", .{ @tagName(query.route), @errorName(err) });
+            return allocator.alloc(search.ScoredCandidate, 0);
+        };
     }
 
     pub fn clearDynamicState(self: *SearchService, allocator: std.mem.Allocator) void {
