@@ -115,6 +115,15 @@ pub fn candidateIconWidget(
             return @ptrCast(image);
         }
     }
+    if (kind == .notification) {
+        if (resolveNotificationIconName(allocator, icon, subtitle)) |icon_name_z| {
+            defer allocator.free(icon_name_z);
+            const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
+            c.gtk_image_set_pixel_size(@ptrCast(image), 30);
+            c.gtk_widget_add_css_class(image, "gs-kind-icon");
+            return @ptrCast(image);
+        }
+    }
     if (kind == .file) {
         if (resolveIconFileForCandidate(allocator, icon, action)) |icon_path_z| {
             defer allocator.free(icon_path_z);
@@ -189,6 +198,35 @@ fn resolveWindowIconName(
         }
     }
     return null;
+}
+
+fn resolveNotificationIconName(
+    allocator: std.mem.Allocator,
+    icon: []const u8,
+    subtitle: []const u8,
+) ?[:0]u8 {
+    const explicit = std.mem.trim(u8, icon, " \t\r\n\"'");
+    if (explicit.len > 0) {
+        if (resolveIconVariantWithTransforms(allocator, explicit)) |name| return name;
+        if (windowIconAlias(explicit)) |alias| {
+            if (resolveIconVariantWithTransforms(allocator, alias)) |name| return name;
+        }
+    }
+    if (notificationAppNameFromSubtitle(subtitle)) |app_name| {
+        if (resolveIconVariantWithTransforms(allocator, app_name)) |name| return name;
+        if (windowIconAlias(app_name)) |alias| {
+            if (resolveIconVariantWithTransforms(allocator, alias)) |name| return name;
+        }
+    }
+    return null;
+}
+
+fn notificationAppNameFromSubtitle(subtitle: []const u8) ?[]const u8 {
+    const trimmed = std.mem.trim(u8, subtitle, " \t\r\n");
+    if (trimmed.len == 0) return null;
+    const sep = std.mem.indexOf(u8, trimmed, " | ") orelse return trimmed;
+    if (sep == 0) return null;
+    return trimmed[0..sep];
 }
 
 fn resolveYaziGlyph(kind: CandidateKind, title: []const u8, subtitle: []const u8, action: []const u8) ?[]const u8 {
@@ -706,4 +744,9 @@ test "windowIconAlias maps known desktop classes" {
     try std.testing.expectEqualStrings("org.kde.discover", windowIconAlias("discover") orelse return error.TestUnexpectedResult);
     try std.testing.expectEqualStrings("archlinux-logo", windowIconAlias("archos") orelse return error.TestUnexpectedResult);
     try std.testing.expect(windowIconAlias("unknown") == null);
+}
+
+test "notificationAppNameFromSubtitle extracts app segment" {
+    try std.testing.expectEqualStrings("notify-send", notificationAppNameFromSubtitle("notify-send | 2s ago") orelse return error.TestUnexpectedResult);
+    try std.testing.expectEqualStrings("zen-browser", notificationAppNameFromSubtitle("zen-browser") orelse return error.TestUnexpectedResult);
 }

@@ -6,6 +6,7 @@ const max_entries: usize = 256;
 const Entry = struct {
     id: u32,
     app_name: []u8,
+    app_icon: []u8,
     summary: []u8,
     body: []u8,
     urgency: u8,
@@ -19,6 +20,7 @@ const Entry = struct {
 pub const Snapshot = struct {
     id: u32,
     app_name: []u8,
+    app_icon: []u8,
     summary: []u8,
     body: []u8,
     urgency: u8,
@@ -69,6 +71,7 @@ pub fn recordNotify(
     allocator: std.mem.Allocator,
     id: u32,
     app_name: []const u8,
+    app_icon: []const u8,
     summary: []const u8,
     body: []const u8,
     urgency: u8,
@@ -81,9 +84,11 @@ pub fn recordNotify(
     if (findIndexLocked(id)) |idx| {
         var row = &runtime.entries.items[idx];
         allocator.free(row.app_name);
+        allocator.free(row.app_icon);
         allocator.free(row.summary);
         allocator.free(row.body);
         row.app_name = try allocator.dupe(u8, app_name);
+        row.app_icon = try allocator.dupe(u8, app_icon);
         row.summary = try allocator.dupe(u8, summary);
         row.body = try allocator.dupe(u8, body);
         row.urgency = urgency;
@@ -97,6 +102,7 @@ pub fn recordNotify(
     try runtime.entries.append(allocator, .{
         .id = id,
         .app_name = try allocator.dupe(u8, app_name),
+        .app_icon = try allocator.dupe(u8, app_icon),
         .summary = try allocator.dupe(u8, summary),
         .body = try allocator.dupe(u8, body),
         .urgency = urgency,
@@ -169,6 +175,7 @@ pub fn snapshot(allocator: std.mem.Allocator) ![]Snapshot {
         out[idx] = .{
             .id = entry.id,
             .app_name = try allocator.dupe(u8, entry.app_name),
+            .app_icon = try allocator.dupe(u8, entry.app_icon),
             .summary = try allocator.dupe(u8, entry.summary),
             .body = try allocator.dupe(u8, entry.body),
             .urgency = entry.urgency,
@@ -246,12 +253,14 @@ pub fn appendRouteCandidates(
         const kept_title = try keep(dynamic_owned, allocator, title);
         const kept_subtitle = try keep(dynamic_owned, allocator, subtitle_buf);
         const kept_action = try keep(dynamic_owned, allocator, action_buf);
+        const icon_hint = if (std.mem.trim(u8, row.app_icon, " \t\r\n").len > 0) row.app_icon else row.app_name;
+        const kept_icon = try keep(dynamic_owned, allocator, icon_hint);
         try out.append(allocator, search.Candidate.initWithIcon(
             .notification,
             kept_title,
             kept_subtitle,
             kept_action,
-            "preferences-system-notifications-symbolic",
+            kept_icon,
         ));
     }
 }
@@ -265,12 +274,14 @@ fn findIndexLocked(id: u32) ?usize {
 
 fn freeEntry(allocator: std.mem.Allocator, row: Entry) void {
     allocator.free(row.app_name);
+    allocator.free(row.app_icon);
     allocator.free(row.summary);
     allocator.free(row.body);
 }
 
 fn freeSnapshotRow(allocator: std.mem.Allocator, row: Snapshot) void {
     allocator.free(row.app_name);
+    allocator.free(row.app_icon);
     allocator.free(row.summary);
     allocator.free(row.body);
 }
@@ -321,15 +332,16 @@ test "recordNotify and snapshot preserve latest state" {
     resetForTest(allocator);
     defer resetForTest(allocator);
 
-    try recordNotify(allocator, 7, "app", "hello", "body", 2, true);
+    try recordNotify(allocator, 7, "app", "app-icon", "hello", "body", 2, true);
     recordClosed(7, 3);
-    try recordNotify(allocator, 7, "app2", "hello2", "body2", 1, false);
+    try recordNotify(allocator, 7, "app2", "app2-icon", "hello2", "body2", 1, false);
 
     const rows = try snapshot(allocator);
     defer freeSnapshot(allocator, rows);
     try std.testing.expectEqual(@as(usize, 1), rows.len);
     try std.testing.expectEqual(@as(u32, 7), rows[0].id);
     try std.testing.expectEqualStrings("app2", rows[0].app_name);
+    try std.testing.expectEqualStrings("app2-icon", rows[0].app_icon);
     try std.testing.expect(rows[0].active);
 }
 
@@ -338,7 +350,7 @@ test "appendRouteCandidates emits dismiss-all and notification rows" {
     resetForTest(allocator);
     defer resetForTest(allocator);
 
-    try recordNotify(allocator, 1, "notify-send", "Title", "Body", 1, false);
+    try recordNotify(allocator, 1, "notify-send", "notify-send", "Title", "Body", 1, false);
     var owned = std.ArrayListUnmanaged([]u8){};
     defer {
         for (owned.items) |item| allocator.free(item);
@@ -351,4 +363,6 @@ test "appendRouteCandidates emits dismiss-all and notification rows" {
     try std.testing.expect(out.items.len >= 2);
     try std.testing.expectEqual(search.CandidateKind.action, out.items[0].kind);
     try std.testing.expectEqualStrings("notif-dismiss-all", out.items[0].action);
+    try std.testing.expectEqual(search.CandidateKind.notification, out.items[1].kind);
+    try std.testing.expectEqualStrings("notify-send", out.items[1].icon);
 }

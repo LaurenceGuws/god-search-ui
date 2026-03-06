@@ -74,6 +74,7 @@ pub const Daemon = struct {
     pub const NotifyEvent = struct {
         id: u32,
         app_name: []const u8,
+        app_icon: []const u8,
         summary: []const u8,
         body: []const u8,
         expire_timeout: i32,
@@ -121,7 +122,7 @@ pub const Daemon = struct {
         self.owner_id = c.g_bus_own_name(
             c.G_BUS_TYPE_SESSION,
             service_name,
-            c.G_BUS_NAME_OWNER_FLAGS_NONE,
+            c.G_BUS_NAME_OWNER_FLAGS_REPLACE,
             onBusAcquired,
             onNameAcquired,
             onNameLost,
@@ -305,8 +306,8 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
     defer c.g_variant_unref(app_name_variant);
     const replaces_id_variant = c.g_variant_get_child_value(payload, 1);
     defer c.g_variant_unref(replaces_id_variant);
-    const _app_icon_variant = c.g_variant_get_child_value(payload, 2);
-    defer c.g_variant_unref(_app_icon_variant);
+    const app_icon_variant = c.g_variant_get_child_value(payload, 2);
+    defer c.g_variant_unref(app_icon_variant);
     const summary_variant = c.g_variant_get_child_value(payload, 3);
     defer c.g_variant_unref(summary_variant);
     const body_variant = c.g_variant_get_child_value(payload, 4);
@@ -324,6 +325,7 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
     }
 
     const app_name = c.g_variant_get_string(app_name_variant, null);
+    const app_icon = c.g_variant_get_string(app_icon_variant, null);
     const summary = c.g_variant_get_string(summary_variant, null);
     const body = c.g_variant_get_string(body_variant, null);
     const replaces_id = c.g_variant_get_uint32(replaces_id_variant);
@@ -355,6 +357,7 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
             on_notify(user_data, .{
                 .id = id,
                 .app_name = std.mem.span(app_name),
+                .app_icon = std.mem.span(app_icon),
                 .summary = std.mem.span(summary),
                 .body = std.mem.span(body),
                 .expire_timeout = expire_timeout,
@@ -369,6 +372,7 @@ fn handleNotify(self: *Daemon, parameters: ?*c.GVariant, invocation: *c.GDBusMet
         self.allocator,
         id,
         std.mem.span(app_name),
+        std.mem.span(app_icon),
         std.mem.span(summary),
         std.mem.span(body),
         parsed_hints.urgency,
