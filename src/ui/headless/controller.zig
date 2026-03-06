@@ -1,5 +1,6 @@
 const std = @import("std");
 const app = @import("../../app/mod.zig");
+const providers = @import("../../providers/mod.zig");
 const common_commands = @import("../common/commands.zig");
 const render = @import("render.zig");
 const icon_diag = @import("icon_diag.zig");
@@ -26,6 +27,7 @@ pub fn run(allocator: std.mem.Allocator, service: *app.SearchService) !void {
         switch (common_commands.parse(query)) {
             .quit => break,
             .refresh => {
+                providers.invalidateWebCaches();
                 service.invalidateSnapshot();
                 try service.prewarmProviders(allocator);
                 try stdout.print("  snapshot refreshed\n", .{});

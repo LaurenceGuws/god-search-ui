@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_mod = @import("../app/mod.zig");
+const providers_mod = @import("../providers/mod.zig");
 const search_mod = @import("../search/mod.zig");
 const gtk_types = @import("gtk/types.zig");
 const gtk_styles = @import("gtk/styles.zig");
@@ -326,6 +327,7 @@ pub const Shell = struct {
         const allocator = allocator_ptr.*;
         const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
         const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+        const parsed_query = search_mod.parseQuery(query);
         gtk_shell_startup.storeQueryText(ctx, query);
         if (refreshUnsupportedMessageForQuery(query)) |msg| {
             setStatus(ctx, msg);
@@ -336,6 +338,16 @@ pub const Shell = struct {
         // Give GTK a chance to paint the refresh indicator before synchronous prewarm starts.
         while (c.g_main_context_pending(null) != 0) {
             _ = c.g_main_context_iteration(null, GFALSE);
+        }
+
+        if (parsed_query.route == .web) {
+            gtk_async.clearAsyncSearchCache(ctx, allocator);
+            ctx.service.clearDynamicState(allocator);
+            providers_mod.invalidateWebCaches();
+            gtk_widgets.clearAsyncRows(ctx.list);
+            setStatus(ctx, "Web bookmark cache refreshed");
+            populateResults(ctx, query);
+            return;
         }
 
         gtk_async.clearAsyncSearchCache(ctx, allocator);
@@ -387,7 +399,6 @@ pub const Shell = struct {
             .files => "File search runs live with fd (no cache refresh needed)",
             .notifications => "Notifications route is live (no cache refresh needed)",
             .run => "Run command executes live (no cache refresh needed)",
-            .web => "Web results build from your query (no cache refresh needed)",
             else => null,
         };
     }

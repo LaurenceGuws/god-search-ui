@@ -10,6 +10,7 @@ pub const ProviderStatus = @import("registry.zig").ProviderStatus;
 pub const appendWebRouteCandidates = @import("web.zig").appendRouteCandidates;
 pub const buildWebSearchUrl = @import("web.zig").buildSearchUrl;
 pub const engineLabelForWeb = @import("web.zig").engineLabel;
+pub const invalidateWebCaches = @import("web.zig").invalidateCaches;
 pub const parseWebCommand = @import("web.zig").parseWebCommand;
 pub const parseWebQuery = @import("web.zig").parseWebQuery;
 pub const resolveBookmarkUrl = @import("web.zig").resolveBookmarkUrl;
