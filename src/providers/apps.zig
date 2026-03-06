@@ -161,7 +161,7 @@ pub const AppsProvider = struct {
         var walker = try dir.walk(allocator);
         defer walker.deinit();
         while (try walker.next()) |entry| {
-            if (entry.kind != .file) continue;
+            if (entry.kind != .file and entry.kind != .sym_link) continue;
             if (!std.mem.endsWith(u8, entry.path, ".desktop")) continue;
             if (entry.path.len >= 512) continue;
             const data = entry.dir.readFileAlloc(allocator, entry.basename, 128 * 1024) catch continue;
@@ -324,9 +324,9 @@ fn desktopSearchRoots(allocator: std.mem.Allocator) !std.ArrayList([]u8) {
     defer if (xdg_data_dirs) |x| allocator.free(x);
 
     if (xdg_data_home) |x| {
-        try roots.append(allocator, try std.fmt.allocPrint(allocator, "{s}/applications", .{x}));
+        try appendDesktopRootUnique(&roots, allocator, try std.fmt.allocPrint(allocator, "{s}/applications", .{x}));
     } else if (home) |h| {
-        try roots.append(allocator, try std.fmt.allocPrint(allocator, "{s}/.local/share/applications", .{h}));
+        try appendDesktopRootUnique(&roots, allocator, try std.fmt.allocPrint(allocator, "{s}/.local/share/applications", .{h}));
     }
 
     if (xdg_data_dirs) |dirs| {
@@ -334,21 +334,34 @@ fn desktopSearchRoots(allocator: std.mem.Allocator) !std.ArrayList([]u8) {
         while (it.next()) |part| {
             const trimmed = std.mem.trim(u8, part, " \t");
             if (trimmed.len == 0) continue;
-            try roots.append(allocator, try std.fmt.allocPrint(allocator, "{s}/applications", .{trimmed}));
+            try appendDesktopRootUnique(&roots, allocator, try std.fmt.allocPrint(allocator, "{s}/applications", .{trimmed}));
         }
-    } else {
-        try roots.append(allocator, try allocator.dupe(u8, "/usr/local/share/applications"));
-        try roots.append(allocator, try allocator.dupe(u8, "/usr/share/applications"));
     }
+    // Always include canonical system app roots even when XDG_DATA_DIRS is custom.
+    try appendDesktopRootUnique(&roots, allocator, try allocator.dupe(u8, "/usr/local/share/applications"));
+    try appendDesktopRootUnique(&roots, allocator, try allocator.dupe(u8, "/usr/share/applications"));
 
     return roots;
+}
+
+fn appendDesktopRootUnique(roots: *std.ArrayList([]u8), allocator: std.mem.Allocator, candidate_owned: []u8) !void {
+    for (roots.items) |existing| {
+        if (std.mem.eql(u8, existing, candidate_owned)) {
+            allocator.free(candidate_owned);
+            return;
+        }
+    }
+    try roots.append(allocator, candidate_owned);
 }
 
 fn writeAppCacheFromCandidates(cache_path: []const u8, rows: []const search.Candidate) !void {
     if (rows.len == 0) return;
     const parent = std.fs.path.dirname(cache_path) orelse return;
     if (std.fs.path.isAbsolute(parent)) {
-        try std.fs.makeDirAbsolute(parent);
+        std.fs.makeDirAbsolute(parent) catch |err| switch (err) {
+            error.PathAlreadyExists => {},
+            else => return err,
+        };
     } else {
         try std.fs.cwd().makePath(parent);
     }
