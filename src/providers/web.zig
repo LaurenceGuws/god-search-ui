@@ -542,11 +542,15 @@ fn probeFaviconPath(allocator: std.mem.Allocator, url: []const u8) ?[]const u8 {
     defer file.close();
     const stat = file.stat() catch return null;
     if (stat.size == 0) {
-        std.fs.deleteFileAbsolute(tmp_target) catch {};
+        std.fs.deleteFileAbsolute(tmp_target) catch |err| {
+            std.log.debug("web favicon cleanup failed path={s} err={s}", .{ tmp_target, @errorName(err) });
+        };
         return null;
     }
     std.fs.renameAbsolute(tmp_target, target) catch {
-        std.fs.deleteFileAbsolute(tmp_target) catch {};
+        std.fs.deleteFileAbsolute(tmp_target) catch |err| {
+            std.log.debug("web favicon cleanup failed path={s} err={s}", .{ tmp_target, @errorName(err) });
+        };
         return null;
     };
     favicon_cache_mu.lock();
@@ -576,7 +580,11 @@ fn fetchSmallFileToPath(allocator: std.mem.Allocator, fetch_url: []const u8, tar
     defer allocator.free(result.stderr);
     defer allocator.free(result.stdout);
     if (result.term != .Exited or result.term.Exited != 0) {
-        if (fileExistsPath(target_path)) std.fs.deleteFileAbsolute(target_path) catch {};
+        if (fileExistsPath(target_path)) {
+            std.fs.deleteFileAbsolute(target_path) catch |err| {
+                std.log.debug("web favicon fetch cleanup failed path={s} err={s}", .{ target_path, @errorName(err) });
+            };
+        }
         return false;
     }
     return true;
@@ -897,7 +905,10 @@ fn loadFirefoxFamilyBookmarksFromRootLocked(browser_label: []const u8, maybe_roo
 
         const db_path = std.fs.path.join(std.heap.page_allocator, &.{ root_path, entry.name, "places.sqlite" }) catch continue;
         defer std.heap.page_allocator.free(db_path);
-        loadFirefoxPlacesSqliteLocked(browser_label, db_path) catch {};
+        if (!fileExistsPath(db_path)) continue;
+        loadFirefoxPlacesSqliteLocked(browser_label, db_path) catch |err| {
+            std.log.warn("web bookmarks sqlite load failed browser={s} path={s} err={s}", .{ browser_label, db_path, @errorName(err) });
+        };
     }
 }
 
@@ -912,12 +923,18 @@ fn loadFirefoxPlacesSqliteLocked(browser_label: []const u8, db_path: []const u8)
         .allocator = std.heap.page_allocator,
         .argv = &.{ "sqlite3", "-readonly", "-separator", "\t", db_path, sql },
         .max_output_bytes = 8 * 1024 * 1024,
-    }) catch return;
+    }) catch |err| {
+        std.log.warn("web bookmarks sqlite spawn failed path={s} err={s}", .{ db_path, @errorName(err) });
+        return;
+    };
     defer {
         std.heap.page_allocator.free(result.stdout);
         std.heap.page_allocator.free(result.stderr);
     }
-    if (result.term != .Exited or result.term.Exited != 0) return;
+    if (result.term != .Exited or result.term.Exited != 0) {
+        std.log.warn("web bookmarks sqlite command failed path={s} exit={any}", .{ db_path, result.term });
+        return;
+    }
     try parseSqliteBookmarkRowsLocked(browser_label, result.stdout);
 }
 
