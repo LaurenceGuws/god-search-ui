@@ -114,7 +114,7 @@ pub fn planCommandKind(allocator: std.mem.Allocator, kind: kinds.UiKind, action:
                 };
                 const term_cmd = runtime_tools.terminalTool().command();
                 const launch_expr = switch (runtime_tools.terminalTool()) {
-                    .kitty, .alacritty, .footclient, .foot, .wezterm, .xterm => "exec \"$term\" -e sh -lc \"$install_cmd\"",
+                    .kitty, .zide_terminal, .alacritty, .footclient, .foot, .wezterm, .xterm => "exec \"$term\" -e sh -lc \"$install_cmd\"",
                     .gnome_terminal, .konsole, .xfce4_terminal, .tilix => "exec \"$term\" -- sh -lc \"$install_cmd\"",
                 };
                 const cmd = try std.fmt.allocPrint(

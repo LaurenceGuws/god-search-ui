@@ -407,6 +407,7 @@ fn parsePackageManager(raw: []const u8) ?config.PackageManager {
 
 fn parseTerminalTool(raw: []const u8) ?config.TerminalTool {
     if (std.ascii.eqlIgnoreCase(raw, "kitty")) return .kitty;
+    if (std.ascii.eqlIgnoreCase(raw, "zide-terminal") or std.ascii.eqlIgnoreCase(raw, "zide_terminal")) return .zide_terminal;
     if (std.ascii.eqlIgnoreCase(raw, "alacritty")) return .alacritty;
     if (std.ascii.eqlIgnoreCase(raw, "footclient")) return .footclient;
     if (std.ascii.eqlIgnoreCase(raw, "foot")) return .foot;

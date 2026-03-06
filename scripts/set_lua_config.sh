@@ -16,7 +16,7 @@ Keys:
   launcher.monitor_name         output name (e.g. DP-1)
   notifications.monitor_name    output name (e.g. HDMI-A-1)
   tools.package_manager         yay | pacman
-  tools.terminal                kitty | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
+  tools.terminal                kitty | zide-terminal | alacritty | footclient | foot | wezterm | gnome-terminal | konsole | xfce4-terminal | tilix | xterm
   tools.grep_include_hidden     true | false
   tools.clipboard_tool          wl-copy | xclip
   tools.editor_tool             nvim | vim | vi | helix | hx | kak | nano | code | codium | code-insiders | subl | xdg-open
@@ -82,7 +82,7 @@ case "$KEY" in
     perl -0777 -i -pe "s/(tools\\s*=\\s*\\{.*?\\n\\s*)package_manager\\s*=\\s*\"[^\"]*\"/\${1}package_manager = \"${V_ESC}\"/s" "$CFG"
     ;;
   tools.terminal)
-    if ! [[ "$VALUE" =~ ^(kitty|alacritty|footclient|foot|wezterm|gnome-terminal|konsole|xfce4-terminal|tilix|xterm)$ ]]; then
+    if ! [[ "$VALUE" =~ ^(kitty|zide-terminal|alacritty|footclient|foot|wezterm|gnome-terminal|konsole|xfce4-terminal|tilix|xterm)$ ]]; then
       echo "value for $KEY is not a supported terminal" >&2
       exit 1
     fi

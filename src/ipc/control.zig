@@ -81,7 +81,9 @@ pub const Server = struct {
             thread.join();
             self.thread = null;
         }
-        std.posix.unlink(self.socket_path) catch {};
+        std.posix.unlink(self.socket_path) catch |err| {
+            std.log.debug("ipc socket unlink failed path={s} err={s}", .{ self.socket_path, @errorName(err) });
+        };
         self.allocator.free(self.socket_path);
     }
 };
@@ -168,7 +170,9 @@ fn sendCommand(allocator: std.mem.Allocator, cmd: Command) !OwnedResponse {
     const request = try std.fmt.allocPrint(allocator, "{{\"v\":1,\"cmd\":\"{s}\"}}", .{@tagName(cmd)});
     defer allocator.free(request);
     _ = try std.posix.write(fd, request);
-    std.posix.shutdown(fd, .send) catch {};
+    std.posix.shutdown(fd, .send) catch |err| {
+        std.log.debug("ipc client shutdown(send) failed route={s} err={s}", .{ @tagName(cmd), @errorName(err) });
+    };
 
     var poll_fds = [_]std.posix.pollfd{
         .{
@@ -296,7 +300,9 @@ fn bindListener(socket_path: []const u8) !std.posix.socket_t {
     std.posix.bind(fd, &addr.any, addr.getOsSockLen()) catch |err| {
         if (err == error.AddressInUse) {
             if (!isSocketLive(socket_path)) {
-                std.posix.unlink(socket_path) catch {};
+                std.posix.unlink(socket_path) catch |unlink_err| {
+                    std.log.warn("ipc stale socket unlink failed path={s} err={s}", .{ socket_path, @errorName(unlink_err) });
+                };
                 try std.posix.bind(fd, &addr.any, addr.getOsSockLen());
             } else {
                 return error.AddressInUse;
@@ -306,7 +312,9 @@ fn bindListener(socket_path: []const u8) !std.posix.socket_t {
         }
     };
     try std.posix.listen(fd, 32);
-    std.posix.fchmodat(std.posix.AT.FDCWD, socket_path, 0o600, 0) catch {};
+    std.posix.fchmodat(std.posix.AT.FDCWD, socket_path, 0o600, 0) catch |err| {
+        std.log.warn("ipc socket chmod failed path={s} err={s}", .{ socket_path, @errorName(err) });
+    };
     return fd;
 }
 
@@ -472,8 +480,12 @@ test "bindListener replaces stale occupied path and binds socket" {
     const pid = std.posix.getpid();
     const path = try std.fmt.allocPrint(allocator, "/tmp/god-search-ui-stale-{d}.sock", .{pid});
     defer allocator.free(path);
-    std.posix.unlink(path) catch {};
-    defer std.posix.unlink(path) catch {};
+    std.posix.unlink(path) catch |err| {
+        std.log.debug("test socket unlink pre failed path={s} err={s}", .{ path, @errorName(err) });
+    };
+    defer std.posix.unlink(path) catch |err| {
+        std.log.debug("test socket unlink post failed path={s} err={s}", .{ path, @errorName(err) });
+    };
 
     const file = try std.fs.createFileAbsolute(path, .{});
     file.close();
@@ -490,8 +502,12 @@ test "bindListener sets user-only socket permissions" {
     const pid = std.posix.getpid();
     const path = try std.fmt.allocPrint(allocator, "/tmp/god-search-ui-mode-{d}.sock", .{pid});
     defer allocator.free(path);
-    std.posix.unlink(path) catch {};
-    defer std.posix.unlink(path) catch {};
+    std.posix.unlink(path) catch |err| {
+        std.log.debug("test socket unlink pre failed path={s} err={s}", .{ path, @errorName(err) });
+    };
+    defer std.posix.unlink(path) catch |err| {
+        std.log.debug("test socket unlink post failed path={s} err={s}", .{ path, @errorName(err) });
+    };
 
     const fd = try bindListener(path);
     defer std.posix.close(fd);

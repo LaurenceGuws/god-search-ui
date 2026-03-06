@@ -139,7 +139,10 @@ pub fn closeAllActive() usize {
     if (close_fn != null and close_ctx != null) {
         for (runtime.entries.items) |entry| {
             if (!entry.active) continue;
-            ids.append(std.heap.page_allocator, entry.id) catch {};
+            ids.append(std.heap.page_allocator, entry.id) catch |err| {
+                std.log.warn("notifications close-all id buffer append failed: {s}", .{@errorName(err)});
+                break;
+            };
         }
     }
     runtime.mu.unlock();

@@ -356,17 +356,16 @@ pub const Shell = struct {
         const allocator = allocator_ptr.*;
         var cfg = config_mod.load(allocator);
         defer cfg.deinit(allocator);
+        if (config_mod.consumeLastLoadIssue(allocator)) |issue| {
+            defer allocator.free(issue);
+            config_mod.issue_notice.show(issue, "Fix config.lua and reload config (Ctrl+Shift+R).");
+            setStatus(ctx, "Config invalid: kept current settings (check notification)");
+            return;
+        }
         runtime_tools.apply(cfg);
         ctx.show_nerd_stats = if (cfg.ui.show_nerd_stats) GTRUE else GFALSE;
         gtk_async.clearAsyncSearchCache(ctx, allocator);
         ctx.service.clearDynamicState(allocator);
-
-        if (config_mod.consumeLastLoadIssue(allocator)) |issue| {
-            defer allocator.free(issue);
-            config_mod.issue_notice.show(issue, "Fix config.lua and reload config (Ctrl+Shift+R).");
-            setStatus(ctx, "Config reloaded with fallback defaults (check notification)");
-            return;
-        }
         config_mod.issue_notice.clearIfActive();
         setStatus(ctx, "Config reloaded");
     }

@@ -25,7 +25,8 @@ pub const AsyncSearchResult = struct {
     on_ready: *const fn (?*anyopaque) callconv(.c) gtk_types.c.gboolean,
 };
 
-const max_cached_rows: usize = 200;
+const min_cached_rows: usize = 80;
+const max_cached_rows: usize = 400;
 
 pub fn queuePendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator, query_owned: []u8) void {
     if (ctx.async_pending_query_ptr) |ptr| {
@@ -65,9 +66,10 @@ pub fn cacheAsyncSearchRows(
     window_limit: usize,
 ) void {
     clearAsyncSearchCache(ctx, allocator);
-    const keep_rows = @min(rows.len, max_cached_rows);
-    if (rows.len > max_cached_rows) {
-        std.log.warn("async cache truncated rows={d} kept={d}", .{ rows.len, keep_rows });
+    const cache_cap = cacheCapForWindowLimit(window_limit);
+    const keep_rows = @min(rows.len, cache_cap);
+    if (rows.len > cache_cap) {
+        std.log.warn("async cache truncated rows={d} kept={d} cap={d}", .{ rows.len, keep_rows, cache_cap });
     }
     if (keep_rows == 0) {
         ctx.async_cached_query_hash = query_hash;
@@ -162,6 +164,11 @@ pub fn cacheAsyncSearchRows(
             cached_bytes,
         },
     );
+}
+
+fn cacheCapForWindowLimit(window_limit: usize) usize {
+    const scaled = window_limit * 5;
+    return std.math.clamp(scaled, min_cached_rows, max_cached_rows);
 }
 
 pub fn asyncCachedRows(ctx: *UiContext, query_hash: u64) ?[]search_mod.ScoredCandidate {

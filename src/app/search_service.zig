@@ -318,7 +318,9 @@ pub const SearchService = struct {
     }
 
     fn refreshWorkerMain(self: *SearchService) void {
-        _ = self.drainScheduledRefresh(std.heap.page_allocator) catch {};
+        _ = self.drainScheduledRefresh(std.heap.page_allocator) catch |err| {
+            std.log.warn("async refresh worker drain failed: {s}", .{@errorName(err)});
+        };
         self.cache_mu.lock();
         refresh_worker.markStopped(&self.refresh_thread_running);
         self.cache_mu.unlock();

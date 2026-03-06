@@ -233,10 +233,14 @@ const Runtime = struct {
 
             switch (event.kind) {
                 .windows_changed, .focus_window_changed => {
-                    if (self.windows) |windows| _ = windows.refreshSnapshot(allocator) catch {};
+                    if (self.windows) |windows| _ = windows.refreshSnapshot(allocator) catch |err| {
+                        std.log.warn("wm-event windows refresh failed: {s}", .{@errorName(err)});
+                    };
                 },
                 .workspaces_changed, .workspace_switched => {
-                    if (self.workspaces) |workspaces| _ = workspaces.refreshSnapshot(allocator) catch {};
+                    if (self.workspaces) |workspaces| _ = workspaces.refreshSnapshot(allocator) catch |err| {
+                        std.log.warn("wm-event workspaces refresh failed: {s}", .{@errorName(err)});
+                    };
                 },
             }
             const result = service.scheduleRefreshFromEvent();

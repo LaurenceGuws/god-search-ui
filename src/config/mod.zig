@@ -14,6 +14,7 @@ pub const PackageManager = enum {
 
 pub const TerminalTool = enum {
     kitty,
+    zide_terminal,
     alacritty,
     footclient,
     foot,
@@ -27,6 +28,7 @@ pub const TerminalTool = enum {
     pub fn command(self: TerminalTool) []const u8 {
         return switch (self) {
             .kitty => "kitty",
+            .zide_terminal => "zide-terminal",
             .alacritty => "alacritty",
             .footclient => "footclient",
             .foot => "foot",
@@ -41,7 +43,7 @@ pub const TerminalTool = enum {
 
     pub fn shellExecWithCommand(self: TerminalTool) []const u8 {
         return switch (self) {
-            .kitty, .alacritty, .footclient, .foot, .wezterm, .xterm => "{term} -e sh -lc \"$install_cmd\"",
+            .kitty, .zide_terminal, .alacritty, .footclient, .foot, .wezterm, .xterm => "{term} -e sh -lc \"$install_cmd\"",
             .gnome_terminal, .konsole, .xfce4_terminal, .tilix => "{term} -- sh -lc \"$install_cmd\"",
         };
     }

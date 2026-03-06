@@ -209,6 +209,7 @@ if conf.tools ~= nil then
     })
     check_enum("tools.terminal", conf.tools.terminal, {
       ["kitty"] = true,
+      ["zide-terminal"] = true,
       ["alacritty"] = true,
       ["footclient"] = true,
       ["foot"] = true,

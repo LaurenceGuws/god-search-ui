@@ -18,7 +18,7 @@ const GTRUE = gtk_types.GTRUE;
 const hot_render_rows: usize = 20;
 const max_poll_windows: usize = 10;
 const max_polled_rows: usize = hot_render_rows * max_poll_windows;
-const async_cache_ttl_ns: i128 = 10 * std.time.ns_per_s;
+const default_async_cache_ttl_ns: i128 = 10 * std.time.ns_per_s;
 
 pub const AsyncHooks = struct {
     start_async_route_search: *const fn (*UiContext, std.mem.Allocator, []const u8) void,
@@ -83,9 +83,11 @@ fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_tri
         rows
     else
         &[_]search_mod.ScoredCandidate{};
+    const parsed_query = search_mod.parseQuery(query_trimmed);
+    const cache_ttl_ns = asyncCacheTtlNsForRoute(parsed_query.route);
     const created_ns = gtk_async_state.asyncCacheCreatedNs(ctx, hash);
     const now_ns = std.time.nanoTimestamp();
-    if (created_ns > 0 and now_ns > created_ns and now_ns - created_ns > async_cache_ttl_ns) {
+    if (created_ns > 0 and now_ns > created_ns and now_ns - created_ns > cache_ttl_ns) {
         std.log.info("results_flow.cache invalidated query={s} reason=ttl_expired age_ns={d}", .{
             query_trimmed,
             now_ns - created_ns,
@@ -93,7 +95,6 @@ fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_tri
         gtk_async_state.clearAsyncSearchCache(ctx, allocator);
         return false;
     }
-    const parsed_query = search_mod.parseQuery(query_trimmed);
     if ((parsed_query.route == .grep or parsed_query.route == .files) and cachedRowsContainMissingPaths(cached_rows)) {
         std.log.info("results_flow.cache invalidated query={s} reason=missing_paths", .{query_trimmed});
         gtk_async_state.clearAsyncSearchCache(ctx, allocator);
@@ -113,6 +114,16 @@ fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_tri
     );
     renderWithScrollRetention(ctx, allocator, query_trimmed, cached_rows, total_len);
     return true;
+}
+
+fn asyncCacheTtlNsForRoute(route: search_mod.Route) i128 {
+    return switch (route) {
+        .grep, .files => 8 * std.time.ns_per_s,
+        .packages, .icons, .web => 20 * std.time.ns_per_s,
+        .nerd_icons, .emoji, .notifications => 60 * std.time.ns_per_s,
+        .calc => 5 * std.time.ns_per_s,
+        else => default_async_cache_ttl_ns,
+    };
 }
 
 fn cachedRowsContainMissingPaths(rows: []const search_mod.ScoredCandidate) bool {
