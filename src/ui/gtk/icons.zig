@@ -5,6 +5,13 @@ const gtk_widgets = @import("widgets.zig");
 const c = gtk_types.c;
 const CandidateKind = gtk_types.CandidateKind;
 const ScoredCandidate = @import("../../search/mod.zig").ScoredCandidate;
+const YaziIconSection = enum { none, dirs, files, exts };
+
+var yazi_icons_mu: std.Thread.Mutex = .{};
+var yazi_icons_loaded: bool = false;
+var yazi_dir_icons: std.StringHashMapUnmanaged([]const u8) = .{};
+var yazi_file_icons: std.StringHashMapUnmanaged([]const u8) = .{};
+var yazi_ext_icons: std.StringHashMapUnmanaged([]const u8) = .{};
 
 pub fn candidateIconWidget(
     allocator: std.mem.Allocator,
@@ -117,6 +124,18 @@ pub fn candidateIconWidget(
             return @ptrCast(image);
         }
     }
+    if (kind == .file or kind == .grep or kind == .dir) {
+        if (resolveYaziGlyph(kind, title, subtitle, action)) |glyph| {
+            const glyph_z = allocator.dupeZ(u8, glyph) catch null;
+            if (glyph_z) |text| {
+                defer allocator.free(text);
+                const icon_label = c.gtk_label_new(text.ptr);
+                c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
+                c.gtk_widget_add_css_class(icon_label, "gs-nerd-glyph-icon");
+                return @ptrCast(icon_label);
+            }
+        }
+    }
     if ((kind == .action or kind == .hint) and isPackageAction(action)) {
         if (resolvePackageIconName(allocator, icon, action)) |icon_name_z| {
             defer allocator.free(icon_name_z);
@@ -170,6 +189,162 @@ fn resolveWindowIconName(
         }
     }
     return null;
+}
+
+fn resolveYaziGlyph(kind: CandidateKind, title: []const u8, subtitle: []const u8, action: []const u8) ?[]const u8 {
+    ensureYaziIconsLoaded();
+    const path = switch (kind) {
+        .file, .dir => std.mem.trim(u8, action, " \t\r\n"),
+        .grep => grepPathFromAction(action),
+        else => "",
+    };
+
+    if (kind == .dir) {
+        var dir_name = if (path.len > 0) std.fs.path.basename(path) else "";
+        if (dir_name.len == 0) dir_name = std.mem.trim(u8, title, " \t\r\n");
+        if (dir_name.len == 0) dir_name = std.mem.trim(u8, subtitle, " \t\r\n");
+        if (lookupYaziMap(&yazi_dir_icons, dir_name)) |glyph| return glyph;
+    }
+
+    var file_name = if (path.len > 0) std.fs.path.basename(path) else "";
+    if (file_name.len == 0) file_name = std.mem.trim(u8, title, " \t\r\n");
+    if (file_name.len > 0) {
+        if (lookupYaziMap(&yazi_file_icons, file_name)) |glyph| return glyph;
+        if (extensionWithoutDot(file_name)) |ext| {
+            if (lookupYaziMap(&yazi_ext_icons, ext)) |glyph| return glyph;
+        }
+    }
+
+    return null;
+}
+
+fn grepPathFromAction(action: []const u8) []const u8 {
+    const trimmed = std.mem.trim(u8, action, " \t\r\n");
+    if (trimmed.len == 0) return "";
+    if (std.mem.lastIndexOfScalar(u8, trimmed, ':')) |idx| {
+        if (idx + 1 < trimmed.len and isDigitsOnly(trimmed[idx + 1 ..])) {
+            return trimmed[0..idx];
+        }
+    }
+    return trimmed;
+}
+
+fn extensionWithoutDot(name: []const u8) ?[]const u8 {
+    const dot = std.mem.lastIndexOfScalar(u8, name, '.') orelse return null;
+    if (dot + 1 >= name.len) return null;
+    return name[dot + 1 ..];
+}
+
+fn ensureYaziIconsLoaded() void {
+    yazi_icons_mu.lock();
+    defer yazi_icons_mu.unlock();
+    if (yazi_icons_loaded) return;
+    yazi_icons_loaded = true;
+    loadYaziIcons() catch |err| {
+        std.log.warn("yazi icon map load failed: {s}", .{@errorName(err)});
+    };
+}
+
+fn loadYaziIcons() !void {
+    const allocator = std.heap.page_allocator;
+    const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
+    defer allocator.free(home);
+    const path = try std.fmt.allocPrint(allocator, "{s}/personal/bash_engine/dots/yazi/theme-light.toml", .{home});
+    defer allocator.free(path);
+
+    const data = std.fs.openFileAbsolute(path, .{}) catch return;
+    defer data.close();
+    const content = data.readToEndAlloc(allocator, 16 * 1024 * 1024) catch return;
+    defer allocator.free(content);
+
+    var in_icon = false;
+    var section: YaziIconSection = .none;
+    var lines = std.mem.splitScalar(u8, content, '\n');
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trim(u8, std.mem.trimRight(u8, line_raw, "\r"), " \t");
+        if (line.len == 0 or line[0] == '#') continue;
+        if (line[0] == '[' and line[line.len - 1] == ']') {
+            in_icon = std.mem.eql(u8, line, "[icon]");
+            section = .none;
+            continue;
+        }
+        if (!in_icon) continue;
+        if (std.mem.startsWith(u8, line, "dirs") and std.mem.indexOfScalar(u8, line, '[') != null) {
+            section = .dirs;
+            continue;
+        }
+        if (std.mem.startsWith(u8, line, "files") and std.mem.indexOfScalar(u8, line, '[') != null) {
+            section = .files;
+            continue;
+        }
+        if (std.mem.startsWith(u8, line, "exts") and std.mem.indexOfScalar(u8, line, '[') != null) {
+            section = .exts;
+            continue;
+        }
+        if (line.len == 1 and line[0] == ']') {
+            section = .none;
+            continue;
+        }
+        if (section == .none or line[0] != '{') continue;
+
+        const name = extractTomlQuotedValue(line, "name") orelse continue;
+        const text = extractTomlQuotedValue(line, "text") orelse continue;
+        const key = lowerDup(allocator, name) catch continue;
+        const value = allocator.dupe(u8, text) catch {
+            allocator.free(key);
+            continue;
+        };
+        const target = switch (section) {
+            .dirs => &yazi_dir_icons,
+            .files => &yazi_file_icons,
+            .exts => &yazi_ext_icons,
+            .none => unreachable,
+        };
+        const gop = target.getOrPut(allocator, key) catch {
+            allocator.free(value);
+            allocator.free(key);
+            continue;
+        };
+        if (gop.found_existing) {
+            allocator.free(gop.key_ptr.*);
+            allocator.free(value);
+        } else {
+            gop.key_ptr.* = key;
+            gop.value_ptr.* = value;
+        }
+    }
+}
+
+fn lookupYaziMap(map: *std.StringHashMapUnmanaged([]const u8), key_raw: []const u8) ?[]const u8 {
+    const trimmed = std.mem.trim(u8, key_raw, " \t\r\n");
+    if (trimmed.len == 0) return null;
+    var lower_buf: [256]u8 = undefined;
+    const key = toLowerAscii(trimmed, &lower_buf) orelse return null;
+    return map.get(key);
+}
+
+fn lowerDup(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
+    var out = try allocator.alloc(u8, input.len);
+    for (input, 0..) |ch, idx| out[idx] = std.ascii.toLower(ch);
+    return out;
+}
+
+fn extractTomlQuotedValue(line: []const u8, field: []const u8) ?[]const u8 {
+    var marker_buf: [64]u8 = undefined;
+    const marker = std.fmt.bufPrint(&marker_buf, "{s} = \"", .{field}) catch return null;
+    const idx = std.mem.indexOf(u8, line, marker) orelse return null;
+    const start = idx + marker.len;
+    const rest = line[start..];
+    const end_rel = std.mem.indexOfScalar(u8, rest, '"') orelse return null;
+    return rest[0..end_rel];
+}
+
+fn isDigitsOnly(value: []const u8) bool {
+    if (value.len == 0) return false;
+    for (value) |ch| {
+        if (!std.ascii.isDigit(ch)) return false;
+    }
+    return true;
 }
 
 fn resolveIconVariantWithTransforms(allocator: std.mem.Allocator, token: []const u8) ?[:0]u8 {
