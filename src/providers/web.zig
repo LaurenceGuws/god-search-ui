@@ -708,6 +708,16 @@ fn fileExistsPath(path: []const u8) bool {
     return true;
 }
 
+fn sqliteHeaderLooksValid(path: []const u8) bool {
+    var file = std.fs.openFileAbsolute(path, .{}) catch return false;
+    defer file.close();
+
+    var header: [16]u8 = undefined;
+    const n = file.readAll(&header) catch return false;
+    if (n < header.len) return false;
+    return std.mem.eql(u8, header[0..], "SQLite format 3\x00");
+}
+
 fn looksLikeUrl(value: []const u8) bool {
     return std.mem.startsWith(u8, value, "http://") or std.mem.startsWith(u8, value, "https://");
 }
@@ -906,6 +916,10 @@ fn loadFirefoxFamilyBookmarksFromRootLocked(browser_label: []const u8, maybe_roo
         const db_path = std.fs.path.join(std.heap.page_allocator, &.{ root_path, entry.name, "places.sqlite" }) catch continue;
         defer std.heap.page_allocator.free(db_path);
         if (!fileExistsPath(db_path)) continue;
+        if (!sqliteHeaderLooksValid(db_path)) {
+            std.log.info("web bookmarks sqlite skip non-db path={s}", .{db_path});
+            continue;
+        }
         loadFirefoxPlacesSqliteLocked(browser_label, db_path) catch |err| {
             std.log.warn("web bookmarks sqlite load failed browser={s} path={s} err={s}", .{ browser_label, db_path, @errorName(err) });
         };

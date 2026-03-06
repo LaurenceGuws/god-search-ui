@@ -823,6 +823,20 @@ test "runShellCaptureBoundedWithAllowExitOne accepts exit code 1 when enabled" {
     try std.testing.expectEqual(@as(usize, 0), out.len);
 }
 
+test "runShellCaptureBounded returns StdoutStreamTooLong when output exceeds cap" {
+    try std.testing.expectError(
+        error.StdoutStreamTooLong,
+        runShellCaptureBounded(std.testing.allocator, "printf '0123456789abcdef'", 8),
+    );
+}
+
+test "runShellCaptureBoundedWithAllowExitOne still fails for non-one exit codes" {
+    try std.testing.expectError(
+        error.CommandFailed,
+        runShellCaptureBoundedWithAllowExitOne(std.testing.allocator, "exit 2", 1024, true),
+    );
+}
+
 test "clearOwned frees entries and resets logical length" {
     const allocator = std.testing.allocator;
     var owned = std.ArrayListUnmanaged([]u8){};

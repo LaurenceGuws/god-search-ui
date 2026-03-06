@@ -9,6 +9,7 @@ items:
     done:
       - Replaced unbounded grep capture with a bounded cap.
       - Added explicit StreamTooLong log path when grep output exceeds cap.
+      - Added bounded shell capture regression tests (`StdoutStreamTooLong` + exit handling).
     todo:
       - Add tests for oversized grep output behavior and OOM guard semantics.
       - Add explicit cap-based UX hint when results were truncated.
