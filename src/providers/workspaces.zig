@@ -58,7 +58,8 @@ pub const WorkspacesProvider = struct {
             const action_tmp = try std.fmt.allocPrint(allocator, "{d}", .{row.id});
             defer allocator.free(action_tmp);
             const action = try self.keepString(allocator, action_tmp);
-            try out.append(allocator, search.Candidate.init(.workspace, title, subtitle, action));
+            const icon = try self.keepString(allocator, workspaceIconName(row.window_count));
+            try out.append(allocator, search.Candidate.initWithIcon(.workspace, title, subtitle, action, icon));
         }
     }
 
@@ -135,6 +136,12 @@ fn formatWorkspaceSubtitle(allocator: std.mem.Allocator, row: wm_mod.WorkspaceIn
     return std.fmt.allocPrint(allocator, "{s} | {d} {s}", .{ row.monitor_name, row.window_count, count_label });
 }
 
+fn workspaceIconName(window_count: u32) []const u8 {
+    if (window_count == 0) return "view-grid-symbolic";
+    if (window_count == 1) return "window-symbolic";
+    return "view-app-grid-symbolic";
+}
+
 fn testStubListWindows(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WindowSnapshot {
     _ = allocator;
     return .{ .items = &.{} };
@@ -193,6 +200,8 @@ test "workspaces provider maps workspace snapshot into candidates" {
     try std.testing.expectEqualStrings("dev", list.items[0].title);
     try std.testing.expectEqualStrings("eDP-1 | 4 windows | Terminal, Editor, Docs (+1)", list.items[0].subtitle);
     try std.testing.expectEqualStrings("1", list.items[0].action);
+    try std.testing.expectEqualStrings("view-app-grid-symbolic", list.items[0].icon);
+    try std.testing.expectEqualStrings("window-symbolic", list.items[1].icon);
     try std.testing.expectEqualStrings("HDMI-A-1 | 1 window | Browser", list.items[1].subtitle);
 }
 

@@ -13,6 +13,7 @@ pub const ActionSpec = struct {
     title: []const u8,
     subtitle: []const u8,
     action: []const u8,
+    icon: []const u8,
     command: []const u8,
     dependency: Dependency,
     confirm: bool = false,
@@ -24,6 +25,7 @@ pub const action_specs = [_]ActionSpec{
         .title = "Settings",
         .subtitle = "System",
         .action = "settings",
+        .icon = "preferences-system-symbolic",
         .command = "wlrlui",
         .dependency = .{ .command = "wlrlui" },
         .help = "Open the application launcher settings panel (requires `wlrlui`).",
@@ -32,6 +34,7 @@ pub const action_specs = [_]ActionSpec{
         .title = "Power menu",
         .subtitle = "Session",
         .action = "power",
+        .icon = "system-shutdown-symbolic",
         .command = "wlogout",
         .dependency = .{ .command = "wlogout" },
         .confirm = false,
@@ -41,6 +44,7 @@ pub const action_specs = [_]ActionSpec{
         .title = "Restart Waybar",
         .subtitle = "System",
         .action = "restart-waybar",
+        .icon = "view-refresh-symbolic",
         .command = "waybar --reload",
         .dependency = .{ .command = "waybar" },
         .help = "Reload the Waybar configuration (`waybar --reload`).",
@@ -49,6 +53,7 @@ pub const action_specs = [_]ActionSpec{
         .title = "Notifications panel",
         .subtitle = "System",
         .action = "notifications",
+        .icon = "preferences-system-notifications-symbolic",
         .command = "$HOME/.config/waybar/scripts/swaync-control.sh toggle",
         .dependency = .{ .home_relative_path = ".config/waybar/scripts/swaync-control.sh" },
         .help = "Toggle the SwayNC notifications panel.",
@@ -74,7 +79,7 @@ pub const ActionsProvider = struct {
         const self: *ActionsProvider = @ptrCast(@alignCast(context));
         for (action_specs) |spec| {
             if (!self.actionAvailable(spec)) continue;
-            try out.append(allocator, search.Candidate.init(.action, spec.title, spec.subtitle, spec.action));
+            try out.append(allocator, search.Candidate.initWithIcon(.action, spec.title, spec.subtitle, spec.action, spec.icon));
         }
     }
 
@@ -164,6 +169,7 @@ test "actions provider collects available action candidates only" {
     try std.testing.expectEqual(@as(usize, 3), list.items.len);
     try std.testing.expectEqual(search.CandidateKind.action, list.items[0].kind);
     try std.testing.expectEqualStrings("settings", list.items[0].action);
+    try std.testing.expectEqualStrings("preferences-system-symbolic", list.items[0].icon);
     try std.testing.expectEqualStrings("restart-waybar", list.items[1].action);
     try std.testing.expectEqualStrings("notifications", list.items[2].action);
 }
