@@ -167,7 +167,7 @@ pub fn cacheAsyncSearchRows(
 }
 
 fn cacheCapForWindowLimit(window_limit: usize) usize {
-    const scaled = window_limit * 5;
+    const scaled = std.math.mul(usize, window_limit, 5) catch std.math.maxInt(usize);
     return std.math.clamp(scaled, min_cached_rows, max_cached_rows);
 }
 
@@ -220,4 +220,15 @@ pub fn freeAsyncSearchResult(payload: *AsyncSearchResult) void {
     }
     if (payload.rows.len > 0) allocator.free(payload.rows);
     allocator.destroy(payload);
+}
+
+test "cacheCapForWindowLimit clamps low, mid, and high ranges" {
+    try std.testing.expectEqual(min_cached_rows, cacheCapForWindowLimit(0));
+    try std.testing.expectEqual(@as(usize, 100), cacheCapForWindowLimit(20));
+    try std.testing.expectEqual(max_cached_rows, cacheCapForWindowLimit(1000));
+}
+
+test "cacheCapForWindowLimit saturates overflow inputs to max cap" {
+    const huge = std.math.maxInt(usize);
+    try std.testing.expectEqual(max_cached_rows, cacheCapForWindowLimit(huge));
 }

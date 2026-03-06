@@ -29,6 +29,7 @@ items:
       - Bounded async payload rows before marshalling to UI.
       - Added bounded cache window in `async_state` with truncation logging.
       - Added bounded scroll-driven window growth in `results_flow`.
+      - Hardened cache-cap math against overflow and added cap clamp/saturation tests.
     todo:
       - Introduce bounded result cache with explicit max size.
       - Ensure poll windows are bounded by UI demand.

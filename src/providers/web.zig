@@ -810,10 +810,19 @@ fn loadBrowserBookmarksLocked() !void {
         const path = try std.fs.path.join(allocator, &.{ config_root, source.rel });
         defer allocator.free(path);
 
-        const data = std.fs.cwd().readFileAlloc(allocator, path, 16 * 1024 * 1024) catch continue;
+        const data = std.fs.cwd().readFileAlloc(allocator, path, 16 * 1024 * 1024) catch |err| switch (err) {
+            error.FileNotFound => continue,
+            else => {
+                std.log.warn("web bookmarks read failed browser={s} path={s} err={s}", .{ source.browser, path, @errorName(err) });
+                continue;
+            },
+        };
         defer allocator.free(data);
 
-        var parsed = std.json.parseFromSlice(std.json.Value, allocator, data, .{}) catch continue;
+        var parsed = std.json.parseFromSlice(std.json.Value, allocator, data, .{}) catch |err| {
+            std.log.warn("web bookmarks parse failed browser={s} path={s} err={s}", .{ source.browser, path, @errorName(err) });
+            continue;
+        };
         defer parsed.deinit();
         try collectChromiumBookmarksLocked(source.browser, parsed.value);
     }
