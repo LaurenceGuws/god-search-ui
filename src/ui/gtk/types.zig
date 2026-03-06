@@ -65,6 +65,7 @@ pub const UiContext = extern struct {
     async_cached_rows_ptr: ?[*]search_mod.ScoredCandidate,
     async_cached_rows_len: usize,
     result_query_hash: u64,
+    result_total_len: usize,
     result_window_limit: u32,
     deferred_dynamic_clear_id: c.guint,
     deferred_stats_refresh_id: c.guint,

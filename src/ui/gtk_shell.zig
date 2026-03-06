@@ -288,7 +288,6 @@ pub const Shell = struct {
         gtk_async_coord.endAsyncSpinner(ctx);
         if (payload.search_error) |err| {
             gtk_results_flow.renderSearchError(ctx, allocator, err);
-            gtk_nav.selectFirstActionableRow(ctx);
             return GFALSE;
         }
         var scored = allocator.alloc(ScoredCandidate, payload.rows.len) catch return GFALSE;
@@ -306,8 +305,9 @@ pub const Shell = struct {
             };
         }
         const query_trimmed = std.mem.trim(u8, payload.query, " \t\r\n");
+        const had_selection = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list)) != null;
         gtk_results_flow.cacheAndRenderAsyncRows(ctx, allocator, query_trimmed, scored, payload.total_len);
-        if (ctx.result_window_limit <= 20) {
+        if (!had_selection and ctx.result_window_limit <= 20) {
             gtk_nav.selectFirstActionableRow(ctx);
         }
         return GFALSE;

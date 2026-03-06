@@ -33,6 +33,7 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     const current_dynamic = gtk_query.shouldAsyncRouteQuery(query_trimmed);
     if (ctx.result_query_hash != hash) {
         ctx.result_query_hash = hash;
+        ctx.result_total_len = 0;
         ctx.result_window_limit = hot_render_rows;
         gtk_async_state.clearAsyncSearchCache(ctx, allocator);
     }
@@ -71,9 +72,12 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     };
     defer allocator.free(ranked);
 
-    renderRankedRows(ctx, allocator, query_trimmed, ranked, ranked.len);
+    const had_selection = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list)) != null;
+    renderWithScrollRetention(ctx, allocator, query_trimmed, ranked, ranked.len);
     _ = ctx.service.drainScheduledRefresh(allocator) catch false;
-    gtk_nav.selectFirstActionableRow(ctx);
+    if (!had_selection and ctx.result_window_limit <= hot_render_rows) {
+        gtk_nav.selectFirstActionableRow(ctx);
+    }
 }
 
 fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) bool {
@@ -304,9 +308,11 @@ fn renderDefaultLoadout(ctx: *UiContext, allocator: std.mem.Allocator) void {
     }
 
     std.mem.sort(search_mod.ScoredCandidate, merged.items, {}, loadoutLessThan);
-    const limit = @min(merged.items.len, @as(usize, @intCast(ctx.result_window_limit)));
-    renderRankedRows(ctx, allocator, "", merged.items[0..limit], merged.items.len);
-    gtk_nav.selectFirstActionableRow(ctx);
+    const had_selection = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list)) != null;
+    renderWithScrollRetention(ctx, allocator, "", merged.items, merged.items.len);
+    if (!had_selection and ctx.result_window_limit <= hot_render_rows) {
+        gtk_nav.selectFirstActionableRow(ctx);
+    }
 }
 
 fn actionFrequency(action: []const u8, history: []const []const u8) u32 {
@@ -333,6 +339,7 @@ fn loadoutLessThan(_: void, a: search_mod.ScoredCandidate, b: search_mod.ScoredC
 
 pub fn renderSearchError(ctx: *UiContext, allocator: std.mem.Allocator, err: anyerror) void {
     markUiQueryCompleted(ctx);
+    ctx.result_total_len = 0;
     const dynamic_msg = switch (err) {
         error.StreamTooLong, error.StdoutStreamTooLong => null,
         else => std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch null,
@@ -362,6 +369,7 @@ pub fn renderRankedRows(
     total_len: usize,
 ) void {
     markUiQueryCompleted(ctx);
+    ctx.result_total_len = total_len;
     const limit = @min(ranked.len, @as(usize, @intCast(ctx.result_window_limit)));
     const rows = ranked[0..limit];
     const empty_query = query_trimmed.len == 0;
@@ -429,7 +437,7 @@ pub fn shouldPollMoreOnScroll(ctx: *UiContext) bool {
     const remaining = upper - (value + page);
     if (remaining > 24.0) return false;
 
-    const total_len = gtk_async_state.asyncCachedTotalLen(ctx, ctx.result_query_hash);
+    const total_len = resultTotalLenForPolling(ctx);
     const current: usize = @intCast(ctx.result_window_limit);
     if (total_len <= current) return false;
 
@@ -446,4 +454,11 @@ pub fn shouldPollMoreOnScroll(ctx: *UiContext) bool {
     });
     ctx.result_window_limit = @intCast(next);
     return true;
+}
+
+fn resultTotalLenForPolling(ctx: *UiContext) usize {
+    if (gtk_async_state.asyncCacheKnownForQuery(ctx, ctx.result_query_hash)) {
+        return gtk_async_state.asyncCachedTotalLen(ctx, ctx.result_query_hash);
+    }
+    return ctx.result_total_len;
 }

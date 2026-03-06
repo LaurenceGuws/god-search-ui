@@ -335,6 +335,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.startup_key_queue_len = 0;
     ctx.startup_key_queue = [_]u32{0} ** 24;
     ctx.result_query_hash = 0;
+    ctx.result_total_len = 0;
     ctx.result_window_limit = 20;
     ctx.deferred_dynamic_clear_id = 0;
     ctx.deferred_stats_refresh_id = 0;
