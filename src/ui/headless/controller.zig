@@ -38,7 +38,15 @@ pub fn run(allocator: std.mem.Allocator, service: *app.SearchService) !void {
             .none => {},
         }
 
-        const ranked = try service.searchQuery(allocator, query);
+        const ranked = service.searchQuery(allocator, query) catch |err| {
+            switch (err) {
+                error.StreamTooLong, error.StdoutStreamTooLong => {
+                    try stdout.print("  search output too large; refine query\n", .{});
+                    continue;
+                },
+                else => return err,
+            }
+        };
         defer allocator.free(ranked);
         try render.printQueryMeta(stdout, service);
         try render.printTopResults(stdout, ranked, 5);

@@ -151,6 +151,10 @@ fn collectRgCandidates(
 
     std.log.info("grep collect start route=grep term={s} cmd={s}", .{ term, cmd });
     const rows = runShellCaptureBoundedWithAllowExitOne(allocator, cmd, max_rg_capture_bytes, true) catch |err| {
+        if (err == error.StdoutStreamTooLong) {
+            std.log.warn("grep collect truncated route=grep term={s} cap_bytes={d}", .{ term, max_rg_capture_bytes });
+            return error.StreamTooLong;
+        }
         std.log.warn("grep collect failed route=grep term={s} err={s}", .{ term, @errorName(err) });
         return err;
     };
@@ -209,6 +213,10 @@ fn collectPackageCandidates(
         max_pkg_capture_bytes,
         allow_no_match_exit,
     ) catch |err| {
+        if (err == error.StdoutStreamTooLong) {
+            std.log.warn("packages collect truncated route=packages term={s} cap_bytes={d}", .{ term, max_pkg_capture_bytes });
+            return error.StreamTooLong;
+        }
         std.log.warn("packages collect failed route=packages term={s} err={s}", .{ term, @errorName(err) });
         return err;
     };
@@ -509,8 +517,12 @@ fn collectIconCandidates(
     defer allocator.free(cmd);
 
     const rows = runShellCaptureBounded(allocator, cmd, max_icon_capture_bytes) catch |err| {
+        if (err == error.StdoutStreamTooLong) {
+            std.log.warn("icons collect truncated route=icons term={s} cap_bytes={d}", .{ term_trimmed, max_icon_capture_bytes });
+            return error.StreamTooLong;
+        }
         std.log.warn("icons collect failed route=icons term={s} err={s}", .{ term_trimmed, @errorName(err) });
-        return;
+        return err;
     };
     defer allocator.free(rows);
 

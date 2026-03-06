@@ -10,9 +10,10 @@ items:
       - Replaced unbounded grep capture with a bounded cap.
       - Added explicit StreamTooLong log path when grep output exceeds cap.
       - Added bounded shell capture regression tests (`StdoutStreamTooLong` + exit handling).
+      - Added UI/headless truncation hint when route output exceeds cap.
+      - Removed swallowed icon-route shell-capture failures by propagating errors.
     todo:
       - Add tests for oversized grep output behavior and OOM guard semantics.
-      - Add explicit cap-based UX hint when results were truncated.
       - Add integration assertion that huge result sets do not OOM the daemon.
     notes: Highest priority memory risk; isolate and close quickly.
 

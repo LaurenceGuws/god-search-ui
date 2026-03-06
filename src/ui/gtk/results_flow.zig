@@ -333,14 +333,24 @@ fn loadoutLessThan(_: void, a: search_mod.ScoredCandidate, b: search_mod.ScoredC
 
 pub fn renderSearchError(ctx: *UiContext, allocator: std.mem.Allocator, err: anyerror) void {
     markUiQueryCompleted(ctx);
-    const msg = std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch "Search failed";
-    defer if (!std.mem.eql(u8, msg, "Search failed")) allocator.free(msg);
+    const dynamic_msg = switch (err) {
+        error.StreamTooLong, error.StdoutStreamTooLong => null,
+        else => std.fmt.allocPrint(allocator, "Search failed: {s}", .{@errorName(err)}) catch null,
+    };
+    defer if (dynamic_msg) |owned| allocator.free(owned);
+    const msg = dynamic_msg orelse switch (err) {
+        error.StreamTooLong, error.StdoutStreamTooLong => "Search output too large. Refine your query.",
+        else => "Search failed",
+    };
 
     gtk_widgets.clearList(ctx.list);
     gtk_widgets.appendInfoRow(ctx.list, msg);
     ctx.last_render_hash = std.hash.Wyhash.hash(0x5ea2c8d7, msg);
     if (ctx.pending_power_confirm == GFALSE) {
-        gtk_status.setStatus(ctx, "Search failed");
+        gtk_status.setStatus(ctx, switch (err) {
+            error.StreamTooLong, error.StdoutStreamTooLong => "Search output too large; refine query",
+            else => "Search failed",
+        });
     }
 }
 
