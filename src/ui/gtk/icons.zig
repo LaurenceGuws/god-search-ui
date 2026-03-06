@@ -6,7 +6,14 @@ const c = gtk_types.c;
 const CandidateKind = gtk_types.CandidateKind;
 const ScoredCandidate = @import("../../search/mod.zig").ScoredCandidate;
 
-pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget {
+pub fn candidateIconWidget(
+    allocator: std.mem.Allocator,
+    kind: CandidateKind,
+    title: []const u8,
+    subtitle: []const u8,
+    action: []const u8,
+    icon: []const u8,
+) *c.GtkWidget {
     if (kind == .hint and std.mem.startsWith(u8, action, "nerd-copy:")) {
         const glyph = std.mem.trim(u8, icon, " \t\r\n");
         if (glyph.len > 0) {
@@ -92,6 +99,15 @@ pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, ac
             return @ptrCast(image);
         }
     }
+    if (kind == .window) {
+        if (resolveWindowIconName(allocator, icon, subtitle, title)) |icon_name_z| {
+            defer allocator.free(icon_name_z);
+            const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
+            c.gtk_image_set_pixel_size(@ptrCast(image), 30);
+            c.gtk_widget_add_css_class(image, "gs-kind-icon");
+            return @ptrCast(image);
+        }
+    }
     if (kind == .file) {
         if (resolveIconFileForCandidate(allocator, icon, action)) |icon_path_z| {
             defer allocator.free(icon_path_z);
@@ -120,6 +136,75 @@ pub fn candidateIconWidget(allocator: std.mem.Allocator, kind: CandidateKind, ac
     const icon_label = c.gtk_label_new(fallback_icon_z.ptr);
     c.gtk_widget_add_css_class(icon_label, "gs-kind-icon");
     return @ptrCast(icon_label);
+}
+
+fn resolveWindowIconName(
+    allocator: std.mem.Allocator,
+    icon: []const u8,
+    class_name: []const u8,
+    title: []const u8,
+) ?[:0]u8 {
+    const explicit = std.mem.trim(u8, icon, " \t\r\n\"'");
+    if (explicit.len > 0) {
+        if (resolveIconVariantWithTransforms(allocator, explicit)) |name| return name;
+    }
+
+    const class_trimmed = std.mem.trim(u8, class_name, " \t\r\n\"'");
+    if (class_trimmed.len > 0) {
+        if (resolveIconVariantWithTransforms(allocator, class_trimmed)) |name| return name;
+        if (windowIconAlias(class_trimmed)) |alias| {
+            if (resolveIconVariantWithTransforms(allocator, alias)) |name| return name;
+        }
+    }
+
+    const title_trimmed = std.mem.trim(u8, title, " \t\r\n\"'");
+    if (title_trimmed.len > 0) {
+        if (resolveIconVariantWithTransforms(allocator, title_trimmed)) |name| return name;
+        const first_word_end = std.mem.indexOfAny(u8, title_trimmed, " \t|:-") orelse title_trimmed.len;
+        if (first_word_end > 0 and first_word_end < title_trimmed.len) {
+            const first_word = title_trimmed[0..first_word_end];
+            if (resolveIconVariantWithTransforms(allocator, first_word)) |name| return name;
+            if (windowIconAlias(first_word)) |alias| {
+                if (resolveIconVariantWithTransforms(allocator, alias)) |name| return name;
+            }
+        }
+    }
+    return null;
+}
+
+fn resolveIconVariantWithTransforms(allocator: std.mem.Allocator, token: []const u8) ?[:0]u8 {
+    if (resolveIconVariant(allocator, token)) |name| return name;
+
+    var lower_buf: [256]u8 = undefined;
+    if (toLowerAscii(token, &lower_buf)) |lower| {
+        if (resolveIconVariant(allocator, lower)) |name| return name;
+
+        var dash_buf: [256]u8 = undefined;
+        if (replaceSpacesWith(lower, '-', &dash_buf)) |dashed| {
+            if (resolveIconVariant(allocator, dashed)) |name| return name;
+        }
+        var underscore_buf: [256]u8 = undefined;
+        if (replaceSpacesWith(lower, '_', &underscore_buf)) |underscored| {
+            if (resolveIconVariant(allocator, underscored)) |name| return name;
+        }
+    }
+
+    return null;
+}
+
+fn toLowerAscii(input: []const u8, buf: []u8) ?[]const u8 {
+    if (input.len > buf.len) return null;
+    for (input, 0..) |ch, idx| {
+        buf[idx] = std.ascii.toLower(ch);
+    }
+    return buf[0..input.len];
+}
+
+fn windowIconAlias(token: []const u8) ?[]const u8 {
+    if (std.ascii.eqlIgnoreCase(token, "zen")) return "zen-browser";
+    if (std.ascii.eqlIgnoreCase(token, "discover")) return "org.kde.discover";
+    if (std.ascii.eqlIgnoreCase(token, "archos")) return "archlinux-logo";
+    return null;
 }
 
 fn resolveIconFileForCandidate(allocator: std.mem.Allocator, icon: []const u8, action: []const u8) ?[:0]u8 {
@@ -439,4 +524,11 @@ test "hasAppGlyphFallback only triggers for app rows without icon and token" {
         },
     };
     try std.testing.expect(!hasAppGlyphFallback(&rows_without_fallback));
+}
+
+test "windowIconAlias maps known desktop classes" {
+    try std.testing.expectEqualStrings("zen-browser", windowIconAlias("zen") orelse return error.TestUnexpectedResult);
+    try std.testing.expectEqualStrings("org.kde.discover", windowIconAlias("discover") orelse return error.TestUnexpectedResult);
+    try std.testing.expectEqualStrings("archlinux-logo", windowIconAlias("archos") orelse return error.TestUnexpectedResult);
+    try std.testing.expect(windowIconAlias("unknown") == null);
 }

@@ -56,7 +56,7 @@ pub const WindowsProvider = struct {
             const kept_title = try self.keepString(allocator, row.title);
             const kept_class = try self.keepString(allocator, row.class_name);
             const kept_address = try self.keepString(allocator, row.id);
-            try out.append(allocator, search.Candidate.init(.window, kept_title, kept_class, kept_address));
+            try out.append(allocator, search.Candidate.initWithIcon(.window, kept_title, kept_class, kept_address, kept_class));
         }
     }
 
@@ -181,6 +181,7 @@ test "windows provider parses command rows into candidates" {
     try std.testing.expectEqualStrings("Terminal", list.items[0].title);
     try std.testing.expectEqualStrings("kitty", list.items[0].subtitle);
     try std.testing.expectEqualStrings("0xabc", list.items[0].action);
+    try std.testing.expectEqualStrings("kitty", list.items[0].icon);
 }
 
 test "windows provider reports unavailable when tools are unavailable" {

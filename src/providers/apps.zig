@@ -56,6 +56,18 @@ pub const AppsProvider = struct {
         };
         defer allocator.free(data);
 
+        if (cacheContainsLegacyThreeColumnRows(data)) {
+            std.log.info("apps provider detected legacy cache rows; attempting desktop refresh", .{});
+            const added: usize = self.collectFromDesktopFiles(allocator, out) catch |scan_err| blk: {
+                std.log.warn("apps provider legacy refresh scan failed: {s}", .{@errorName(scan_err)});
+                break :blk 0;
+            };
+            if (added > 0) {
+                self.had_runtime_failure = false;
+                return;
+            }
+        }
+
         var count: usize = 0;
         var lines = std.mem.splitScalar(u8, data, '\n');
         while (lines.next()) |line| {
@@ -174,6 +186,20 @@ pub const AppsProvider = struct {
         }
     }
 };
+
+fn cacheContainsLegacyThreeColumnRows(data: []const u8) bool {
+    var lines = std.mem.splitScalar(u8, data, '\n');
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trim(u8, std.mem.trimRight(u8, line_raw, "\r"), " \t");
+        if (line.len == 0) continue;
+        var tab_count: usize = 0;
+        for (line) |ch| {
+            if (ch == '\t') tab_count += 1;
+        }
+        if (tab_count == 2) return true;
+    }
+    return false;
+}
 
 const DesktopScanState = struct {
     seen_execs: std.StringHashMapUnmanaged(void) = .{},
@@ -403,6 +429,17 @@ test "apps provider accepts legacy three-column rows with empty icon metadata" {
     try std.testing.expectEqualStrings("Kitty", list.items[0].title);
     try std.testing.expectEqualStrings("", list.items[0].icon);
     try std.testing.expectEqualStrings("firefox", list.items[1].icon);
+}
+
+test "cacheContainsLegacyThreeColumnRows detects three-column cache lines" {
+    const legacy =
+        "Utilities\tKitty\tkitty\n" ++
+        "Internet\tFirefox\tfirefox\tfirefox\n";
+    const modern =
+        "Utilities\tKitty\tkitty\tkitty\n" ++
+        "Internet\tFirefox\tfirefox\tfirefox\n";
+    try std.testing.expect(cacheContainsLegacyThreeColumnRows(legacy));
+    try std.testing.expect(!cacheContainsLegacyThreeColumnRows(modern));
 }
 
 test "apps provider falls back when cache is missing" {

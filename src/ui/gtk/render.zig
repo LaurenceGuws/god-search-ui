@@ -12,7 +12,14 @@ const ScoredCandidate = @import("../../search/mod.zig").ScoredCandidate;
 const UiKind = common_dispatch.kinds.UiKind;
 
 pub const Hooks = struct {
-    candidate_icon_widget: *const fn (allocator: std.mem.Allocator, kind: CandidateKind, action: []const u8, icon: []const u8) *c.GtkWidget,
+    candidate_icon_widget: *const fn (
+        allocator: std.mem.Allocator,
+        kind: CandidateKind,
+        title: []const u8,
+        subtitle: []const u8,
+        action: []const u8,
+        icon: []const u8,
+    ) *c.GtkWidget,
 };
 
 pub fn computeRenderHash(
@@ -126,7 +133,14 @@ fn appendCandidateRow(
     c.gtk_widget_set_hexpand(primary_label, GTRUE);
     c.gtk_widget_add_css_class(primary_label, "gs-candidate-primary");
 
-    const icon_widget = hooks.candidate_icon_widget(allocator, row.candidate.kind, row.candidate.action, row.candidate.icon);
+    const icon_widget = hooks.candidate_icon_widget(
+        allocator,
+        row.candidate.kind,
+        row.candidate.title,
+        row.candidate.subtitle,
+        row.candidate.action,
+        row.candidate.icon,
+    );
     c.gtk_widget_set_valign(icon_widget, c.GTK_ALIGN_CENTER);
     const chip = gtk_widgets.kindChipWidget(row.candidate.kind);
     c.gtk_widget_set_valign(chip, c.GTK_ALIGN_CENTER);
