@@ -13,6 +13,13 @@ var yazi_dir_icons: std.StringHashMapUnmanaged([]const u8) = .{};
 var yazi_file_icons: std.StringHashMapUnmanaged([]const u8) = .{};
 var yazi_ext_icons: std.StringHashMapUnmanaged([]const u8) = .{};
 
+pub fn invalidateYaziIconCache() void {
+    yazi_icons_mu.lock();
+    defer yazi_icons_mu.unlock();
+    clearYaziIconMapsLocked();
+    yazi_icons_loaded = false;
+}
+
 pub fn candidateIconWidget(
     allocator: std.mem.Allocator,
     kind: CandidateKind,
@@ -281,6 +288,22 @@ fn ensureYaziIconsLoaded() void {
     loadYaziIcons() catch |err| {
         std.log.warn("yazi icon map load failed: {s}", .{@errorName(err)});
     };
+}
+
+fn clearYaziMapLocked(map: *std.StringHashMapUnmanaged([]const u8)) void {
+    var it = map.iterator();
+    while (it.next()) |entry| {
+        std.heap.page_allocator.free(@constCast(entry.key_ptr.*));
+        std.heap.page_allocator.free(@constCast(entry.value_ptr.*));
+    }
+    map.deinit(std.heap.page_allocator);
+    map.* = .{};
+}
+
+fn clearYaziIconMapsLocked() void {
+    clearYaziMapLocked(&yazi_dir_icons);
+    clearYaziMapLocked(&yazi_file_icons);
+    clearYaziMapLocked(&yazi_ext_icons);
 }
 
 fn loadYaziIcons() !void {

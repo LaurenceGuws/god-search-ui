@@ -345,6 +345,7 @@ pub const Shell = struct {
             ctx.service.clearDynamicState(allocator);
             providers_mod.invalidateWebCaches();
             providers_mod.invalidateAppsCache();
+            gtk_icons.invalidateYaziIconCache();
             ctx.service.invalidateSnapshot();
             ctx.service.prewarmProviders(allocator) catch {
                 gtk_widgets.clearAsyncRows(ctx.list);
@@ -361,6 +362,7 @@ pub const Shell = struct {
         ctx.service.clearDynamicState(allocator);
         providers_mod.invalidateWebCaches();
         providers_mod.invalidateAppsCache();
+        gtk_icons.invalidateYaziIconCache();
         ctx.service.invalidateSnapshot();
         ctx.service.prewarmProviders(allocator) catch {
             gtk_widgets.clearAsyncRows(ctx.list);
@@ -387,6 +389,7 @@ pub const Shell = struct {
         ctx.show_nerd_stats = if (cfg.ui.show_nerd_stats) GTRUE else GFALSE;
         gtk_async.clearAsyncSearchCache(ctx, allocator);
         ctx.service.clearDynamicState(allocator);
+        gtk_icons.invalidateYaziIconCache();
         config_mod.issue_notice.clearIfActive();
         setStatus(ctx, "Config reloaded");
     }
