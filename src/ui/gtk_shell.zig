@@ -344,6 +344,7 @@ pub const Shell = struct {
             gtk_async.clearAsyncSearchCache(ctx, allocator);
             ctx.service.clearDynamicState(allocator);
             providers_mod.invalidateWebCaches();
+            providers_mod.invalidateAppsCache();
             gtk_widgets.clearAsyncRows(ctx.list);
             setStatus(ctx, "Web bookmark cache refreshed");
             populateResults(ctx, query);
@@ -352,6 +353,7 @@ pub const Shell = struct {
 
         gtk_async.clearAsyncSearchCache(ctx, allocator);
         ctx.service.clearDynamicState(allocator);
+        providers_mod.invalidateWebCaches();
         providers_mod.invalidateAppsCache();
         ctx.service.invalidateSnapshot();
         ctx.service.prewarmProviders(allocator) catch {
