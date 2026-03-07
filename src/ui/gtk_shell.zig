@@ -345,6 +345,12 @@ pub const Shell = struct {
             ctx.service.clearDynamicState(allocator);
             providers_mod.invalidateWebCaches();
             providers_mod.invalidateAppsCache();
+            ctx.service.invalidateSnapshot();
+            ctx.service.prewarmProviders(allocator) catch {
+                gtk_widgets.clearAsyncRows(ctx.list);
+                setStatus(ctx, "Refresh failed");
+                return;
+            };
             gtk_widgets.clearAsyncRows(ctx.list);
             setStatus(ctx, "Web bookmark cache refreshed");
             populateResults(ctx, query);
