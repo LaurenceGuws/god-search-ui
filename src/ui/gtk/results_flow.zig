@@ -251,6 +251,15 @@ fn renderWithScrollRetention(
 }
 
 fn renderDefaultLoadout(ctx: *UiContext, allocator: std.mem.Allocator) void {
+    switch (ctx.service.staticQueryExecution()) {
+        .ready => {},
+        .refreshing, .cache_cold => {
+            _ = ctx.service.scheduleRefreshFromEvent();
+            renderStaticRefreshPending(ctx);
+            return;
+        },
+    }
+
     const apps = ctx.service.searchQuery(allocator, "@ ") catch {
         gtk_widgets.clearList(ctx.list);
         gtk_widgets.appendInfoRow(ctx.list, "Default loadout unavailable");
