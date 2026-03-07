@@ -41,7 +41,11 @@ pub const WindowsProvider = struct {
         self.snapshot_mu.lock();
         const has_snapshot = self.snapshot_ready;
         self.snapshot_mu.unlock();
-        if (!has_snapshot) {
+        if (has_snapshot) {
+            self.refreshSnapshot(allocator) catch |err| {
+                std.log.warn("windows provider query failed: {s}", .{@errorName(err)});
+            };
+        } else {
             self.refreshSnapshot(allocator) catch |err| {
                 std.log.warn("windows provider query failed: {s}", .{@errorName(err)});
                 return;
@@ -387,6 +391,65 @@ test "windows provider maps hyprland backend runtime parse without jq escapes de
     try std.testing.expectEqualStrings("Title\tTabbed\nName", list.items[0].title);
     try std.testing.expectEqualStrings("zen", list.items[0].subtitle);
     try std.testing.expectEqualStrings("0xabc", list.items[0].action);
+}
+
+test "windows provider refreshes snapshot on subsequent collects" {
+    const Fake = struct {
+        var mode: u8 = 0;
+
+        fn listWindows(_: *anyopaque, allocator: std.mem.Allocator) !wm_mod.WindowSnapshot {
+            var items = try allocator.alloc(wm_mod.WindowInfo, 1);
+            if (mode == 0) {
+                items[0] = .{
+                    .title = try allocator.dupe(u8, "Terminal"),
+                    .class_name = try allocator.dupe(u8, "kitty"),
+                    .id = try allocator.dupe(u8, "0xaaa"),
+                };
+            } else {
+                items[0] = .{
+                    .title = try allocator.dupe(u8, "Browser"),
+                    .class_name = try allocator.dupe(u8, "zen"),
+                    .id = try allocator.dupe(u8, "0xbbb"),
+                };
+            }
+            return .{ .items = items };
+        }
+
+        fn health(_: *anyopaque) wm_mod.Health {
+            return .ready;
+        }
+
+        fn capabilities(_: *anyopaque) wm_mod.Capability {
+            return .{ .windows = true };
+        }
+    };
+    Fake.mode = 0;
+    var fake_ctx: u8 = 0;
+    const fake_backend = wm_mod.Backend{
+        .name = "fake",
+        .context = &fake_ctx,
+        .vtable = &.{
+            .list_windows = Fake.listWindows,
+            .list_workspaces = testStubListWorkspaces,
+            .health = Fake.health,
+            .capabilities = Fake.capabilities,
+        },
+    };
+
+    var provider_impl = WindowsProvider{ .backend_override = fake_backend };
+    defer provider_impl.deinit(std.testing.allocator);
+
+    var list = search.CandidateList.empty;
+    defer list.deinit(std.testing.allocator);
+
+    const provider = provider_impl.provider();
+    try provider.collect(std.testing.allocator, &list);
+    try std.testing.expectEqualStrings("Terminal", list.items[0].title);
+
+    list.clearRetainingCapacity();
+    Fake.mode = 1;
+    try provider.collect(std.testing.allocator, &list);
+    try std.testing.expectEqualStrings("Browser", list.items[0].title);
 }
 
 test "windows provider rotates owned strings across collects with bounded growth" {
