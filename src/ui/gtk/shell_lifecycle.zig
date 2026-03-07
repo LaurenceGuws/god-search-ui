@@ -106,6 +106,10 @@ pub fn onDestroy(_: ?*c.GtkWidget, user_data: ?*anyopaque) callconv(.c) void {
         _ = c.g_source_remove(ctx.async_spinner_id);
         ctx.async_spinner_id = 0;
     }
+    if (ctx.refresh_spinner_id != 0) {
+        _ = c.g_source_remove(ctx.refresh_spinner_id);
+        ctx.refresh_spinner_id = 0;
+    }
     if (ctx.startup_idle_id != 0) {
         _ = c.g_source_remove(ctx.startup_idle_id);
         ctx.startup_idle_id = 0;

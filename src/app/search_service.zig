@@ -309,6 +309,12 @@ pub const SearchService = struct {
         return .ready;
     }
 
+    pub fn refreshInFlight(self: *SearchService) bool {
+        if (!self.cache_mu.tryLock()) return true;
+        defer self.cache_mu.unlock();
+        return self.refresh_requested or self.refresh_thread_running;
+    }
+
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {
         self.cache_mu.lock();
         const requested = self.refresh_requested;

@@ -313,10 +313,13 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     ctx.preview_dir_tree_mode = gtk_types.GFALSE;
     ctx.async_search_generation = 0;
     ctx.async_spinner_id = 0;
+    ctx.refresh_spinner_id = 0;
     ctx.async_ready_id = 0;
     ctx.startup_idle_id = 0;
     ctx.async_spinner_phase = 0;
+    ctx.refresh_spinner_phase = 0;
     ctx.async_inflight = gtk_types.GFALSE;
+    ctx.refresh_inflight = gtk_types.GFALSE;
     ctx.async_worker_active = gtk_types.GFALSE;
     ctx.async_pending_query_ptr = null;
     ctx.async_pending_query_len = 0;

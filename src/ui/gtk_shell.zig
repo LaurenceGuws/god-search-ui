@@ -334,12 +334,6 @@ pub const Shell = struct {
             return;
         }
 
-        showRefreshSpinnerFeedback(ctx);
-        // Give GTK a chance to paint the refresh indicator before synchronous prewarm starts.
-        while (c.g_main_context_pending(null) != 0) {
-            _ = c.g_main_context_iteration(null, GFALSE);
-        }
-
         if (parsed_query.route == .web) {
             gtk_async.clearAsyncSearchCache(ctx, allocator);
             ctx.service.clearDynamicState(allocator);
@@ -347,10 +341,9 @@ pub const Shell = struct {
             providers_mod.invalidateAppsCache();
             gtk_icons.invalidateYaziIconCache();
             ctx.service.invalidateSnapshot();
-            gtk_widgets.clearAsyncRows(ctx.list);
             switch (ctx.service.scheduleRefreshFromEvent()) {
-                .scheduled => setStatus(ctx, "Web bookmark cache refresh scheduled"),
-                .skipped_running => setStatus(ctx, "Refresh already running"),
+                .scheduled => beginRefreshSpinner(ctx),
+                .skipped_running => beginRefreshSpinner(ctx),
                 .failed_spawn => setStatus(ctx, "Refresh failed"),
             }
             return;
@@ -362,10 +355,9 @@ pub const Shell = struct {
         providers_mod.invalidateAppsCache();
         gtk_icons.invalidateYaziIconCache();
         ctx.service.invalidateSnapshot();
-        gtk_widgets.clearAsyncRows(ctx.list);
         switch (ctx.service.scheduleRefreshFromEvent()) {
-            .scheduled => setStatus(ctx, "Cache refresh scheduled"),
-            .skipped_running => setStatus(ctx, "Refresh already running"),
+            .scheduled => beginRefreshSpinner(ctx),
+            .skipped_running => beginRefreshSpinner(ctx),
             .failed_spawn => setStatus(ctx, "Refresh failed"),
         }
     }
@@ -390,12 +382,54 @@ pub const Shell = struct {
         setStatus(ctx, "Config reloaded");
     }
 
-    fn showRefreshSpinnerFeedback(ctx: *UiContext) void {
+    fn beginRefreshSpinner(ctx: *UiContext) void {
+        ctx.refresh_inflight = GTRUE;
+        if (ctx.refresh_spinner_id != 0) return;
+        ctx.refresh_spinner_phase = 0;
+        updateRefreshSpinnerFrame(ctx);
+        ctx.refresh_spinner_id = c.g_timeout_add(120, onRefreshSpinnerTick, ctx);
+    }
+
+    fn endRefreshSpinner(ctx: *UiContext) void {
+        ctx.refresh_inflight = GFALSE;
+        if (ctx.refresh_spinner_id != 0) {
+            _ = c.g_source_remove(ctx.refresh_spinner_id);
+            ctx.refresh_spinner_id = 0;
+        }
         gtk_widgets.clearAsyncRows(ctx.list);
-        gtk_widgets.appendAsyncRow(ctx.list, "⟳", "Refreshing cached modules...");
+        ctx.last_render_hash = 0;
+    }
+
+    fn onRefreshSpinnerTick(user_data: ?*anyopaque) callconv(.c) c.gboolean {
+        if (user_data == null) return GFALSE;
+        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
+        if (ctx.refresh_inflight == GFALSE) {
+            ctx.refresh_spinner_id = 0;
+            return GFALSE;
+        }
+        if (!ctx.service.refreshInFlight()) {
+            endRefreshSpinner(ctx);
+            const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
+            const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+            setStatus(ctx, "Snapshot refreshed");
+            populateResults(ctx, query);
+            return GFALSE;
+        }
+        updateRefreshSpinnerFrame(ctx);
+        return GTRUE;
+    }
+
+    fn updateRefreshSpinnerFrame(ctx: *UiContext) void {
+        const frames = [_][]const u8{ "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "⠋", "⠙" };
+        const frame = frames[ctx.refresh_spinner_phase % frames.len];
+        ctx.refresh_spinner_phase +%= 1;
+        gtk_widgets.clearAsyncRows(ctx.list);
+        gtk_widgets.appendAsyncRow(ctx.list, frame, "Refreshing cached modules...");
         ctx.last_render_hash = 0;
         if (ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "⟳ Refreshing cache...");
+            var status_buf: [40]u8 = undefined;
+            const status_msg = std.fmt.bufPrint(&status_buf, "{s} Refreshing cache...", .{frame}) catch "Refreshing cache...";
+            setStatus(ctx, status_msg);
         }
     }
 
