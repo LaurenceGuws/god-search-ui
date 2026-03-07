@@ -89,7 +89,7 @@ pub const DirsProvider = struct {
 };
 
 fn hasSystemTools() bool {
-    return tool_check.commandExistsCached("zoxide");
+    return tool_check.commandExists("zoxide");
 }
 
 fn listDirsWithSystemTools(allocator: std.mem.Allocator) ![]u8 {
