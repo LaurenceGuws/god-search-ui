@@ -22,6 +22,11 @@ pub const SearchService = struct {
         skipped_running,
         failed_spawn,
     };
+    pub const StaticQueryExecution = enum {
+        ready,
+        refreshing,
+        cache_cold,
+    };
 
     registry: providers.ProviderRegistry,
     query_mu: std.Thread.Mutex = .{},
@@ -292,6 +297,16 @@ pub const SearchService = struct {
             return false;
         };
         return true;
+    }
+
+    pub fn staticQueryExecution(self: *SearchService) StaticQueryExecution {
+        if (!self.cache_mu.tryLock()) return .refreshing;
+        defer self.cache_mu.unlock();
+
+        self.reapFinishedRefreshThreadLocked();
+        if (self.refresh_thread_running or self.refresh_thread != null) return .refreshing;
+        if (!self.cache_ready) return .cache_cold;
+        return .ready;
     }
 
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {

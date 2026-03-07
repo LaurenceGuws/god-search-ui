@@ -66,6 +66,15 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     }
     hooks.cancel_async_route_search(ctx);
 
+    switch (ctx.service.staticQueryExecution()) {
+        .ready => {},
+        .refreshing, .cache_cold => {
+            _ = ctx.service.scheduleRefreshFromEvent();
+            renderStaticRefreshPending(ctx);
+            return;
+        },
+    }
+
     const ranked = ctx.service.searchQuery(allocator, query) catch |err| {
         renderSearchError(ctx, allocator, err);
         return;
@@ -78,6 +87,13 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
     if (!had_selection and ctx.result_window_limit <= hot_render_rows) {
         gtk_nav.selectFirstActionableRow(ctx);
     }
+}
+
+fn renderStaticRefreshPending(ctx: *UiContext) void {
+    gtk_widgets.clearList(ctx.list);
+    gtk_widgets.appendAsyncRow(ctx.list, "⟳", "Refreshing cached modules...");
+    ctx.last_render_hash = 0;
+    gtk_status.setStatus(ctx, "⟳ Refreshing cache...");
 }
 
 fn renderFromAsyncCache(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) bool {
