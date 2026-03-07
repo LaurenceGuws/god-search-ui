@@ -278,6 +278,22 @@ pub const SearchService = struct {
         return .scheduled;
     }
 
+    pub fn maybeStartRequestedRefreshWorker(self: *SearchService) bool {
+        self.cache_mu.lock();
+        defer self.cache_mu.unlock();
+
+        self.reapFinishedRefreshThreadLocked();
+        if (!self.refresh_requested) return false;
+        if (self.refresh_thread_running or self.refresh_thread != null) return false;
+
+        refresh_worker.markRunning(&self.refresh_thread_running);
+        self.refresh_thread = std.Thread.spawn(.{}, refreshWorkerMain, .{self}) catch {
+            refresh_worker.markStopped(&self.refresh_thread_running);
+            return false;
+        };
+        return true;
+    }
+
     pub fn drainScheduledRefresh(self: *SearchService, allocator: std.mem.Allocator) !bool {
         self.cache_mu.lock();
         const requested = self.refresh_requested;

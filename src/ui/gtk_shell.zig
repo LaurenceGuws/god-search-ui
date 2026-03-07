@@ -347,14 +347,12 @@ pub const Shell = struct {
             providers_mod.invalidateAppsCache();
             gtk_icons.invalidateYaziIconCache();
             ctx.service.invalidateSnapshot();
-            ctx.service.prewarmProviders(allocator) catch {
-                gtk_widgets.clearAsyncRows(ctx.list);
-                setStatus(ctx, "Refresh failed");
-                return;
-            };
             gtk_widgets.clearAsyncRows(ctx.list);
-            setStatus(ctx, "Web bookmark cache refreshed");
-            populateResults(ctx, query);
+            switch (ctx.service.scheduleRefreshFromEvent()) {
+                .scheduled => setStatus(ctx, "Web bookmark cache refresh scheduled"),
+                .skipped_running => setStatus(ctx, "Refresh already running"),
+                .failed_spawn => setStatus(ctx, "Refresh failed"),
+            }
             return;
         }
 
@@ -364,14 +362,12 @@ pub const Shell = struct {
         providers_mod.invalidateAppsCache();
         gtk_icons.invalidateYaziIconCache();
         ctx.service.invalidateSnapshot();
-        ctx.service.prewarmProviders(allocator) catch {
-            gtk_widgets.clearAsyncRows(ctx.list);
-            setStatus(ctx, "Refresh failed");
-            return;
-        };
-
         gtk_widgets.clearAsyncRows(ctx.list);
-        populateResults(ctx, query);
+        switch (ctx.service.scheduleRefreshFromEvent()) {
+            .scheduled => setStatus(ctx, "Cache refresh scheduled"),
+            .skipped_running => setStatus(ctx, "Refresh already running"),
+            .failed_spawn => setStatus(ctx, "Refresh failed"),
+        }
     }
 
     fn reloadConfig(ctx: *UiContext) void {

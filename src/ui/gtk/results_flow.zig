@@ -74,7 +74,7 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
 
     const had_selection = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list)) != null;
     renderWithScrollRetention(ctx, allocator, query_trimmed, ranked, ranked.len);
-    _ = ctx.service.drainScheduledRefresh(allocator) catch false;
+    _ = ctx.service.maybeStartRequestedRefreshWorker();
     if (!had_selection and ctx.result_window_limit <= hot_render_rows) {
         gtk_nav.selectFirstActionableRow(ctx);
     }
