@@ -187,6 +187,18 @@ pub const AppsProvider = struct {
     }
 };
 
+pub fn invalidateDefaultCache() void {
+    const allocator = std.heap.page_allocator;
+    const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
+    defer allocator.free(home);
+    const cache_path = std.fmt.allocPrint(allocator, "{s}/.cache/waybar/wofi-app-launcher.tsv", .{home}) catch return;
+    defer allocator.free(cache_path);
+    std.fs.deleteFileAbsolute(cache_path) catch |err| switch (err) {
+        error.FileNotFound => {},
+        else => std.log.warn("apps provider cache invalidate failed path={s} err={s}", .{ cache_path, @errorName(err) }),
+    };
+}
+
 fn cacheContainsLegacyThreeColumnRows(data: []const u8) bool {
     var lines = std.mem.splitScalar(u8, data, '\n');
     while (lines.next()) |line_raw| {

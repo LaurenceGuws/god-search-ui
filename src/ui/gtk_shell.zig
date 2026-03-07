@@ -352,6 +352,7 @@ pub const Shell = struct {
 
         gtk_async.clearAsyncSearchCache(ctx, allocator);
         ctx.service.clearDynamicState(allocator);
+        providers_mod.invalidateAppsCache();
         ctx.service.invalidateSnapshot();
         ctx.service.prewarmProviders(allocator) catch {
             gtk_widgets.clearAsyncRows(ctx.list);

@@ -1,4 +1,5 @@
 pub const AppsProvider = @import("apps.zig").AppsProvider;
+pub const invalidateAppsCache = @import("apps.zig").invalidateDefaultCache;
 pub const ActionsProvider = @import("actions.zig").ActionsProvider;
 pub const DirsProvider = @import("dirs.zig").DirsProvider;
 pub const calc = @import("calc.zig");

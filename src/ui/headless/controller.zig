@@ -28,6 +28,7 @@ pub fn run(allocator: std.mem.Allocator, service: *app.SearchService) !void {
             .quit => break,
             .refresh => {
                 providers.invalidateWebCaches();
+                providers.invalidateAppsCache();
                 service.invalidateSnapshot();
                 try service.prewarmProviders(allocator);
                 try stdout.print("  snapshot refreshed\n", .{});
