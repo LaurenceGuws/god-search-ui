@@ -281,7 +281,7 @@ fn connectUnixStream(path: []const u8) !std.posix.fd_t {
 }
 
 fn hasSystemTools() bool {
-    return tool_check.commandExistsCached("hyprctl");
+    return tool_check.commandExists("hyprctl");
 }
 
 fn listWindowsJsonWithSystemTools(allocator: std.mem.Allocator) ![]u8 {

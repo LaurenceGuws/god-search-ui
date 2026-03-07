@@ -61,7 +61,7 @@ pub const action_specs = [_]ActionSpec{
 };
 
 pub const ActionsProvider = struct {
-    command_exists_fn: *const fn (name: []const u8) bool = tool_check.commandExistsCached,
+    command_exists_fn: *const fn (name: []const u8) bool = tool_check.commandExists,
     path_exists_fn: *const fn (path: []const u8) bool = pathExists,
 
     pub fn provider(self: *ActionsProvider) search.Provider {
