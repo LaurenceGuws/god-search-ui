@@ -1,29 +1,19 @@
 const std = @import("std");
 const app_mod = @import("../app/mod.zig");
-const providers_mod = @import("../providers/mod.zig");
-const search_mod = @import("../search/mod.zig");
 const gtk_types = @import("gtk/types.zig");
 const gtk_styles = @import("gtk/styles.zig");
 const gtk_bootstrap = @import("gtk/bootstrap.zig");
-const gtk_nav = @import("gtk/navigation.zig");
-const gtk_query = @import("gtk/query_helpers.zig");
 const gtk_async = @import("gtk/async_state.zig");
-const gtk_async_coord = @import("gtk/async_coordinator.zig");
-const gtk_menus = @import("gtk/menus.zig");
-const gtk_status = @import("gtk/status.zig");
 const gtk_icons = @import("gtk/icons.zig");
 const gtk_row_data = @import("gtk/row_data.zig");
 const gtk_preview = @import("gtk/preview.zig");
 const gtk_selection = @import("gtk/selection.zig");
 const gtk_controller = @import("gtk/controller.zig");
-const gtk_results_flow = @import("gtk/results_flow.zig");
-const gtk_widgets = @import("gtk/widgets.zig");
 const ipc_control = @import("../ipc/control.zig");
-const config_mod = @import("../config/mod.zig");
-const runtime_tools = @import("../config/runtime_tools.zig");
 const notifications_mod = @import("../notifications/mod.zig");
 const shell_mod = @import("../shell/mod.zig");
 const gtk_shell_control = @import("gtk/shell_control.zig");
+const gtk_shell_actions = @import("gtk/shell_actions.zig");
 const gtk_shell_lifecycle = @import("gtk/shell_lifecycle.zig");
 const gtk_deferred_clear = @import("gtk/deferred_clear.zig");
 const gtk_shell_notifications = @import("gtk/shell_notifications.zig");
@@ -41,7 +31,6 @@ const LaunchContext = gtk_bootstrap.LaunchContext;
 
 const UiContext = gtk_types.UiContext;
 const AsyncSearchResult = gtk_async.AsyncSearchResult;
-const ScoredCandidate = @import("../search/mod.zig").ScoredCandidate;
 
 pub const Shell = struct {
     pub const RunOptions = struct {
@@ -258,154 +247,43 @@ pub const Shell = struct {
     }
 
     fn refreshSnapshot(ctx: *UiContext) void {
-        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const allocator = allocator_ptr.*;
-        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
-        const parsed_query = search_mod.parseQuery(query);
-        gtk_shell_startup.storeQueryText(ctx, query);
-        if (refreshUnsupportedMessageForQuery(query)) |msg| {
-            setStatus(ctx, msg);
-            return;
-        }
-
-        if (parsed_query.route == .web) {
-            gtk_async.clearAsyncSearchCache(ctx, allocator);
-            ctx.service.clearDynamicState(allocator);
-            providers_mod.invalidateWebCaches();
-            providers_mod.invalidateAppsCache();
-            gtk_icons.invalidateYaziIconCache();
-            ctx.service.invalidateSnapshot();
-            switch (ctx.service.scheduleRefreshFromEvent()) {
-                .scheduled => beginRefreshSpinner(ctx),
-                .skipped_running => beginRefreshSpinner(ctx),
-                .failed_spawn => setStatus(ctx, "Refresh failed"),
-            }
-            return;
-        }
-
-        gtk_async.clearAsyncSearchCache(ctx, allocator);
-        ctx.service.clearDynamicState(allocator);
-        providers_mod.invalidateWebCaches();
-        providers_mod.invalidateAppsCache();
-        gtk_icons.invalidateYaziIconCache();
-        ctx.service.invalidateSnapshot();
-        switch (ctx.service.scheduleRefreshFromEvent()) {
-            .scheduled => beginRefreshSpinner(ctx),
-            .skipped_running => beginRefreshSpinner(ctx),
-            .failed_spawn => setStatus(ctx, "Refresh failed"),
-        }
+        gtk_shell_actions.refreshSnapshot(ctx, .{
+            .set_status = setStatus,
+            .populate_results = populateResults,
+        });
     }
 
     fn reloadConfig(ctx: *UiContext) void {
-        const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const allocator = allocator_ptr.*;
-        var cfg = config_mod.load(allocator);
-        defer cfg.deinit(allocator);
-        if (config_mod.consumeLastLoadIssue(allocator)) |issue| {
-            defer allocator.free(issue);
-            config_mod.issue_notice.show(issue, "Fix config.lua and reload config (Ctrl+Shift+R).");
-            setStatus(ctx, "Config invalid: kept current settings (check notification)");
-            return;
-        }
-        runtime_tools.apply(cfg);
-        ctx.show_nerd_stats = if (cfg.ui.show_nerd_stats) GTRUE else GFALSE;
-        gtk_async.clearAsyncSearchCache(ctx, allocator);
-        ctx.service.clearDynamicState(allocator);
-        gtk_icons.invalidateYaziIconCache();
-        config_mod.issue_notice.clearIfActive();
-        setStatus(ctx, "Config reloaded");
-    }
-
-    fn beginRefreshSpinner(ctx: *UiContext) void {
-        ctx.refresh_inflight = GTRUE;
-        if (ctx.refresh_spinner_id != 0) return;
-        ctx.refresh_spinner_phase = 0;
-        updateRefreshSpinnerFrame(ctx);
-        ctx.refresh_spinner_id = c.g_timeout_add(120, onRefreshSpinnerTick, ctx);
-    }
-
-    fn endRefreshSpinner(ctx: *UiContext) void {
-        ctx.refresh_inflight = GFALSE;
-        if (ctx.refresh_spinner_id != 0) {
-            _ = c.g_source_remove(ctx.refresh_spinner_id);
-            ctx.refresh_spinner_id = 0;
-        }
-        gtk_widgets.clearAsyncRows(ctx.list);
-        ctx.last_render_hash = 0;
-    }
-
-    fn onRefreshSpinnerTick(user_data: ?*anyopaque) callconv(.c) c.gboolean {
-        if (user_data == null) return GFALSE;
-        const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        if (ctx.refresh_inflight == GFALSE) {
-            ctx.refresh_spinner_id = 0;
-            return GFALSE;
-        }
-        if (!ctx.service.refreshInFlight()) {
-            endRefreshSpinner(ctx);
-            const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-            const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
-            setStatus(ctx, "Snapshot refreshed");
-            populateResults(ctx, query);
-            return GFALSE;
-        }
-        updateRefreshSpinnerFrame(ctx);
-        return GTRUE;
-    }
-
-    fn updateRefreshSpinnerFrame(ctx: *UiContext) void {
-        const frames = [_][]const u8{ "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "⠋", "⠙" };
-        const frame = frames[ctx.refresh_spinner_phase % frames.len];
-        ctx.refresh_spinner_phase +%= 1;
-        gtk_widgets.clearAsyncRows(ctx.list);
-        gtk_widgets.appendAsyncRow(ctx.list, frame, "Refreshing cached modules...");
-        ctx.last_render_hash = 0;
-        if (ctx.pending_power_confirm == GFALSE) {
-            var status_buf: [40]u8 = undefined;
-            const status_msg = std.fmt.bufPrint(&status_buf, "{s} Refreshing cache...", .{frame}) catch "Refreshing cache...";
-            setStatus(ctx, status_msg);
-        }
-    }
-
-    fn refreshUnsupportedMessageForQuery(query: []const u8) ?[]const u8 {
-        const parsed = search_mod.parseQuery(query);
-        return switch (parsed.route) {
-            .calc => "Calculator updates as you type (no cache refresh needed)",
-            .grep => "Grep runs live with rg (no cache refresh needed)",
-            .files => "File search runs live with fd (no cache refresh needed)",
-            .notifications => "Notifications route is live (no cache refresh needed)",
-            .run => "Run command executes live (no cache refresh needed)",
-            else => null,
-        };
+        gtk_shell_actions.reloadConfig(ctx, .{
+            .set_status = setStatus,
+            .populate_results = populateResults,
+        });
     }
 
     fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path: []const u8) void {
-        gtk_menus.showDirActionMenu(ctx, allocator, dir_path, .{
+        gtk_shell_actions.showDirActionMenu(ctx, allocator, dir_path, .{
             .set_status = setStatus,
-            .select_first = gtk_nav.selectFirstActionableRow,
+            .populate_results = populateResults,
         });
     }
 
     fn showFileActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, file_action: []const u8) void {
-        gtk_menus.showFileActionMenu(ctx, allocator, file_action, .{
+        gtk_shell_actions.showFileActionMenu(ctx, allocator, file_action, .{
             .set_status = setStatus,
-            .select_first = gtk_nav.selectFirstActionableRow,
+            .populate_results = populateResults,
         });
     }
 
     fn showLaunchFeedback(ctx: *UiContext, message: []const u8) void {
-        gtk_status.showLaunchFeedback(ctx, message, .{
-            .select_first = gtk_nav.selectFirstActionableRow,
-        });
+        gtk_shell_actions.showLaunchFeedback(ctx, message);
     }
 
     fn setStatus(ctx: *UiContext, message: []const u8) void {
-        gtk_status.setStatus(ctx, message);
+        gtk_shell_actions.setStatus(ctx, message);
     }
 
     fn togglePreview(ctx: *UiContext) void {
-        gtk_preview.toggle(ctx);
+        gtk_shell_actions.togglePreview(ctx);
     }
 
     fn installCss(window: *c.GtkWidget) void {
