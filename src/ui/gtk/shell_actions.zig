@@ -8,6 +8,7 @@ const gtk_preview = @import("preview.zig");
 const gtk_nav = @import("navigation.zig");
 const gtk_menus = @import("menus.zig");
 const providers_mod = @import("../../providers/mod.zig");
+const tool_check = @import("../../providers/tool_check.zig");
 const search_mod = @import("../../search/mod.zig");
 const config_mod = @import("../../config/mod.zig");
 const runtime_tools = @import("../../config/runtime_tools.zig");
@@ -32,6 +33,7 @@ pub fn refreshSnapshot(ctx: *gtk_types.UiContext, hooks: Hooks) void {
 
     gtk_async.clearAsyncSearchCache(ctx, allocator);
     ctx.service.clearDynamicState(allocator);
+    tool_check.invalidateCache();
     providers_mod.invalidateWebCaches();
     providers_mod.invalidateAppsCache();
     gtk_icons.invalidateYaziIconCache();
@@ -58,6 +60,7 @@ pub fn reloadConfig(ctx: *gtk_types.UiContext, hooks: Hooks) void {
     ctx.show_nerd_stats = if (cfg.ui.show_nerd_stats) GTRUE else GFALSE;
     gtk_async.clearAsyncSearchCache(ctx, allocator);
     ctx.service.clearDynamicState(allocator);
+    tool_check.invalidateCache();
     gtk_icons.invalidateYaziIconCache();
     config_mod.issue_notice.clearIfActive();
     hooks.set_status(ctx, "Config reloaded");
