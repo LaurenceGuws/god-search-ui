@@ -5,7 +5,7 @@ var cache: std.StringHashMapUnmanaged(bool) = .{};
 var command_exists_runner: *const fn (name: []const u8) bool = commandExistsViaShell;
 
 pub fn commandExists(name: []const u8) bool {
-    return command_exists_runner(name);
+    return commandExistsCached(name);
 }
 
 pub fn commandExistsCached(name: []const u8) bool {
@@ -29,6 +29,10 @@ pub fn commandExistsCached(name: []const u8) bool {
     return value;
 }
 
+pub fn invalidateCache() void {
+    clearCacheLocked();
+}
+
 fn commandExistsViaShell(name: []const u8) bool {
     const result = std.process.Child.run(.{
         .allocator = std.heap.page_allocator,
@@ -42,6 +46,10 @@ fn commandExistsViaShell(name: []const u8) bool {
 }
 
 fn clearCacheForTests() void {
+    invalidateCache();
+}
+
+fn clearCacheLocked() void {
     cache_lock.lock();
     defer cache_lock.unlock();
 
