@@ -85,10 +85,8 @@ pub const PopupManager = struct {
 
     pub fn deinit(self: *PopupManager) void {
         self.daemon.clearHooks();
-        for (self.entries.items) |entry| {
-            if (entry.timeout_id != 0) {
-                _ = c.g_source_remove(entry.timeout_id);
-            }
+        for (self.entries.items) |*entry| {
+            cancelTimeout(&entry.timeout_id);
         }
         self.entries.deinit(self.allocator);
         if (self.window) |window| {
@@ -142,9 +140,8 @@ pub const PopupManager = struct {
     fn remove(self: *PopupManager, id: u32) void {
         const idx = self.findIndex(id) orelse return;
         const entry = self.entries.items[idx];
-        if (entry.timeout_id != 0) {
-            _ = c.g_source_remove(entry.timeout_id);
-        }
+        var timeout_id = entry.timeout_id;
+        cancelTimeout(&timeout_id);
         c.gtk_box_remove(@ptrCast(self.list.?), entry.row);
         _ = self.entries.swapRemove(idx);
         if (self.entries.items.len == 0) {
@@ -160,10 +157,7 @@ pub const PopupManager = struct {
     }
 
     fn rescheduleTimeout(self: *PopupManager, entry: *PopupEntry, expire_timeout: i32) void {
-        if (entry.timeout_id != 0) {
-            _ = c.g_source_remove(entry.timeout_id);
-            entry.timeout_id = 0;
-        }
+        cancelTimeout(&entry.timeout_id);
 
         const delay_ms = normalizeExpireTimeout(expire_timeout);
         if (delay_ms <= 0) return;
@@ -356,6 +350,12 @@ pub const PopupManager = struct {
     }
 };
 
+fn cancelTimeout(timeout_id: *c.guint) void {
+    if (timeout_id.* == 0) return;
+    _ = c.g_source_remove(timeout_id.*);
+    timeout_id.* = 0;
+}
+
 fn clearChildren(box: *c.GtkWidget) void {
     var child = c.gtk_widget_get_first_child(box);
     while (child != null) {
@@ -399,16 +399,6 @@ fn setLabelMarkup(label: *c.GtkLabel, value: []const u8) void {
     const value_z = c.g_strndup(value.ptr, @intCast(value.len)) orelse return;
     defer c.g_free(value_z);
     c.gtk_label_set_markup(label, value_z);
-}
-
-fn setButtonLabel(button: *c.GtkWidget, value: []const u8) void {
-    if (value.len == 0) {
-        c.gtk_button_set_label(@ptrCast(button), "");
-        return;
-    }
-    const value_z = c.g_strndup(value.ptr, @intCast(value.len)) orelse return;
-    defer c.g_free(value_z);
-    c.gtk_button_set_label(@ptrCast(button), value_z);
 }
 
 fn displaySummary(summary: []const u8, app_name: []const u8) []const u8 {

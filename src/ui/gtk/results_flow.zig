@@ -1,9 +1,9 @@
 const std = @import("std");
 const search_mod = @import("../../search/mod.zig");
-const history_access = @import("../../app/search_service/history_access.zig");
 const gtk_types = @import("types.zig");
 const gtk_async_state = @import("async_state.zig");
 const gtk_query = @import("query_helpers.zig");
+const gtk_default_loadout = @import("default_loadout.zig");
 const gtk_render = @import("render.zig");
 const gtk_icons = @import("icons.zig");
 const gtk_nav = @import("navigation.zig");
@@ -47,7 +47,7 @@ pub fn populateResults(ctx: *UiContext, query: []const u8, hooks: AsyncHooks) vo
         ctx.active_query_started_ns = 0;
         gtk_async_state.clearAsyncSearchCache(ctx, allocator);
         hooks.cancel_async_route_search(ctx);
-        renderDefaultLoadout(ctx, allocator);
+        gtk_default_loadout.render(ctx, allocator, hot_render_rows, renderStaticRefreshPending);
         return;
     }
     ctx.last_query_dynamic = if (current_dynamic) GTRUE else GFALSE;
@@ -248,119 +248,6 @@ fn renderWithScrollRetention(
             c.gtk_list_box_select_row(@ptrCast(ctx.list), restored);
         }
     }
-}
-
-fn renderDefaultLoadout(ctx: *UiContext, allocator: std.mem.Allocator) void {
-    switch (ctx.service.staticQueryExecution()) {
-        .ready => {},
-        .refreshing, .cache_cold => {
-            _ = ctx.service.scheduleRefreshFromEvent();
-            renderStaticRefreshPending(ctx);
-            return;
-        },
-    }
-
-    const apps = ctx.service.searchQuery(allocator, "@ ") catch {
-        gtk_widgets.clearList(ctx.list);
-        gtk_widgets.appendInfoRow(ctx.list, "Default loadout unavailable");
-        ctx.last_render_hash = std.hash.Wyhash.hash(0x91f3aa, "default-loadout-unavailable");
-        if (ctx.pending_power_confirm == GFALSE) {
-            gtk_status.setStatus(ctx, "Type to search");
-        }
-        return;
-    };
-    defer allocator.free(apps);
-
-    const dirs = ctx.service.searchQuery(allocator, "~ ") catch {
-        gtk_widgets.clearList(ctx.list);
-        gtk_widgets.appendInfoRow(ctx.list, "Default loadout unavailable");
-        ctx.last_render_hash = std.hash.Wyhash.hash(0x91f3aa, "default-loadout-unavailable");
-        if (ctx.pending_power_confirm == GFALSE) {
-            gtk_status.setStatus(ctx, "Type to search");
-        }
-        return;
-    };
-    defer allocator.free(dirs);
-
-    var history: []const []const u8 = &.{};
-    var history_owned = false;
-    if (ctx.service.historySnapshotNewestFirstOwned(allocator)) |snapshot| {
-        history = snapshot;
-        history_owned = true;
-    } else |_| {}
-    defer if (history_owned) history_access.freeSnapshot(allocator, history);
-
-    var merged = std.ArrayList(search_mod.ScoredCandidate).empty;
-    defer merged.deinit(allocator);
-
-    for (apps) |row| {
-        const freq = actionFrequency(row.candidate.action, history);
-        merged.append(allocator, .{
-            .candidate = row.candidate,
-            .score = @as(i32, @intCast(freq * 1000)),
-        }) catch break;
-    }
-
-    var zide_dirs_added: usize = 0;
-    for (dirs) |row| {
-        if (!isZideDirCandidate(row.candidate)) continue;
-        const freq = actionFrequency(row.candidate.action, history);
-        merged.append(allocator, .{
-            .candidate = row.candidate,
-            .score = @as(i32, @intCast(freq * 1000)),
-        }) catch break;
-        zide_dirs_added += 1;
-    }
-
-    if (zide_dirs_added == 0) {
-        for (dirs) |row| {
-            const freq = actionFrequency(row.candidate.action, history);
-            merged.append(allocator, .{
-                .candidate = row.candidate,
-                .score = @as(i32, @intCast(freq * 1000)),
-            }) catch break;
-        }
-    }
-
-    const had_selection = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list)) != null;
-    gtk_widgets.clearList(ctx.list);
-    gtk_widgets.appendModuleFilterMenu(ctx.list, allocator);
-    if (merged.items.len > 0) {
-        std.mem.sort(search_mod.ScoredCandidate, merged.items, {}, loadoutLessThan);
-        gtk_widgets.appendSectionSeparatorRow(ctx.list);
-        gtk_widgets.appendHeaderRow(ctx.list, "Suggested For You");
-        gtk_render.appendOrderedRows(ctx, allocator, merged.items, "", .{
-            .candidate_icon_widget = gtk_icons.candidateIconWidget,
-        });
-        ctx.last_render_hash = std.hash.Wyhash.hash(0x4dd8f0, "default-loadout-with-modules");
-    } else {
-        ctx.last_render_hash = std.hash.Wyhash.hash(0x4dd8f0, "default-loadout-modules-only");
-    }
-    if (!had_selection and ctx.result_window_limit <= hot_render_rows) {
-        gtk_nav.selectFirstActionableRow(ctx);
-    }
-}
-
-fn actionFrequency(action: []const u8, history: []const []const u8) u32 {
-    var count: u32 = 0;
-    for (history) |entry| {
-        if (std.mem.eql(u8, entry, action)) count += 1;
-    }
-    return count;
-}
-
-fn isZideDirCandidate(candidate: search_mod.Candidate) bool {
-    if (candidate.kind != .dir) return false;
-    return std.mem.indexOf(u8, candidate.action, "/zide") != null or
-        std.mem.indexOf(u8, candidate.subtitle, "/zide") != null or
-        std.mem.indexOf(u8, candidate.title, "zide") != null;
-}
-
-fn loadoutLessThan(_: void, a: search_mod.ScoredCandidate, b: search_mod.ScoredCandidate) bool {
-    if (a.score != b.score) return a.score > b.score;
-    const title_order = std.mem.order(u8, a.candidate.title, b.candidate.title);
-    if (title_order != .eq) return title_order == .lt;
-    return std.mem.order(u8, a.candidate.action, b.candidate.action) == .lt;
 }
 
 pub fn renderSearchError(ctx: *UiContext, allocator: std.mem.Allocator, err: anyerror) void {
