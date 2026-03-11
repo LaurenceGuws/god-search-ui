@@ -686,7 +686,7 @@ pub const Shell = struct {
 
         fn applyControlEvent(state: *State, event: shell_mod.module.Event) void {
             switch (event) {
-            .summon => if (state.ctx.launch.ctx) |ui_ctx| {
+                .summon => if (state.ctx.launch.ctx) |ui_ctx| {
                     std.log.info(
                         "ram_event=ui_summon query_hash={d} window_limit={d} visible={}",
                         .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit, c.gtk_widget_get_visible(ui_ctx.window) == GTRUE },
@@ -726,6 +726,14 @@ pub const Shell = struct {
         fn summonExistingUi(ui_ctx: *UiContext) void {
             c.gtk_window_present(@ptrCast(ui_ctx.window));
             _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(ui_ctx.entry)));
+            const text_ptr = c.gtk_editable_get_text(@ptrCast(ui_ctx.entry));
+            const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
+            if (std.mem.trim(u8, query, " \t\r\n").len == 0) {
+                ui_ctx.last_render_hash = 0;
+                ui_ctx.last_selected_row_index = -1;
+                ui_ctx.last_scroll_position = 0;
+                populateResults(ui_ctx, "");
+            }
             gtk_shell_startup.afterActivate(ui_ctx);
         }
     };

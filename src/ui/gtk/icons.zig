@@ -20,6 +20,24 @@ pub fn invalidateYaziIconCache() void {
     yazi_icons_loaded = false;
 }
 
+pub fn notificationIconWidget(
+    allocator: std.mem.Allocator,
+    app_icon: []const u8,
+    app_name: []const u8,
+) *c.GtkWidget {
+    if (resolveNotificationIconName(allocator, app_icon, app_name)) |icon_name_z| {
+        defer allocator.free(icon_name_z);
+        const image = c.gtk_image_new_from_icon_name(icon_name_z.ptr);
+        c.gtk_image_set_pixel_size(@ptrCast(image), 24);
+        c.gtk_widget_add_css_class(image, "gs-notify-app-icon");
+        return @ptrCast(image);
+    }
+    const image = c.gtk_image_new_from_icon_name("preferences-system-notifications-symbolic");
+    c.gtk_image_set_pixel_size(@ptrCast(image), 18);
+    c.gtk_widget_add_css_class(image, "gs-notify-app-icon");
+    return @ptrCast(image);
+}
+
 pub fn candidateIconWidget(
     allocator: std.mem.Allocator,
     kind: CandidateKind,

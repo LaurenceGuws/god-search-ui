@@ -1,5 +1,6 @@
 const std = @import("std");
 const gtk_types = @import("types.zig");
+const gtk_icons = @import("icons.zig");
 const notifications = @import("../../notifications/mod.zig");
 const placement_bridge = @import("placement_bridge.zig");
 const layer_shell = @import("layer_shell.zig");
@@ -113,12 +114,12 @@ pub const PopupManager = struct {
         const idx = self.findIndex(event.id);
         if (idx) |existing_idx| {
             const entry = &self.entries.items[existing_idx];
-            setLabelText(entry.summary_label, event.summary);
+            setLabelText(entry.summary_label, displaySummary(event.summary, event.app_name));
             setBodyLabel(entry.body_label, event.body);
             updateActions(self, entry.actions_box, event.id, event.actions);
             rescheduleTimeout(self, entry, event.expire_timeout);
         } else {
-            const row = createRow(self, event.id, event.summary, event.body) catch return;
+            const row = createRow(self, event.id, event.app_name, event.app_icon, event.summary, event.body) catch return;
             updateActions(self, row.actions_box, event.id, event.actions);
             self.entries.append(self.allocator, .{
                 .id = event.id,
@@ -187,7 +188,7 @@ pub const PopupManager = struct {
         return GFALSE;
     }
 
-    fn createRow(self: *PopupManager, id: u32, summary: []const u8, body: []const u8) !struct {
+    fn createRow(self: *PopupManager, id: u32, app_name: []const u8, app_icon: []const u8, summary: []const u8, body: []const u8) !struct {
         row: *c.GtkWidget,
         summary_label: *c.GtkLabel,
         body_label: *c.GtkLabel,
@@ -196,19 +197,35 @@ pub const PopupManager = struct {
         const row = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 6);
         c.gtk_widget_add_css_class(row, "gs-notify-row");
 
+        const top = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 10);
+        c.gtk_widget_add_css_class(top, "gs-notify-top");
+
+        const icon_widget = gtk_icons.notificationIconWidget(self.allocator, app_icon, app_name);
+        c.gtk_widget_set_valign(icon_widget, c.GTK_ALIGN_START);
+
+        const content = c.gtk_box_new(c.GTK_ORIENTATION_VERTICAL, 3);
+        c.gtk_widget_set_hexpand(content, GTRUE);
+        c.gtk_widget_add_css_class(content, "gs-notify-content");
+
         const header = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 8);
+        c.gtk_widget_add_css_class(header, "gs-notify-header");
 
         const summary_label = c.gtk_label_new("");
-        setLabelText(@ptrCast(summary_label), summary);
+        setLabelText(@ptrCast(summary_label), displaySummary(summary, app_name));
         c.gtk_label_set_xalign(@ptrCast(summary_label), 0.0);
         c.gtk_label_set_wrap(@ptrCast(summary_label), GTRUE);
+        c.gtk_label_set_wrap_mode(@ptrCast(summary_label), c.PANGO_WRAP_WORD_CHAR);
         c.gtk_widget_add_css_class(summary_label, "gs-notify-summary");
         c.gtk_widget_set_hexpand(summary_label, GTRUE);
 
         c.gtk_box_append(@ptrCast(header), summary_label);
         if (self.show_close_button) {
-            const close_btn = c.gtk_button_new_with_label("x");
+            const close_btn = c.gtk_button_new();
             c.gtk_widget_add_css_class(close_btn, "gs-notify-close");
+            c.gtk_widget_set_tooltip_text(close_btn, "Dismiss notification");
+            const close_icon = c.gtk_image_new_from_icon_name("window-close-symbolic");
+            c.gtk_image_set_pixel_size(@ptrCast(close_icon), 16);
+            c.gtk_button_set_child(@ptrCast(close_btn), close_icon);
             const payload: *DismissPayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(DismissPayload))));
             payload.* = .{ .manager = self, .id = id };
             _ = c.g_signal_connect_data(close_btn, "clicked", c.G_CALLBACK(onDismissClicked), payload, onDismissPayloadDestroyed, 0);
@@ -218,6 +235,7 @@ pub const PopupManager = struct {
         const body_label = c.gtk_label_new("");
         c.gtk_label_set_xalign(@ptrCast(body_label), 0.0);
         c.gtk_label_set_wrap(@ptrCast(body_label), GTRUE);
+        c.gtk_label_set_wrap_mode(@ptrCast(body_label), c.PANGO_WRAP_WORD_CHAR);
         c.gtk_label_set_use_markup(@ptrCast(body_label), GTRUE);
         setBodyLabel(@ptrCast(body_label), body);
         c.gtk_widget_add_css_class(body_label, "gs-notify-body");
@@ -226,8 +244,13 @@ pub const PopupManager = struct {
         c.gtk_widget_add_css_class(actions_box, "gs-notify-actions");
         c.gtk_widget_set_visible(actions_box, GFALSE);
 
-        c.gtk_box_append(@ptrCast(row), header);
-        c.gtk_box_append(@ptrCast(row), body_label);
+        c.gtk_box_append(@ptrCast(content), header);
+        c.gtk_box_append(@ptrCast(content), body_label);
+
+        c.gtk_box_append(@ptrCast(top), icon_widget);
+        c.gtk_box_append(@ptrCast(top), content);
+
+        c.gtk_box_append(@ptrCast(row), top);
         c.gtk_box_append(@ptrCast(row), actions_box);
         c.gtk_box_append(@ptrCast(self.list.?), row);
 
@@ -310,10 +333,16 @@ pub const PopupManager = struct {
             c.gtk_widget_set_visible(actions_box, GFALSE);
             return;
         }
+        const vertical_stack = shouldStackActions(actions);
+        c.gtk_orientable_set_orientation(
+            @ptrCast(actions_box),
+            if (vertical_stack) c.GTK_ORIENTATION_VERTICAL else c.GTK_ORIENTATION_HORIZONTAL,
+        );
         for (actions) |action| {
-            const button = c.gtk_button_new_with_label("");
-            setButtonLabel(button, action.label);
+            const button = c.gtk_button_new();
+            configureActionButton(button, action);
             c.gtk_widget_add_css_class(button, "gs-notify-action-btn");
+            if (vertical_stack) c.gtk_widget_set_hexpand(button, GTRUE);
             const payload: *ActionPayload = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(ActionPayload))));
             payload.* = .{
                 .manager = self,
@@ -337,12 +366,18 @@ fn clearChildren(box: *c.GtkWidget) void {
 }
 
 fn setBodyLabel(label: *c.GtkLabel, body: []const u8) void {
+    const trimmed = std.mem.trim(u8, body, " \t\r\n");
+    c.gtk_widget_set_visible(@ptrCast(@alignCast(label)), if (trimmed.len == 0) GFALSE else GTRUE);
+    if (trimmed.len == 0) {
+        c.gtk_label_set_text(label, "");
+        return;
+    }
     // Basic heuristic: treat body as markup only when it contains tag-like delimiters.
     // Otherwise keep plain text behavior to avoid accidental markup parsing errors.
-    if (std.mem.indexOfScalar(u8, body, '<') != null and std.mem.indexOfScalar(u8, body, '>') != null) {
-        setLabelMarkup(label, body);
+    if (std.mem.indexOfScalar(u8, trimmed, '<') != null and std.mem.indexOfScalar(u8, trimmed, '>') != null) {
+        setLabelMarkup(label, trimmed);
     } else {
-        setLabelText(label, body);
+        setLabelText(label, trimmed);
     }
 }
 
@@ -374,4 +409,65 @@ fn setButtonLabel(button: *c.GtkWidget, value: []const u8) void {
     const value_z = c.g_strndup(value.ptr, @intCast(value.len)) orelse return;
     defer c.g_free(value_z);
     c.gtk_button_set_label(@ptrCast(button), value_z);
+}
+
+fn displaySummary(summary: []const u8, app_name: []const u8) []const u8 {
+    const trimmed = std.mem.trim(u8, summary, " \t\r\n");
+    if (trimmed.len > 0) return trimmed;
+    const app_trimmed = std.mem.trim(u8, app_name, " \t\r\n");
+    if (app_trimmed.len > 0) return app_trimmed;
+    return "Notification";
+}
+
+fn displayActionLabel(action: notifications.Daemon.Action) []const u8 {
+    const label = std.mem.trim(u8, action.label, " \t\r\n");
+    if (label.len > 0) return label;
+    const key = std.mem.trim(u8, action.key, " \t\r\n");
+    if (key.len == 0 or std.mem.eql(u8, key, "default")) return "Open";
+    if (std.mem.eql(u8, key, "dismiss")) return "Dismiss";
+    return prettifyActionKey(key);
+}
+
+fn actionIconName(action: notifications.Daemon.Action) [*:0]const u8 {
+    const key = std.mem.trim(u8, action.key, " \t\r\n");
+    if (std.mem.eql(u8, key, "dismiss")) return "window-close-symbolic";
+    if (std.mem.indexOf(u8, key, "reply") != null) return "mail-reply-sender-symbolic";
+    if (std.mem.indexOf(u8, key, "open") != null) return "external-link-symbolic";
+    if (std.mem.indexOf(u8, key, "view") != null) return "document-open-symbolic";
+    return "emblem-ok-symbolic";
+}
+
+fn configureActionButton(button: *c.GtkWidget, action: notifications.Daemon.Action) void {
+    const content = c.gtk_box_new(c.GTK_ORIENTATION_HORIZONTAL, 6);
+    c.gtk_widget_add_css_class(content, "gs-notify-action-content");
+    c.gtk_widget_set_halign(content, c.GTK_ALIGN_START);
+    const icon = c.gtk_image_new_from_icon_name(actionIconName(action));
+    c.gtk_image_set_pixel_size(@ptrCast(icon), 15);
+    c.gtk_widget_add_css_class(icon, "gs-notify-action-icon");
+    const label = c.gtk_label_new("");
+    const label_text = displayActionLabel(action);
+    setLabelText(@ptrCast(label), label_text);
+    c.gtk_label_set_wrap(@ptrCast(label), GTRUE);
+    c.gtk_label_set_wrap_mode(@ptrCast(label), c.PANGO_WRAP_WORD_CHAR);
+    c.gtk_label_set_xalign(@ptrCast(label), 0.0);
+    c.gtk_widget_add_css_class(label, "gs-notify-action-label");
+    c.gtk_box_append(@ptrCast(content), icon);
+    c.gtk_box_append(@ptrCast(content), label);
+    c.gtk_button_set_child(@ptrCast(button), content);
+    const tooltip_z = c.g_strndup(label_text.ptr, @intCast(label_text.len)) orelse return;
+    defer c.g_free(tooltip_z);
+    c.gtk_widget_set_tooltip_text(button, tooltip_z);
+}
+
+fn shouldStackActions(actions: []const notifications.Daemon.Action) bool {
+    return actions.len > 3;
+}
+
+fn prettifyActionKey(key: []const u8) []const u8 {
+    if (std.mem.eql(u8, key, "reply")) return "Reply";
+    if (std.mem.eql(u8, key, "archive")) return "Archive";
+    if (std.mem.eql(u8, key, "mark-read")) return "Mark Read";
+    if (std.mem.eql(u8, key, "mark_read")) return "Mark Read";
+    if (std.mem.eql(u8, key, "open")) return "Open";
+    return key;
 }

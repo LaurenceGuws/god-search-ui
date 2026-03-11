@@ -89,12 +89,22 @@ pub fn installCss(window: *c.GtkWidget) void {
         ".gs-notify-window, .gs-notify-window > widget, .gs-notify-window > box, .gs-notify-window > frame { background: transparent; background-image: none; box-shadow: none; }\n" ++
         ".gs-notify-frame { background: transparent; border: none; box-shadow: none; }\n" ++
         ".gs-notify-list, .gs-notify-list > viewport, .gs-notify-list row { background: transparent; background-image: none; box-shadow: none; }\n" ++
-        ".gs-notify-row { background: rgba(30, 38, 56, 0.82); border: 1px solid rgba(132, 160, 228, 0.20); border-radius: 8px; padding: 10px; }\n" ++
-        ".gs-notify-summary { color: #e8ecf7; font-weight: 700; }\n" ++
-        ".gs-notify-body { color: #bec9df; }\n" ++
-        ".gs-notify-close { min-width: 26px; min-height: 26px; padding: 0 8px; font-size: 0.82em; }\n" ++
-        ".gs-notify-actions { margin-top: 2px; }\n" ++
-        ".gs-notify-action-btn { min-height: 26px; padding: 0 10px; font-size: 0.86em; }\n";
+        ".gs-notify-row { background: linear-gradient(180deg, rgba(28, 37, 55, 0.95), rgba(23, 31, 46, 0.92)); border: 1px solid rgba(142, 171, 238, 0.28); border-radius: 14px; padding: 12px; box-shadow: 0 10px 28px rgba(5, 10, 20, 0.28); }\n" ++
+        ".gs-notify-top { min-width: 0; }\n" ++
+        ".gs-notify-content { min-width: 0; }\n" ++
+        ".gs-notify-header { min-width: 0; }\n" ++
+        ".gs-notify-summary { color: #f2f6ff; font-size: 1.06em; font-weight: 800; }\n" ++
+        ".gs-notify-body { color: #c6d2e8; line-height: 1.25; margin-top: 1px; }\n" ++
+        ".gs-notify-app-icon { color: #9fb1d4; min-width: 18px; min-height: 18px; margin-top: 4px; margin-right: 0; opacity: 0.92; }\n" ++
+        ".gs-notify-close { min-width: 24px; min-height: 24px; padding: 0; margin-top: 1px; border-radius: 8px; background: transparent; border: none; box-shadow: none; color: #9fb1d4; }\n" ++
+        ".gs-notify-close:hover { background: rgba(255, 255, 255, 0.08); color: #f6fbff; }\n" ++
+        ".gs-notify-close:active { background: rgba(248, 118, 118, 0.16); color: #ffd8d8; }\n" ++
+        ".gs-notify-actions { margin-top: 8px; }\n" ++
+        ".gs-notify-action-btn { min-height: 34px; padding: 6px 12px; border-radius: 10px; background: rgba(130, 160, 230, 0.14); border: 1px solid rgba(142, 171, 238, 0.24); }\n" ++
+        ".gs-notify-action-btn:hover { background: rgba(130, 160, 230, 0.22); border-color: rgba(171, 198, 255, 0.38); }\n" ++
+        ".gs-notify-action-content { min-width: 0; }\n" ++
+        ".gs-notify-action-icon { color: #dce8ff; }\n" ++
+        ".gs-notify-action-label { color: #eef4ff; font-weight: 700; }\n";
 
     const provider = c.gtk_css_provider_new();
     defer c.g_object_unref(provider);

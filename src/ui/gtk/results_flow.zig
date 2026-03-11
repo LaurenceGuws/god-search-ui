@@ -322,19 +322,20 @@ fn renderDefaultLoadout(ctx: *UiContext, allocator: std.mem.Allocator) void {
         }
     }
 
-    if (merged.items.len == 0) {
-        gtk_widgets.clearList(ctx.list);
-        gtk_widgets.appendInfoRow(ctx.list, "No default suggestions");
-        ctx.last_render_hash = std.hash.Wyhash.hash(0x4dd8f0, "default-loadout-empty");
-        if (ctx.pending_power_confirm == GFALSE) {
-            gtk_status.setStatus(ctx, "Type to search");
-        }
-        return;
-    }
-
-    std.mem.sort(search_mod.ScoredCandidate, merged.items, {}, loadoutLessThan);
     const had_selection = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list)) != null;
-    renderWithScrollRetention(ctx, allocator, "", merged.items, merged.items.len);
+    gtk_widgets.clearList(ctx.list);
+    gtk_widgets.appendModuleFilterMenu(ctx.list, allocator);
+    if (merged.items.len > 0) {
+        std.mem.sort(search_mod.ScoredCandidate, merged.items, {}, loadoutLessThan);
+        gtk_widgets.appendSectionSeparatorRow(ctx.list);
+        gtk_widgets.appendHeaderRow(ctx.list, "Suggested For You");
+        gtk_render.appendOrderedRows(ctx, allocator, merged.items, "", .{
+            .candidate_icon_widget = gtk_icons.candidateIconWidget,
+        });
+        ctx.last_render_hash = std.hash.Wyhash.hash(0x4dd8f0, "default-loadout-with-modules");
+    } else {
+        ctx.last_render_hash = std.hash.Wyhash.hash(0x4dd8f0, "default-loadout-modules-only");
+    }
     if (!had_selection and ctx.result_window_limit <= hot_render_rows) {
         gtk_nav.selectFirstActionableRow(ctx);
     }
@@ -414,7 +415,7 @@ pub fn renderRankedRows(
             if (empty_query and route_hint == null) {
                 gtk_render.appendOrderedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = gtk_icons.candidateIconWidget });
             } else {
-            gtk_render.appendGroupedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = gtk_icons.candidateIconWidget });
+                gtk_render.appendGroupedRows(ctx, allocator, rows, highlight_token, .{ .candidate_icon_widget = gtk_icons.candidateIconWidget });
             }
             if (total_len > limit) {
                 const more = std.fmt.allocPrint(allocator, "Showing top {d} results", .{limit}) catch "Showing results";

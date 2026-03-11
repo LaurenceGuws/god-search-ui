@@ -72,6 +72,8 @@ var favicon_cache_owned: std.ArrayListUnmanaged([]u8) = .{};
 const web_scrape_limit: usize = 10;
 const web_favicon_probe_limit: usize = 5;
 const bookmark_favicon_probe_limit: usize = 30;
+const bookmark_cache_file_name = "bookmarks.tsv";
+const favicon_url_cache_file_name = "favicon_urls.tsv";
 
 pub fn invalidateCaches() void {
     browser_bookmarks_mu.lock();
@@ -90,6 +92,8 @@ pub fn invalidateCaches() void {
     favicon_cache_mu.lock();
     clearFaviconCacheLocked();
     favicon_cache_mu.unlock();
+
+    clearWebCacheFiles();
 
     std.log.info("web cache invalidated via refresh request", .{});
 }
@@ -454,12 +458,6 @@ fn clearBrowserFaviconUrlCacheLocked() void {
 }
 
 fn clearFaviconCacheLocked() void {
-    for (favicon_cache_entries.items) |entry| {
-        std.fs.deleteFileAbsolute(entry.path) catch |err| switch (err) {
-            error.FileNotFound => {},
-            else => std.log.debug("web favicon cache file delete failed path={s} err={s}", .{ entry.path, @errorName(err) }),
-        };
-    }
     for (favicon_cache_owned.items) |item| std.heap.page_allocator.free(item);
     favicon_cache_entries.deinit(std.heap.page_allocator);
     favicon_cache_owned.deinit(std.heap.page_allocator);
@@ -578,11 +576,9 @@ fn probeFaviconPathWithReport(allocator: std.mem.Allocator, url: []const u8) Fav
     }
     favicon_cache_mu.unlock();
 
-    const cache_dir = "/tmp/god-search-ui-favicons";
-    std.fs.makeDirAbsolute(cache_dir) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return report,
-    };
+    const cache_dir = webFaviconCacheDir(allocator) catch return report;
+    defer allocator.free(cache_dir);
+    ensurePathExistsAbsolute(cache_dir) catch return report;
 
     const host_hash = std.hash.Wyhash.hash(0x7f11f9, host);
     const target = std.fmt.allocPrint(allocator, "{s}/{x}.png", .{ cache_dir, host_hash }) catch return report;
@@ -671,6 +667,15 @@ fn lookupBrowserStoredFaviconUrl(allocator: std.mem.Allocator, host: []const u8)
     }
     browser_favicon_url_mu.unlock();
 
+    loadPersistedFaviconUrlCacheEntry(host);
+    browser_favicon_url_mu.lock();
+    if (browser_favicon_url_cache.get(host)) |cached| {
+        browser_favicon_url_mu.unlock();
+        if (cached.len == 0) return null;
+        return allocator.dupe(u8, cached) catch null;
+    }
+    browser_favicon_url_mu.unlock();
+
     const found = resolveBrowserStoredFaviconUrlNoCache(allocator, host) catch null;
 
     browser_favicon_url_mu.lock();
@@ -692,6 +697,9 @@ fn lookupBrowserStoredFaviconUrl(allocator: std.mem.Allocator, host: []const u8)
     } else {
         _ = browser_favicon_url_cache.put(std.heap.page_allocator, host_copy, "") catch {};
     }
+    persistFaviconUrlCacheEntry(host, found) catch |err| {
+        std.log.debug("web favicon url cache persist failed host={s} err={s}", .{ host, @errorName(err) });
+    };
     return found;
 }
 
@@ -1024,6 +1032,10 @@ fn ensureBrowserBookmarksLoaded() void {
     defer browser_bookmarks_mu.unlock();
     if (browser_bookmarks_loaded) return;
     browser_bookmarks_loaded = true;
+    loadPersistedBrowserBookmarksLocked() catch |err| {
+        std.log.debug("browser bookmarks persisted load skipped: {s}", .{@errorName(err)});
+    };
+    if (browser_bookmarks.items.len > 0) return;
     loadBrowserBookmarksLocked() catch |err| {
         std.log.warn("browser bookmarks load failed: {s}", .{@errorName(err)});
     };
@@ -1070,6 +1082,11 @@ fn loadBrowserBookmarksLocked() !void {
     try loadFirefoxFamilyBookmarksFromRootLocked("Zen", tryJoin(allocator, &.{ home_root, ".zen" }));
     try loadFirefoxFamilyBookmarksFromRootLocked("Firefox", tryJoin(allocator, &.{ home_root, ".var/app/org.mozilla.firefox/.mozilla/firefox" }));
     try loadFirefoxFamilyBookmarksFromRootLocked("Zen", tryJoin(allocator, &.{ home_root, ".var/app/app.zen_browser.zen/.zen" }));
+    if (browser_bookmarks.items.len > 0) {
+        persistBrowserBookmarksLocked() catch |err| {
+            std.log.warn("browser bookmarks persist failed: {s}", .{@errorName(err)});
+        };
+    }
 }
 
 fn configHomePath(allocator: std.mem.Allocator) ![]u8 {
@@ -1087,6 +1104,182 @@ fn homePath(allocator: std.mem.Allocator) ![]u8 {
 
 fn tryJoin(allocator: std.mem.Allocator, parts: []const []const u8) ?[]u8 {
     return std.fs.path.join(allocator, parts) catch null;
+}
+
+fn cacheHomePath(allocator: std.mem.Allocator) ![]u8 {
+    if (std.process.getEnvVarOwned(allocator, "XDG_CACHE_HOME")) |xdg| {
+        return xdg;
+    } else |_| {}
+    const home = try std.process.getEnvVarOwned(allocator, "HOME");
+    defer allocator.free(home);
+    return std.fmt.allocPrint(allocator, "{s}/.cache", .{home});
+}
+
+fn webCacheDir(allocator: std.mem.Allocator) ![]u8 {
+    const cache_home = try cacheHomePath(allocator);
+    defer allocator.free(cache_home);
+    return std.fs.path.join(allocator, &.{ cache_home, "god-search-ui", "web" });
+}
+
+fn webCacheFilePath(allocator: std.mem.Allocator, file_name: []const u8) ![]u8 {
+    const dir = try webCacheDir(allocator);
+    defer allocator.free(dir);
+    return std.fs.path.join(allocator, &.{ dir, file_name });
+}
+
+fn webFaviconCacheDir(allocator: std.mem.Allocator) ![]u8 {
+    const dir = try webCacheDir(allocator);
+    defer allocator.free(dir);
+    return std.fs.path.join(allocator, &.{ dir, "favicons" });
+}
+
+fn ensurePathExistsAbsolute(path: []const u8) !void {
+    var fs_path = try std.fs.openDirAbsolute("/", .{});
+    defer fs_path.close();
+    try fs_path.makePath(path[1..]);
+}
+
+fn clearWebCacheFiles() void {
+    const allocator = std.heap.page_allocator;
+    const web_dir = webCacheDir(allocator) catch return;
+    defer allocator.free(web_dir);
+    deleteTreeIfExists(web_dir);
+}
+
+fn deleteTreeIfExists(path: []const u8) void {
+    std.fs.accessAbsolute(path, .{}) catch return;
+    var parent = std.fs.openDirAbsolute("/", .{}) catch return;
+    defer parent.close();
+    parent.deleteTree(path[1..]) catch |err| {
+        std.log.debug("web cache deleteTree failed path={s} err={s}", .{ path, @errorName(err) });
+    };
+}
+
+fn writeFileAtomicAbsolute(path: []const u8, contents: []const u8) !void {
+    const parent = std.fs.path.dirname(path) orelse return error.FileNotFound;
+    try ensurePathExistsAbsolute(parent);
+    const tmp_path = try std.fmt.allocPrint(std.heap.page_allocator, "{s}.tmp", .{path});
+    defer std.heap.page_allocator.free(tmp_path);
+    var file = try std.fs.createFileAbsolute(tmp_path, .{ .truncate = true });
+    defer file.close();
+    try file.writeAll(contents);
+    try file.sync();
+    try std.fs.renameAbsolute(tmp_path, path);
+}
+
+fn readFileAbsoluteAllocCompat(allocator: std.mem.Allocator, path: []const u8, max_bytes: usize) ![]u8 {
+    var file = try std.fs.openFileAbsolute(path, .{});
+    defer file.close();
+    return try file.readToEndAlloc(allocator, max_bytes);
+}
+
+fn loadPersistedBrowserBookmarksLocked() !void {
+    const allocator = std.heap.page_allocator;
+    const path = try webCacheFilePath(allocator, bookmark_cache_file_name);
+    defer allocator.free(path);
+    const data = readFileAbsoluteAllocCompat(allocator, path, 16 * 1024 * 1024) catch |err| switch (err) {
+        error.FileNotFound => return,
+        else => return err,
+    };
+    defer allocator.free(data);
+    var lines = std.mem.splitScalar(u8, data, '\n');
+    while (lines.next()) |line_raw| {
+        if (browser_bookmarks.items.len >= browser_bookmark_limit) return;
+        const line = std.mem.trimRight(u8, line_raw, "\r");
+        if (line.len == 0) continue;
+        var fields = std.mem.splitScalar(u8, line, '\t');
+        const title = fields.next() orelse continue;
+        const url = fields.next() orelse continue;
+        const subtitle = fields.next() orelse continue;
+        try appendPersistedBrowserBookmarkLocked(title, url, subtitle);
+    }
+}
+
+fn appendPersistedBrowserBookmarkLocked(title: []const u8, url: []const u8, subtitle: []const u8) !void {
+    if (!looksLikeUrl(url)) return;
+    const kept_title = try keepBrowserBookmarkStringLocked(title);
+    const kept_url = try keepBrowserBookmarkStringLocked(url);
+    const kept_subtitle = try keepBrowserBookmarkStringLocked(subtitle);
+    try browser_bookmarks.append(std.heap.page_allocator, .{
+        .title = kept_title,
+        .url = kept_url,
+        .subtitle = kept_subtitle,
+    });
+}
+
+fn persistBrowserBookmarksLocked() !void {
+    var buf = std.ArrayList(u8).empty;
+    defer buf.deinit(std.heap.page_allocator);
+    for (browser_bookmarks.items) |row| {
+        try buf.writer(std.heap.page_allocator).print("{s}\t{s}\t{s}\n", .{
+            row.title,
+            row.url,
+            row.subtitle,
+        });
+    }
+    const path = try webCacheFilePath(std.heap.page_allocator, bookmark_cache_file_name);
+    defer std.heap.page_allocator.free(path);
+    try writeFileAtomicAbsolute(path, buf.items);
+}
+
+fn loadPersistedFaviconUrlCacheEntry(host: []const u8) void {
+    const allocator = std.heap.page_allocator;
+    const path = webCacheFilePath(allocator, favicon_url_cache_file_name) catch return;
+    defer allocator.free(path);
+    const data = readFileAbsoluteAllocCompat(allocator, path, 2 * 1024 * 1024) catch return;
+    defer allocator.free(data);
+    var lines = std.mem.splitScalar(u8, data, '\n');
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trimRight(u8, line_raw, "\r");
+        if (line.len == 0) continue;
+        var fields = std.mem.splitScalar(u8, line, '\t');
+        const entry_host = fields.next() orelse continue;
+        const entry_url = fields.next() orelse "";
+        if (!std.mem.eql(u8, entry_host, host)) continue;
+        browser_favicon_url_mu.lock();
+        defer browser_favicon_url_mu.unlock();
+        if (browser_favicon_url_cache.get(host) != null) return;
+        const host_copy = std.heap.page_allocator.dupe(u8, entry_host) catch return;
+        browser_favicon_url_owned.append(std.heap.page_allocator, host_copy) catch return;
+        const url_copy = std.heap.page_allocator.dupe(u8, entry_url) catch {
+            _ = browser_favicon_url_cache.put(std.heap.page_allocator, host_copy, "") catch {};
+            return;
+        };
+        browser_favicon_url_owned.append(std.heap.page_allocator, url_copy) catch {};
+        _ = browser_favicon_url_cache.put(std.heap.page_allocator, host_copy, url_copy) catch {};
+        return;
+    }
+}
+
+fn persistFaviconUrlCacheEntry(host: []const u8, found: ?[]u8) !void {
+    const allocator = std.heap.page_allocator;
+    const path = try webCacheFilePath(allocator, favicon_url_cache_file_name);
+    defer allocator.free(path);
+    const existing = readFileAbsoluteAllocCompat(allocator, path, 2 * 1024 * 1024) catch |err| switch (err) {
+        error.FileNotFound => try allocator.dupe(u8, ""),
+        else => return err,
+    };
+    defer allocator.free(existing);
+    var buf = std.ArrayList(u8).empty;
+    defer buf.deinit(allocator);
+    var lines = std.mem.splitScalar(u8, existing, '\n');
+    var replaced = false;
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trimRight(u8, line_raw, "\r");
+        if (line.len == 0) continue;
+        var fields = std.mem.splitScalar(u8, line, '\t');
+        const entry_host = fields.next() orelse continue;
+        if (std.mem.eql(u8, entry_host, host)) {
+            try buf.writer(allocator).print("{s}\t{s}\n", .{ host, found orelse "" });
+            replaced = true;
+        } else {
+            try buf.writer(allocator).print("{s}\n", .{line});
+        }
+    }
+    if (!replaced) {
+        try buf.writer(allocator).print("{s}\t{s}\n", .{ host, found orelse "" });
+    }
+    try writeFileAtomicAbsolute(path, buf.items);
 }
 
 fn collectChromiumBookmarksLocked(browser_label: []const u8, value: std.json.Value) !void {
