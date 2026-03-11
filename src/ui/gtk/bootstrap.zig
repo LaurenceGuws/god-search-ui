@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_mod = @import("../../app/mod.zig");
+const gtk_bootstrap_context = @import("bootstrap_context.zig");
 const gtk_types = @import("types.zig");
 const gtk_help_panel = @import("help_panel.zig");
 const gtk_preview = @import("preview.zig");
@@ -174,95 +175,20 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
     c.gtk_overlay_set_child(@ptrCast(content_overlay), content_stack);
     c.gtk_overlay_add_overlay(@ptrCast(content_overlay), help_panel_row);
 
-    const ctx: *UiContext = @ptrCast(@alignCast(c.g_malloc0(@sizeOf(UiContext))));
-    const allocator_box = launch.allocator.create(std.mem.Allocator) catch {
-        c.g_free(ctx);
-        return;
+    const widgets = gtk_bootstrap_context.WidgetRefs{
+        .window = window,
+        .entry = entry,
+        .status = status,
+        .list = list,
+        .scroller = scroller,
+        .preview_panel = preview_panel,
+        .preview_title = preview_title,
+        .preview_toggle_button = preview_toggle_button,
+        .preview_text_scroller = preview_text_scroller,
+        .preview_text = preview_text,
     };
-    allocator_box.* = launch.allocator;
-    ctx.launch_ctx = @ptrCast(launch);
-    ctx.window = @ptrCast(window);
-    ctx.entry = @ptrCast(entry);
-    ctx.status = @ptrCast(status);
-    ctx.list = @ptrCast(list);
-    ctx.scroller = @ptrCast(scroller);
-    ctx.preview_panel = @ptrCast(preview_panel);
-    ctx.preview_title = @ptrCast(preview_title);
-    ctx.preview_toggle_button = @ptrCast(preview_toggle_button);
-    ctx.preview_text_scroller = @ptrCast(preview_text_scroller);
-    ctx.preview_text_view = @ptrCast(preview_text);
-    ctx.allocator = @ptrCast(allocator_box);
-    ctx.service = launch.service;
-    ctx.telemetry = launch.telemetry;
-    ctx.resident_mode = if (launch.resident_mode) gtk_types.GTRUE else gtk_types.GFALSE;
-    ctx.pending_power_confirm = gtk_types.GFALSE;
-    ctx.clear_query_on_close = gtk_types.GFALSE;
-    ctx.search_debounce_id = 0;
-    ctx.status_reset_id = 0;
-    ctx.last_status_hash = 0;
-    ctx.last_status_tone = 0;
-    ctx.last_render_hash = 0;
-    ctx.last_preview_hash = 0;
-    ctx.preview_enabled = gtk_types.GFALSE;
-    ctx.preview_dir_tree_mode = gtk_types.GFALSE;
-    ctx.async_search_generation = 0;
-    ctx.async_spinner_id = 0;
-    ctx.refresh_spinner_id = 0;
-    ctx.async_ready_id = 0;
-    ctx.startup_idle_id = 0;
-    ctx.async_spinner_phase = 0;
-    ctx.refresh_spinner_phase = 0;
-    ctx.async_inflight = gtk_types.GFALSE;
-    ctx.refresh_inflight = gtk_types.GFALSE;
-    ctx.async_worker_active = gtk_types.GFALSE;
-    ctx.async_pending_query_ptr = null;
-    ctx.async_pending_query_len = 0;
-    ctx.async_shutdown = gtk_types.GFALSE;
-    ctx.async_worker_count = 0;
-    ctx.launch_start_ns = launch_start_ns;
-    ctx.focus_ready_logged = gtk_types.GFALSE;
-    ctx.first_keypress_logged = gtk_types.GFALSE;
-    ctx.first_input_logged = gtk_types.GFALSE;
-    ctx.last_selected_row_index = -1;
-    ctx.last_scroll_position = 0;
-    ctx.last_query_text = null;
-    ctx.last_query_len = 0;
-    ctx.startup_key_queue_id = 0;
-    ctx.startup_key_queue_active = gtk_types.GFALSE;
-    ctx.startup_key_queue_len = 0;
-    ctx.startup_key_queue = [_]u32{0} ** 24;
-    ctx.result_query_hash = 0;
-    ctx.result_total_len = 0;
-    ctx.result_window_limit = 20;
-    ctx.deferred_dynamic_clear_id = 0;
-    ctx.deferred_stats_refresh_id = 0;
-    ctx.show_nerd_stats = if (launch.show_nerd_stats) gtk_types.GTRUE else gtk_types.GFALSE;
-    ctx.active_query_hash = 0;
-    ctx.active_query_started_ns = 0;
-    ctx.last_ui_query_total_ns = 0;
-    ctx.last_query_dynamic = gtk_types.GFALSE;
-    ctx.package_preview_timeout_id = 0;
-    ctx.package_preview_action_ptr = null;
-    ctx.package_preview_action_len = 0;
-    c.g_mutex_init(&ctx.async_worker_lock);
-    c.g_cond_init(&ctx.async_worker_cond);
-
-    const key_controller = c.gtk_event_controller_key_new();
-    _ = c.g_signal_connect_data(key_controller, "key-pressed", c.G_CALLBACK(hooks.on_key_pressed), ctx, null, 0);
-    c.gtk_widget_add_controller(window, @ptrCast(key_controller));
-    _ = c.g_signal_connect_data(entry, "changed", c.G_CALLBACK(hooks.on_search_changed), ctx, null, 0);
-    _ = c.g_signal_connect_data(entry, "activate", c.G_CALLBACK(hooks.on_entry_activate), ctx, null, 0);
-    _ = c.g_signal_connect_data(list, "row-activated", c.G_CALLBACK(hooks.on_row_activated), ctx, null, 0);
-    _ = c.g_signal_connect_data(list, "row-selected", c.G_CALLBACK(hooks.on_row_selected), ctx, null, 0);
-    _ = c.g_signal_connect_data(preview_toggle_button, "clicked", c.G_CALLBACK(gtk_preview.onPreviewToggleClicked), ctx, null, 0);
-    const vadj = c.gtk_scrolled_window_get_vadjustment(@ptrCast(scroller));
-    if (vadj != null) {
-        _ = c.g_signal_connect_data(vadj, "changed", c.G_CALLBACK(hooks.on_adjustment_changed), ctx, null, 0);
-        _ = c.g_signal_connect_data(vadj, "value-changed", c.G_CALLBACK(hooks.on_adjustment_changed), ctx, null, 0);
-    }
-    _ = c.g_signal_connect_data(window, "close-request", c.G_CALLBACK(hooks.on_close_request), ctx, null, 0);
-    _ = c.g_signal_connect_data(window, "destroy", c.G_CALLBACK(hooks.on_destroy), ctx, null, 0);
-    _ = c.g_signal_connect_data(window, "notify::is-active", c.G_CALLBACK(hooks.on_window_active_notify), ctx, null, 0);
+    const ctx = gtk_bootstrap_context.createUiContext(launch, widgets, launch_start_ns) orelse return;
+    gtk_bootstrap_context.connectSignals(ctx, widgets, hooks);
 
     c.gtk_box_append(@ptrCast(root_box), entry_row);
     c.gtk_box_append(@ptrCast(root_box), content_overlay);
