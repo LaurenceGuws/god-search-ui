@@ -249,28 +249,24 @@ pub const Shell = struct {
     fn refreshSnapshot(ctx: *UiContext) void {
         gtk_shell_actions.refreshSnapshot(ctx, .{
             .set_status = setStatus,
-            .populate_results = populateResults,
         });
     }
 
     fn reloadConfig(ctx: *UiContext) void {
         gtk_shell_actions.reloadConfig(ctx, .{
             .set_status = setStatus,
-            .populate_results = populateResults,
         });
     }
 
     fn showDirActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, dir_path: []const u8) void {
         gtk_shell_actions.showDirActionMenu(ctx, allocator, dir_path, .{
             .set_status = setStatus,
-            .populate_results = populateResults,
         });
     }
 
     fn showFileActionMenu(ctx: *UiContext, allocator: std.mem.Allocator, file_action: []const u8) void {
         gtk_shell_actions.showFileActionMenu(ctx, allocator, file_action, .{
             .set_status = setStatus,
-            .populate_results = populateResults,
         });
     }
 

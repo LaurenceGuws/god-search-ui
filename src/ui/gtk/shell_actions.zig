@@ -17,7 +17,6 @@ const GFALSE = gtk_types.GFALSE;
 
 pub const Hooks = struct {
     set_status: *const fn (*gtk_types.UiContext, []const u8) void,
-    populate_results: *const fn (*gtk_types.UiContext, []const u8) void,
 };
 
 pub fn refreshSnapshot(ctx: *gtk_types.UiContext, hooks: Hooks) void {
@@ -25,14 +24,12 @@ pub fn refreshSnapshot(ctx: *gtk_types.UiContext, hooks: Hooks) void {
     const allocator = allocator_ptr.*;
     const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
     const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
-    const parsed_query = search_mod.parseQuery(query);
     @import("shell_startup.zig").storeQueryText(ctx, query);
     if (refreshUnsupportedMessageForQuery(query)) |msg| {
         hooks.set_status(ctx, msg);
         return;
     }
 
-    _ = parsed_query;
     gtk_async.clearAsyncSearchCache(ctx, allocator);
     ctx.service.clearDynamicState(allocator);
     providers_mod.invalidateWebCaches();
@@ -129,7 +126,6 @@ fn onRefreshSpinnerTick(user_data: ?*anyopaque) callconv(.c) c.gboolean {
     }
     updateRefreshSpinnerFrame(ctx, .{
         .set_status = setStatus,
-        .populate_results = @import("shell_controller.zig").populateResults,
     });
     return GTRUE;
 }
