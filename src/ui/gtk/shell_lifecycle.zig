@@ -6,6 +6,7 @@ const gtk_async_coord = @import("async_coordinator.zig");
 const gtk_controller = @import("controller.zig");
 const gtk_deferred_clear = @import("deferred_clear.zig");
 const gtk_preview = @import("preview.zig");
+const gtk_shell_controller = @import("shell_controller.zig");
 
 const c = gtk_types.c;
 const GTRUE = gtk_types.GTRUE;
@@ -16,36 +17,7 @@ const LaunchContext = gtk_bootstrap.LaunchContext;
 pub fn onCloseRequest(_: ?*c.GtkWindow, user_data: ?*anyopaque) callconv(.c) c.gboolean {
     if (user_data == null) return GFALSE;
     const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-    if (ctx.resident_mode == GTRUE) {
-        captureListState(ctx);
-        std.log.info(
-            "ram_event=ui_close_request query_hash={d} window_limit={d} clear_query_on_close={}",
-            .{
-                ctx.result_query_hash,
-                ctx.result_window_limit,
-                ctx.clear_query_on_close == GTRUE,
-            },
-        );
-        gtk_deferred_clear.request(ctx);
-        gtk_preview.cancelPendingWork(ctx);
-        if (ctx.clear_query_on_close == GTRUE) {
-            const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-            const allocator = allocator_ptr.*;
-            c.gtk_editable_set_text(@ptrCast(ctx.entry), "");
-            c.gtk_editable_set_position(@ptrCast(ctx.entry), -1);
-            ctx.last_selected_row_index = -1;
-            ctx.last_scroll_position = 0;
-            if (ctx.last_query_text) |query_ptr| {
-                allocator.free(query_ptr[0..ctx.last_query_len]);
-                ctx.last_query_text = null;
-                ctx.last_query_len = 0;
-            }
-            ctx.clear_query_on_close = GFALSE;
-        }
-        c.gtk_widget_set_visible(ctx.window, GFALSE);
-        return GTRUE;
-    }
-    return GFALSE;
+    return gtk_shell_controller.onCloseRequest(ctx);
 }
 
 pub fn onWindowActiveNotify(window: ?*c.GtkWindow, _: ?*c.GParamSpec, user_data: ?*anyopaque) callconv(.c) void {
@@ -54,15 +26,7 @@ pub fn onWindowActiveNotify(window: ?*c.GtkWindow, _: ?*c.GParamSpec, user_data:
     if (ctx.resident_mode != GTRUE) return;
     if (c.gtk_widget_get_visible(ctx.window) != GTRUE) return;
     if (c.gtk_window_is_active(window) == GTRUE) return;
-
-    captureListState(ctx);
-    std.log.info(
-        "ram_event=ui_focus_lost_hide query_hash={d} window_limit={d}",
-        .{ ctx.result_query_hash, ctx.result_window_limit },
-    );
-    gtk_deferred_clear.request(ctx);
-    gtk_preview.cancelPendingWork(ctx);
-    c.gtk_widget_set_visible(ctx.window, GFALSE);
+    gtk_shell_controller.onWindowFocusLost(ctx);
 }
 
 pub fn captureListState(ctx: *UiContext) void {

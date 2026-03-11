@@ -5,7 +5,6 @@ const gtk_nav = @import("navigation.zig");
 const gtk_query = @import("query_helpers.zig");
 const gtk_row_data = @import("row_data.zig");
 const gtk_preview = @import("preview.zig");
-const gtk_deferred_clear = @import("deferred_clear.zig");
 
 const c = gtk_types.c;
 const UiContext = gtk_types.UiContext;
@@ -17,6 +16,7 @@ pub const InputHooks = struct {
     reload_config: *const fn (*UiContext) void,
     toggle_preview: *const fn (*UiContext) void,
     set_status: *const fn (*UiContext, []const u8) void,
+    hide_session: *const fn (*UiContext) void,
 };
 
 pub const StatusHooks = struct {
@@ -37,9 +37,7 @@ pub fn handleKeyPressed(ctx: *UiContext, keyval: c.guint, state: c.GdkModifierTy
     switch (keyval) {
         c.GDK_KEY_Escape => {
             if (ctx.resident_mode == GTRUE) {
-                captureListStateForClose(ctx);
-                gtk_deferred_clear.request(ctx);
-                c.gtk_widget_set_visible(ctx.window, GFALSE);
+                hooks.hide_session(ctx);
             } else {
                 c.gtk_window_close(@ptrCast(ctx.window));
             }
@@ -241,16 +239,4 @@ pub fn handleRowSelected(ctx: *UiContext, row: *c.GtkListBoxRow, hooks: StatusHo
     const msg = std.fmt.allocPrint(allocator_ptr.*, "Enter launch {s}: {s}", .{ kind_label, title }) catch return;
     defer allocator_ptr.*.free(msg);
     hooks.set_status(ctx, msg);
-}
-
-fn captureListStateForClose(ctx: *UiContext) void {
-    const selected = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list));
-    ctx.last_selected_row_index = if (selected != null) c.gtk_list_box_row_get_index(selected) else -1;
-
-    const adjustment = c.gtk_scrolled_window_get_vadjustment(@ptrCast(ctx.scroller));
-    if (adjustment != null) {
-        ctx.last_scroll_position = c.gtk_adjustment_get_value(adjustment);
-    } else {
-        ctx.last_scroll_position = 0;
-    }
 }

@@ -28,6 +28,7 @@ const gtk_shell_lifecycle = @import("gtk/shell_lifecycle.zig");
 const gtk_deferred_clear = @import("gtk/deferred_clear.zig");
 const gtk_shell_notifications = @import("gtk/shell_notifications.zig");
 const gtk_shell_notifications_popup = @import("gtk/shell_notifications_popup.zig");
+const gtk_shell_controller = @import("gtk/shell_controller.zig");
 const gtk_shell_startup = @import("gtk/shell_startup.zig");
 const SurfaceMode = @import("surfaces/mod.zig").SurfaceMode;
 const PlacementPolicy = @import("placement/mod.zig").RuntimePolicy;
@@ -152,6 +153,7 @@ pub const Shell = struct {
             .reload_config = reloadConfig,
             .toggle_preview = togglePreview,
             .set_status = setStatus,
+            .hide_session = hideSession,
         });
     }
 
@@ -165,51 +167,23 @@ pub const Shell = struct {
         _ = entry;
         if (user_data == null) return;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        clearPowerConfirmation(ctx);
-
-        if (ctx.search_debounce_id != 0) {
-            _ = c.g_source_remove(ctx.search_debounce_id);
-            ctx.search_debounce_id = 0;
-        }
-        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
-        if (ctx.first_input_logged == GFALSE and query.len > 0) {
-            ctx.first_input_logged = GTRUE;
-            logStartupMetric(ctx, "startup.first_input_ms");
-        }
-        if (query.len > 0 and ctx.startup_key_queue_active == GTRUE) {
-            if (ctx.startup_key_queue_id != 0) {
-                _ = c.g_source_remove(ctx.startup_key_queue_id);
-                ctx.startup_key_queue_id = 0;
-            }
-            gtk_controller.flushAndDisableStartupKeyQueue(ctx);
-        }
-        gtk_controller.updateEntryRouteIcon(ctx, query);
-        gtk_shell_startup.storeQueryText(ctx, query);
-        if (std.mem.trim(u8, query, " \t\r\n").len == 0) {
-            cancelAsyncRouteSearch(ctx);
-        }
-        if (ctx.pending_power_confirm == GFALSE) {
-            setStatus(ctx, "Searching...");
-        }
-        const debounce_ms = searchDebounceMsForQuery(std.mem.trim(u8, query, " \t\r\n"));
-        ctx.search_debounce_id = c.g_timeout_add(debounce_ms, onSearchDebounced, ctx);
+        gtk_shell_controller.onSearchChanged(ctx, .{
+            .clear_power_confirmation = clearPowerConfirmation,
+            .set_status = setStatus,
+            .log_startup_metric = logStartupMetric,
+            .populate_results = populateResults,
+        });
     }
 
     fn onSearchDebounced(user_data: ?*anyopaque) callconv(.c) c.gboolean {
         if (user_data == null) return GFALSE;
         const ctx: *UiContext = @ptrCast(@alignCast(user_data.?));
-        ctx.search_debounce_id = 0;
-
-        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-        if (text_ptr == null) {
-            populateResults(ctx, "");
-            return GFALSE;
-        }
-        const query = std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr)));
-        gtk_shell_startup.storeQueryText(ctx, query);
-        populateResults(ctx, query);
-        return GFALSE;
+        return gtk_shell_controller.onSearchDebounced(ctx, .{
+            .clear_power_confirmation = clearPowerConfirmation,
+            .set_status = setStatus,
+            .log_startup_metric = logStartupMetric,
+            .populate_results = populateResults,
+        });
     }
 
     fn onResultsAdjustmentChanged(_: ?*c.GtkAdjustment, user_data: ?*anyopaque) callconv(.c) void {
@@ -218,10 +192,6 @@ pub const Shell = struct {
         gtk_controller.handleResultsAdjustmentChanged(ctx, .{
             .poll_more = pollMoreResults,
         });
-    }
-
-    fn searchDebounceMsForQuery(query_trimmed: []const u8) c.guint {
-        return gtk_query.searchDebounceMsForQuery(query_trimmed);
     }
 
     fn onRowActivated(_: ?*c.GtkListBox, row: ?*c.GtkListBoxRow, user_data: ?*anyopaque) callconv(.c) void {
@@ -254,72 +224,37 @@ pub const Shell = struct {
     }
 
     fn populateResults(ctx: *UiContext, query: []const u8) void {
-        gtk_results_flow.populateResults(ctx, query, .{
-            .start_async_route_search = startAsyncRouteSearch,
-            .cancel_async_route_search = cancelAsyncRouteSearch,
-        });
+        gtk_shell_controller.populateResults(ctx, query);
         gtk_preview.refreshFromSelection(ctx);
     }
 
     fn pollMoreResults(ctx: *UiContext) void {
-        if (!gtk_results_flow.shouldPollMoreOnScroll(ctx)) return;
-        const text_ptr = c.gtk_editable_get_text(@ptrCast(ctx.entry));
-        const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
-        populateResults(ctx, query);
+        gtk_shell_controller.pollMoreResults(ctx, .{
+            .clear_power_confirmation = clearPowerConfirmation,
+            .set_status = setStatus,
+            .log_startup_metric = logStartupMetric,
+            .populate_results = populateResults,
+        });
     }
 
     fn startAsyncRouteSearch(ctx: *UiContext, allocator: std.mem.Allocator, query_trimmed: []const u8) void {
-        gtk_async_coord.startAsyncRouteSearch(ctx, allocator, query_trimmed, onAsyncSearchReady);
+        gtk_shell_controller.startAsyncRouteSearch(ctx, allocator, query_trimmed);
     }
 
     fn onAsyncSearchReady(user_data: ?*anyopaque) callconv(.c) c.gboolean {
         if (user_data == null) return GFALSE;
         const payload: *AsyncSearchResult = @ptrCast(@alignCast(user_data.?));
         const ctx = payload.ctx;
-        gtk_async_coord.clearAsyncReadySourceIdIf(ctx, payload.ready_source_id);
         const allocator_ptr: *std.mem.Allocator = @ptrCast(@alignCast(ctx.allocator));
-        const allocator = allocator_ptr.*;
-        if (gtk_async_coord.isAsyncShuttingDown(ctx)) return GFALSE;
-        ctx.async_worker_active = GFALSE;
-        if (payload.generation != ctx.async_search_generation) {
-            _ = launchPendingAsyncQuery(ctx, allocator);
-            return GFALSE;
-        }
-
-        gtk_async_coord.endAsyncSpinner(ctx);
-        if (payload.search_error) |err| {
-            gtk_results_flow.renderSearchError(ctx, allocator, err);
-            return GFALSE;
-        }
-        var scored = allocator.alloc(ScoredCandidate, payload.rows.len) catch return GFALSE;
-        defer allocator.free(scored);
-        for (payload.rows, 0..) |row, idx| {
-            scored[idx] = .{
-                .candidate = .{
-                    .kind = row.kind,
-                    .title = row.title,
-                    .subtitle = row.subtitle,
-                    .action = row.action,
-                    .icon = row.icon,
-                },
-                .score = row.score,
-            };
-        }
-        const query_trimmed = std.mem.trim(u8, payload.query, " \t\r\n");
-        const had_selection = c.gtk_list_box_get_selected_row(@ptrCast(ctx.list)) != null;
-        gtk_results_flow.cacheAndRenderAsyncRows(ctx, allocator, query_trimmed, scored, payload.total_len);
-        if (!had_selection and ctx.result_window_limit <= 20) {
-            gtk_nav.selectFirstActionableRow(ctx);
-        }
-        return GFALSE;
+        return gtk_shell_controller.onAsyncSearchReady(ctx, payload, allocator_ptr.*);
     }
 
     fn cancelAsyncRouteSearch(ctx: *UiContext) void {
-        gtk_async_coord.cancelAsyncRouteSearch(ctx);
+        gtk_shell_controller.cancelAsyncRouteSearch(ctx);
     }
 
     fn launchPendingAsyncQuery(ctx: *UiContext, allocator: std.mem.Allocator) bool {
-        return gtk_async_coord.launchPendingAsyncQuery(ctx, allocator, onAsyncSearchReady);
+        return gtk_shell_controller.launchPendingAsyncQuery(ctx, allocator);
     }
 
     fn refreshSnapshot(ctx: *UiContext) void {
@@ -486,6 +421,10 @@ pub const Shell = struct {
         if (ctx.pending_power_confirm == GFALSE) return;
         ctx.pending_power_confirm = GFALSE;
         setStatus(ctx, "");
+    }
+
+    fn hideSession(ctx: *UiContext) void {
+        gtk_shell_controller.hideSession(ctx, .escape);
     }
 
     fn emitTelemetry(ctx: *UiContext, kind: []const u8, action: []const u8, status: []const u8, detail: []const u8) void {
@@ -685,56 +624,12 @@ pub const Shell = struct {
         }
 
         fn applyControlEvent(state: *State, event: shell_mod.module.Event) void {
-            switch (event) {
-                .summon => if (state.ctx.launch.ctx) |ui_ctx| {
-                    std.log.info(
-                        "ram_event=ui_summon query_hash={d} window_limit={d} visible={}",
-                        .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit, c.gtk_widget_get_visible(ui_ctx.window) == GTRUE },
-                    );
-                    summonExistingUi(ui_ctx);
-                } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
-                .hide => if (state.ctx.launch.ctx) |ui_ctx| {
-                    std.log.info(
-                        "ram_event=ui_hide request query_hash={d} window_limit={d}",
-                        .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit },
-                    );
-                    gtk_deferred_clear.request(ui_ctx);
-                    gtk_shell_lifecycle.captureListState(ui_ctx);
-                    c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
-                },
-                .toggle => if (state.ctx.launch.ctx) |ui_ctx| {
-                    if (c.gtk_widget_get_visible(ui_ctx.window) == GTRUE) {
-                        std.log.info(
-                            "ram_event=ui_toggle_hide request query_hash={d} window_limit={d}",
-                            .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit },
-                        );
-                        gtk_deferred_clear.request(ui_ctx);
-                        gtk_shell_lifecycle.captureListState(ui_ctx);
-                        c.gtk_widget_set_visible(ui_ctx.window, GFALSE);
-                    } else {
-                        std.log.info(
-                            "ram_event=ui_toggle_show query_hash={d} window_limit={d}",
-                            .{ ui_ctx.result_query_hash, ui_ctx.result_window_limit },
-                        );
-                        summonExistingUi(ui_ctx);
-                    }
-                } else c.g_application_activate(@ptrCast(state.ctx.gtk_app)),
-                else => {},
-            }
-        }
-
-        fn summonExistingUi(ui_ctx: *UiContext) void {
-            c.gtk_window_present(@ptrCast(ui_ctx.window));
-            _ = c.gtk_entry_grab_focus_without_selecting(@ptrCast(@alignCast(ui_ctx.entry)));
-            const text_ptr = c.gtk_editable_get_text(@ptrCast(ui_ctx.entry));
-            const query = if (text_ptr != null) std.mem.span(@as([*:0]const u8, @ptrCast(text_ptr))) else "";
-            if (std.mem.trim(u8, query, " \t\r\n").len == 0) {
-                ui_ctx.last_render_hash = 0;
-                ui_ctx.last_selected_row_index = -1;
-                ui_ctx.last_scroll_position = 0;
-                populateResults(ui_ctx, "");
-            }
-            gtk_shell_startup.afterActivate(ui_ctx);
+            gtk_shell_controller.applyLauncherControlEvent(state.ctx.gtk_app, state.ctx.launch.ctx, event, .{
+                .clear_power_confirmation = clearPowerConfirmation,
+                .set_status = setStatus,
+                .log_startup_metric = logStartupMetric,
+                .populate_results = populateResults,
+            });
         }
     };
 
