@@ -7,7 +7,7 @@ set -euo pipefail
 # Optional overrides:
 #   RERUN_BUILD_FLAGS="-Doptimize=ReleaseFast"
 #   RERUN_DAEMON_ARGS="--ui-daemon"
-#   RERUN_BIN="./zig-out/bin/god_search_ui"
+#   RERUN_BIN="./zig-out/bin/god-search-ui"
 #   RERUN_LOG="$HOME/.local/state/god-search-ui/daemon.log"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +15,7 @@ cd "$ROOT_DIR"
 
 : "${RERUN_BUILD_FLAGS:=-Doptimize=ReleaseFast}"
 : "${RERUN_DAEMON_ARGS:=--ui-daemon}"
-: "${RERUN_BIN:=./zig-out/bin/god_search_ui}"
+: "${RERUN_BIN:=./zig-out/bin/god-search-ui}"
 : "${RERUN_LOG:=$HOME/.local/state/god-search-ui/daemon.log}"
 : "${RERUN_KILL_TARGET:=true}"
 
@@ -38,7 +38,7 @@ zig build "${build_flags[@]}"
 if [[ "$RERUN_KILL_TARGET" == "true" ]]; then
     echo "[re-run] stopping existing daemon variants (--ui-daemon)"
     mapfile -t matched_pids < <(
-        pgrep -a -f '(god_search_ui|god-search-ui).*(--ui-daemon)' | awk '{print $1}' || true
+        pgrep -a -f 'god-search-ui.*(--ui-daemon)' | awk '{print $1}' || true
     )
     if ((${#matched_pids[@]} == 0)); then
         echo "[re-run] no existing daemon found"

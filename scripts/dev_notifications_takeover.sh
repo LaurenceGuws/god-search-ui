@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MODE="${1:-takeover}"
-BIN="${BIN:-./zig-out/bin/god_search_ui}"
+BIN="${BIN:-./zig-out/bin/god-search-ui}"
 SOCKET_PATH="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/god-search-ui.sock"
 
 usage() {
@@ -69,7 +69,7 @@ case "$MODE" in
         ;;
     restore)
         echo "[dev-notify] stopping god-search-ui daemon"
-        pkill -x god_search_ui 2>/dev/null || true
+        pkill -x god-search-ui 2>/dev/null || true
         rm -f "$SOCKET_PATH" 2>/dev/null || true
 
         echo "[dev-notify] starting swaync"

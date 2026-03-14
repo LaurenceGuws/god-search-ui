@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-BIN="${BIN:-./zig-out/bin/god_search_ui}"
+BIN="${BIN:-./zig-out/bin/god-search-ui}"
 if [[ ! -x "$BIN" ]]; then
   echo "missing binary: $BIN" >&2
   echo "build with: zig build -Doptimize=ReleaseFast" >&2

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-BIN="${BIN:-./zig-out/bin/god_search_ui}"
+BIN="${BIN:-./zig-out/bin/god-search-ui}"
 if [[ ! -x "$BIN" ]]; then
   echo "missing binary: $BIN" >&2
   echo "build with: zig build -Doptimize=ReleaseFast" >&2
@@ -32,12 +32,12 @@ fi
 tmp_dir="$(mktemp -d)"
 log_file="$tmp_dir/wm-event-smoke.log"
 cleanup() {
-  pkill -x god_search_ui 2>/dev/null || true
+  pkill -x god-search-ui 2>/dev/null || true
   rm -rf "$tmp_dir"
 }
 trap cleanup EXIT
 
-pkill -x god_search_ui 2>/dev/null || true
+pkill -x god-search-ui 2>/dev/null || true
 
 GOD_SEARCH_WM_EVENT_BRIDGE=1 GOD_SEARCH_WM_EVENT_LOG_EVERY=1 "$BIN" --ui-daemon >"$log_file" 2>&1 &
 i=0

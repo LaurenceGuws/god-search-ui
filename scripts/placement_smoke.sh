@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BIN="${BIN:-./zig-out/bin/god_search_ui}"
+BIN="${BIN:-./zig-out/bin/god-search-ui}"
 EXPECT_OUTPUT="${1:-}"
 
 echo "[placement-smoke] outputs:"

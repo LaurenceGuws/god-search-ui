@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BIN="${BIN:-./zig-out/bin/god_search_ui}"
+BIN="${BIN:-./zig-out/bin/god-search-ui}"
 MODE="${1:-start}"
 WAIT_SECS="${WAIT_SECS:-6}"
 LOG_PATH="${LOG_PATH:-$HOME/.local/state/god-search-ui/daemon.log}"
@@ -20,7 +20,7 @@ Options:
   --mask-swaync  Mask swaync.service via systemd user to prevent auto-activation takeover.
 
 Environment:
-  BIN            Path to god_search_ui binary (default: ./zig-out/bin/god_search_ui)
+  BIN            Path to god-search-ui binary (default: ./zig-out/bin/god-search-ui)
   WAIT_SECS      Max seconds to wait for bus ownership (default: 6)
   LOG_PATH       Daemon log path (default: ~/.local/state/god-search-ui/daemon.log)
   MASK_SWAYNC    Same as --mask-swaync when set to 1
@@ -61,7 +61,7 @@ stop_competitors() {
 
 start_daemon() {
   mkdir -p "$(dirname "$LOG_PATH")"
-  pkill -x god_search_ui >/dev/null 2>&1 || true
+  pkill -x god-search-ui >/dev/null 2>&1 || true
   nohup "$BIN" --ui-daemon >"$LOG_PATH" 2>&1 & disown
 }
 
@@ -103,8 +103,8 @@ case "$MODE" in
     echo "[dev-notif-start] owner: $(bus_info)"
     ;;
   stop)
-    pkill -x god_search_ui >/dev/null 2>&1 || true
-    echo "[dev-notif-start] stopped god_search_ui"
+    pkill -x god-search-ui >/dev/null 2>&1 || true
+    echo "[dev-notif-start] stopped god-search-ui"
     ;;
   *)
     usage

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-BIN="${BIN:-./zig-out/bin/god_search_ui}"
+BIN="${BIN:-./zig-out/bin/god-search-ui}"
 DAEMON_LOG="$HOME/.local/state/god-search-ui/daemon.log"
 OUT_CSV="${OUT_CSV:-/tmp/god-search-ui-ram-baseline.csv}"
 OUT_LOG="${OUT_LOG:-/tmp/god-search-ui-ram-daemon-log.txt}"
