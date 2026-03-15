@@ -1,11 +1,11 @@
 [Unit]
-Description=God Search UI Launcher
+Description=Wayspot Launcher
 After=graphical-session.target
 Wants=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/god-search-ui --ui-daemon
+ExecStart=/usr/bin/wayspot --ui-daemon
 Restart=on-failure
 RestartSec=1
 

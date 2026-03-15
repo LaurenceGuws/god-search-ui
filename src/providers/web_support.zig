@@ -25,7 +25,7 @@ pub fn cacheHomePath(allocator: std.mem.Allocator) ![]u8 {
 pub fn webCacheDir(allocator: std.mem.Allocator) ![]u8 {
     const cache_home = try cacheHomePath(allocator);
     defer allocator.free(cache_home);
-    return std.fs.path.join(allocator, &.{ cache_home, "god-search-ui", "web" });
+    return std.fs.path.join(allocator, &.{ cache_home, "wayspot", "web" });
 }
 
 pub fn webCacheFilePath(allocator: std.mem.Allocator, file_name: []const u8) ![]u8 {

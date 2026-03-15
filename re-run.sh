@@ -7,16 +7,16 @@ set -euo pipefail
 # Optional overrides:
 #   RERUN_BUILD_FLAGS="-Doptimize=ReleaseFast"
 #   RERUN_DAEMON_ARGS="--ui-daemon"
-#   RERUN_BIN="./zig-out/bin/god-search-ui"
-#   RERUN_LOG="$HOME/.local/state/god-search-ui/daemon.log"
+#   RERUN_BIN="./zig-out/bin/wayspot"
+#   RERUN_LOG="$HOME/.local/state/wayspot/daemon.log"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
 : "${RERUN_BUILD_FLAGS:=-Doptimize=ReleaseFast}"
 : "${RERUN_DAEMON_ARGS:=--ui-daemon}"
-: "${RERUN_BIN:=./zig-out/bin/god-search-ui}"
-: "${RERUN_LOG:=$HOME/.local/state/god-search-ui/daemon.log}"
+: "${RERUN_BIN:=./zig-out/bin/wayspot}"
+: "${RERUN_LOG:=$HOME/.local/state/wayspot/daemon.log}"
 : "${RERUN_KILL_TARGET:=true}"
 
 if [[ -f "$ROOT_DIR/.rerun.env" ]]; then
@@ -28,7 +28,7 @@ read -r -a build_flags <<<"$RERUN_BUILD_FLAGS"
 read -r -a daemon_args <<<"$RERUN_DAEMON_ARGS"
 
 runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-sock="$runtime_dir/god-search-ui.sock"
+sock="$runtime_dir/wayspot.sock"
 
 mkdir -p "$(dirname "$RERUN_LOG")"
 
@@ -38,7 +38,7 @@ zig build "${build_flags[@]}"
 if [[ "$RERUN_KILL_TARGET" == "true" ]]; then
     echo "[re-run] stopping existing daemon variants (--ui-daemon)"
     mapfile -t matched_pids < <(
-        pgrep -a -f 'god-search-ui.*(--ui-daemon)' | awk '{print $1}' || true
+        pgrep -a -f 'wayspot.*(--ui-daemon)' | awk '{print $1}' || true
     )
     if ((${#matched_pids[@]} == 0)); then
         echo "[re-run] no existing daemon found"

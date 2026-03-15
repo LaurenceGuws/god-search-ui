@@ -16,9 +16,9 @@ pub fn show(issue: []const u8, hint: []const u8) void {
     lock.unlock();
 
     const maybe_id = if (replace_id != 0)
-        runNotifyWithReplace("god-search-ui config issue", detail, "critical", 0, replace_id)
+        runNotifyWithReplace("wayspot config issue", detail, "critical", 0, replace_id)
     else
-        runNotify("god-search-ui config issue", detail, "critical", 0);
+        runNotify("wayspot config issue", detail, "critical", 0);
 
     if (maybe_id) |id| {
         lock.lock();
@@ -34,7 +34,7 @@ pub fn clearIfActive() void {
     if (id == 0) return;
 
     _ = runNotifyWithReplace(
-        "god-search-ui config",
+        "wayspot config",
         "Config is valid. Issue cleared.",
         "low",
         1200,

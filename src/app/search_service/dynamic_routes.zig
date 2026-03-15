@@ -616,7 +616,7 @@ fn collectEmojiCandidates(
 }
 
 fn resolveNerdIconSourcePath(allocator: std.mem.Allocator) ![]u8 {
-    if (std.process.getEnvVarOwned(allocator, "GOD_SEARCH_NERD_ICONS_FILE")) |path| {
+    if (std.process.getEnvVarOwned(allocator, "WAYSPOT_NERD_ICONS_FILE")) |path| {
         return path;
     } else |_| {}
     const home = try std.process.getEnvVarOwned(allocator, "HOME");

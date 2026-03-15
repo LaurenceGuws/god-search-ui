@@ -50,7 +50,7 @@ pub fn activate(gtk_app: *c.GtkApplication, launch: *LaunchContext, hooks: Activ
 
     const launch_start_ns = std.time.nanoTimestamp();
     const window = c.gtk_application_window_new(gtk_app);
-    c.gtk_window_set_title(@ptrCast(window), "God Search");
+    c.gtk_window_set_title(@ptrCast(window), "Wayspot");
     const use_layer_launcher = layer_shell.shouldUseLayerShell(launch.surface_mode);
     if (use_layer_launcher and !layer_shell.applyLauncher(window, launch.placement_policy.launcher)) {
         std.log.err("launcher: layer-shell requested but unavailable", .{});

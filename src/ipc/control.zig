@@ -285,11 +285,11 @@ pub fn defaultSocketPathAlloc(allocator: std.mem.Allocator) ![]u8 {
     const xdg_runtime = std.process.getEnvVarOwned(allocator, "XDG_RUNTIME_DIR") catch null;
     if (xdg_runtime) |runtime_dir| {
         defer allocator.free(runtime_dir);
-        return std.fmt.allocPrint(allocator, "{s}/god-search-ui.sock", .{runtime_dir});
+        return std.fmt.allocPrint(allocator, "{s}/wayspot.sock", .{runtime_dir});
     }
 
     const uid = std.posix.getuid();
-    return std.fmt.allocPrint(allocator, "/tmp/god-search-ui-{d}.sock", .{uid});
+    return std.fmt.allocPrint(allocator, "/tmp/wayspot-{d}.sock", .{uid});
 }
 
 fn bindListener(socket_path: []const u8) !std.posix.socket_t {
@@ -478,7 +478,7 @@ fn connectWithRetryTimeout(fd: std.posix.socket_t, sockaddr: *const std.posix.so
 test "bindListener replaces stale occupied path and binds socket" {
     const allocator = std.testing.allocator;
     const pid = std.posix.getpid();
-    const path = try std.fmt.allocPrint(allocator, "/tmp/god-search-ui-stale-{d}.sock", .{pid});
+    const path = try std.fmt.allocPrint(allocator, "/tmp/wayspot-stale-{d}.sock", .{pid});
     defer allocator.free(path);
     std.posix.unlink(path) catch |err| {
         std.log.debug("test socket unlink pre failed path={s} err={s}", .{ path, @errorName(err) });
@@ -500,7 +500,7 @@ test "bindListener replaces stale occupied path and binds socket" {
 test "bindListener sets user-only socket permissions" {
     const allocator = std.testing.allocator;
     const pid = std.posix.getpid();
-    const path = try std.fmt.allocPrint(allocator, "/tmp/god-search-ui-mode-{d}.sock", .{pid});
+    const path = try std.fmt.allocPrint(allocator, "/tmp/wayspot-mode-{d}.sock", .{pid});
     defer allocator.free(path);
     std.posix.unlink(path) catch |err| {
         std.log.debug("test socket unlink pre failed path={s} err={s}", .{ path, @errorName(err) });

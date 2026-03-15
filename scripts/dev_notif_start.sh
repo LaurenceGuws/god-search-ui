@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BIN="${BIN:-./zig-out/bin/god-search-ui}"
+BIN="${BIN:-./zig-out/bin/wayspot}"
 MODE="${1:-start}"
 WAIT_SECS="${WAIT_SECS:-6}"
-LOG_PATH="${LOG_PATH:-$HOME/.local/state/god-search-ui/daemon.log}"
+LOG_PATH="${LOG_PATH:-$HOME/.local/state/wayspot/daemon.log}"
 MASK_SWAYNC="${MASK_SWAYNC:-0}"
 
 usage() {
@@ -12,17 +12,17 @@ usage() {
 Usage: scripts/dev_notif_start.sh [start|status|stop] [--mask-swaync]
 
 Modes:
-  start         Stop competing daemons, start god-search-ui --ui-daemon, wait for bus ownership.
+  start         Stop competing daemons, start wayspot --ui-daemon, wait for bus ownership.
   status        Print current org.freedesktop.Notifications owner info.
-  stop          Stop god-search-ui daemon.
+  stop          Stop wayspot daemon.
 
 Options:
   --mask-swaync  Mask swaync.service via systemd user to prevent auto-activation takeover.
 
 Environment:
-  BIN            Path to god-search-ui binary (default: ./zig-out/bin/god-search-ui)
+  BIN            Path to wayspot binary (default: ./zig-out/bin/wayspot)
   WAIT_SECS      Max seconds to wait for bus ownership (default: 6)
-  LOG_PATH       Daemon log path (default: ~/.local/state/god-search-ui/daemon.log)
+  LOG_PATH       Daemon log path (default: ~/.local/state/wayspot/daemon.log)
   MASK_SWAYNC    Same as --mask-swaync when set to 1
 USAGE
 }
@@ -40,7 +40,7 @@ wait_for_owner() {
   while (( SECONDS <= deadline )); do
     local info
     info="$(bus_info)"
-    if [[ "$info" == *"god-search-ui"* ]]; then
+    if [[ "$info" == *"wayspot"* ]]; then
       echo "$info"
       return 0
     fi
@@ -61,7 +61,7 @@ stop_competitors() {
 
 start_daemon() {
   mkdir -p "$(dirname "$LOG_PATH")"
-  pkill -x god-search-ui >/dev/null 2>&1 || true
+  pkill -x wayspot >/dev/null 2>&1 || true
   nohup "$BIN" --ui-daemon >"$LOG_PATH" 2>&1 & disown
 }
 
@@ -86,11 +86,11 @@ case "$MODE" in
     fi
     echo "[dev-notif-start] stopping competing notification daemons"
     stop_competitors
-    echo "[dev-notif-start] starting god-search-ui daemon"
+    echo "[dev-notif-start] starting wayspot daemon"
     start_daemon
     if info="$(wait_for_owner)"; then
       echo "[dev-notif-start] owner ready: $info"
-      echo "[dev-notif-start] test with: notify-send -a \"god-search-ui\" \"smoke\" \"hello\""
+      echo "[dev-notif-start] test with: notify-send -a \"wayspot\" \"smoke\" \"hello\""
       exit 0
     fi
     echo "[dev-notif-start] ERROR: bus ownership did not stabilize within ${WAIT_SECS}s" >&2
@@ -103,8 +103,8 @@ case "$MODE" in
     echo "[dev-notif-start] owner: $(bus_info)"
     ;;
   stop)
-    pkill -x god-search-ui >/dev/null 2>&1 || true
-    echo "[dev-notif-start] stopped god-search-ui"
+    pkill -x wayspot >/dev/null 2>&1 || true
+    echo "[dev-notif-start] stopped wayspot"
     ;;
   *)
     usage

@@ -1,4 +1,4 @@
-# god-search-ui
+# wayspot
 
 Scaffold for a Spotlight-style launcher UI on Wayland.
 
@@ -38,14 +38,14 @@ Optional deterministic Wayland anchoring via layer-shell:
 ```bash
 zig build run -- --ui
 ```
-Surface mode is configured via Lua config only (`~/.config/god-search-ui/config.lua`).
+Surface mode is configured via Lua config only (`~/.config/wayspot/config.lua`).
 Accepted values in Lua: `layer-shell` (recommended), `toplevel`.
 
 Lua config:
 ```bash
 zig build
 ```
-Config file path defaults to `~/.config/god-search-ui/config.lua` (override with `GOD_SEARCH_CONFIG_LUA`).
+Config file path defaults to `~/.config/wayspot/config.lua` (override with `WAYSPOT_CONFIG_LUA`).
 When missing, a default config file is auto-created on app startup paths that load runtime config.
 Generate default config:
 ```bash
@@ -66,46 +66,46 @@ Docs:
 Resident GTK modes (recommended for zero-drop fast summon):
 ```bash
 # Keep GTK process alive and visible on first launch
-god-search-ui --ui-resident
+wayspot --ui-resident
 
 # Keep GTK process alive and hidden until summon
-god-search-ui --ui-daemon
+wayspot --ui-daemon
 ```
-With `--ui-daemon`, bind your launcher key to `god-search-ui --ui` so each press re-activates the warm instance.
+With `--ui-daemon`, bind your launcher key to `wayspot --ui` so each press re-activates the warm instance.
 
 Control-plane commands (for resident/daemon mode):
 ```bash
-god-search-ui --ctl --help
-god-search-ui --ctl ping
-god-search-ui --ctl summon
-god-search-ui --ctl hide
-god-search-ui --ctl toggle
-god-search-ui --ctl version
-god-search-ui --ctl shell_health
-god-search-ui --ctl wm_event_stats
+wayspot --ctl --help
+wayspot --ctl ping
+wayspot --ctl summon
+wayspot --ctl hide
+wayspot --ctl toggle
+wayspot --ctl version
+wayspot --ctl shell_health
+wayspot --ctl wm_event_stats
 ```
 Reference: `docs/architecture/WA1_CONTROL_PLANE_SPEC.md`
 
 Control-plane quickstart:
 ```bash
-god-search-ui --ui-daemon
-god-search-ui --ctl ping
-god-search-ui --ctl summon
-god-search-ui --print-shell-health
+wayspot --ui-daemon
+wayspot --ctl ping
+wayspot --ctl summon
+wayspot --print-shell-health
 ```
 
 Runtime config introspection (prints resolved surface mode + placement policy):
 ```bash
-god-search-ui --print-config
+wayspot --print-config
 ```
 
 Output discovery for monitor pinning:
 ```bash
-god-search-ui --print-outputs
+wayspot --print-outputs
 ```
 Shell module health snapshot:
 ```bash
-god-search-ui --print-shell-health
+wayspot --print-shell-health
 ```
 If a daemon is running, this queries live module health over the control socket.
 Placement smoke:
@@ -115,7 +115,7 @@ scripts/placement_smoke.sh
 
 Optional advanced refresh mode:
 ```bash
-GOD_SEARCH_ASYNC_REFRESH=1 god-search-ui --ui
+WAYSPOT_ASYNC_REFRESH=1 wayspot --ui
 ```
 
 Apps cache supports optional icon metadata:
@@ -166,9 +166,9 @@ scripts/check_lua_config_validator.sh
 
 ## Packaging
 - Arch skeleton: `packaging/arch/PKGBUILD`
-- systemd user unit template: `packaging/systemd/god-search-ui.service`
-- desktop entry template: `packaging/desktop/god-search-ui.desktop`
-- icon asset: `assets/icons/god-search-ui.svg`
+- systemd user unit template: `packaging/systemd/wayspot.service`
+- desktop entry template: `packaging/desktop/wayspot.desktop`
+- icon asset: `assets/icons/wayspot.svg`
 - docs index and governance: `docs/INDEX.md`
 - DE shell vision and architecture plan: `docs/architecture/DE_SHELL_VISION.md`
 - WA-1 shell control-plane spec: `docs/architecture/WA1_CONTROL_PLANE_SPEC.md`

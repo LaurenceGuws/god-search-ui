@@ -108,7 +108,7 @@ pub fn loadStrict(allocator: std.mem.Allocator) !config.Settings {
         return settings;
     }
 
-    _ = c.lua_getglobal(lua, "god_search_ui");
+    _ = c.lua_getglobal(lua, "wayspot");
     if (c.lua_istable(lua, -1)) {
         settings = parseSettingsFromTop(lua, allocator, settings);
     }

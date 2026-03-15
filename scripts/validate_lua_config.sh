@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CFG="${1:-${GOD_SEARCH_CONFIG_LUA:-$HOME/.config/god-search-ui/config.lua}}"
+CFG="${1:-${WAYSPOT_CONFIG_LUA:-$HOME/.config/wayspot/config.lua}}"
 
 if ! command -v lua >/dev/null 2>&1; then
   echo "lua interpreter not found in PATH" >&2

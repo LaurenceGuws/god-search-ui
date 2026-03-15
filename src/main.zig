@@ -1,15 +1,15 @@
 const std = @import("std");
-const god_search_ui = @import("god_search_ui");
+const wayspot = @import("wayspot");
 
 pub fn main() !void {
-    const startup_sw = god_search_ui.app.Stopwatch.start();
+    const startup_sw = wayspot.app.Stopwatch.start();
     const allocator = std.heap.page_allocator;
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    const state = god_search_ui.app.bootstrap();
-    const logger = god_search_ui.app.Logger.init(.info);
-    logger.info("god-search-ui starting (mode={s})", .{@tagName(state.mode)});
+    const state = wayspot.app.bootstrap();
+    const logger = wayspot.app.Logger.init(.info);
+    logger.info("wayspot starting (mode={s})", .{@tagName(state.mode)});
 
     if (hasArg(args, "--ctl")) {
         const raw_cmd = argValueAfterFlag(args, "--ctl") orelse {
@@ -24,7 +24,7 @@ pub fn main() !void {
             std.process.exit(13);
         };
         if (cmd == .shell_health or cmd == .wm_event_stats) {
-            const response = god_search_ui.ipc.control.executeCommand(allocator, cmd) catch |err| {
+            const response = wayspot.ipc.control.executeCommand(allocator, cmd) catch |err| {
                 std.log.err("control command failure route={s} err={s}", .{ raw_cmd, @errorName(err) });
                 std.process.exit(10);
             };
@@ -51,7 +51,7 @@ pub fn main() !void {
             }
             std.process.exit(0);
         }
-        const response = god_search_ui.ipc.control.executeCommand(allocator, cmd) catch |err| {
+        const response = wayspot.ipc.control.executeCommand(allocator, cmd) catch |err| {
             std.log.err("control command failure route={s} err={s}", .{ raw_cmd, @errorName(err) });
             std.process.exit(10);
         };
@@ -70,21 +70,21 @@ pub fn main() !void {
     }
 
     if (hasArg(args, "--print-config")) {
-        var cfg = god_search_ui.config.load(allocator);
+        var cfg = wayspot.config.load(allocator);
         defer cfg.deinit(allocator);
-        god_search_ui.config.runtime_tools.apply(cfg);
+        wayspot.config.runtime_tools.apply(cfg);
         const surface_mode = resolveSurfaceMode(args, cfg);
         try printResolvedConfig(cfg, surface_mode);
         return;
     }
 
     if (hasArg(args, "--print-outputs")) {
-        try god_search_ui.ui.Diagnostics.printOutputs(allocator);
+        try wayspot.ui.Diagnostics.printOutputs(allocator);
         return;
     }
 
     if (hasArg(args, "--print-shell-health")) {
-        const live = god_search_ui.ipc.control.queryCommandMessage(allocator, .shell_health) catch null;
+        const live = wayspot.ipc.control.queryCommandMessage(allocator, .shell_health) catch null;
         if (live) |message| {
             defer allocator.free(message);
             var stdout_buffer: [4096]u8 = undefined;
@@ -97,24 +97,24 @@ pub fn main() !void {
             }
             try out.flush();
         } else {
-            try god_search_ui.ui.Diagnostics.printShellHealth(allocator);
+            try wayspot.ui.Diagnostics.printShellHealth(allocator);
         }
         return;
     }
 
     const ui_mode = hasArg(args, "--ui") or hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
     if (ui_mode) {
-        var cfg = god_search_ui.config.load(allocator);
+        var cfg = wayspot.config.load(allocator);
         defer cfg.deinit(allocator);
-        god_search_ui.config.runtime_tools.apply(cfg);
-        const cfg_issue = god_search_ui.config.consumeLastLoadIssue(allocator);
+        wayspot.config.runtime_tools.apply(cfg);
+        const cfg_issue = wayspot.config.consumeLastLoadIssue(allocator);
         defer if (cfg_issue) |msg| allocator.free(msg);
         if (cfg_issue == null) {
-            god_search_ui.config.issue_notice.clearIfActive();
+            wayspot.config.issue_notice.clearIfActive();
         }
         const resident_mode = hasArg(args, "--ui-resident") or hasArg(args, "--ui-daemon");
         const start_hidden = hasArg(args, "--ui-daemon");
-        if (!god_search_ui.ui.gtk_enabled and resident_mode) {
+        if (!wayspot.ui.gtk_enabled and resident_mode) {
             std.log.err("--ui-daemon/--ui-resident requires GTK build; run: zig build -Denable_gtk=true", .{});
             std.process.exit(2);
         }
@@ -135,7 +135,7 @@ pub fn main() !void {
         var runtime = try setupRuntime(allocator);
         defer runtime.deinit(allocator);
         runtime.rebindProviderContexts();
-        if (resident_mode and envFlagEnabled("GOD_SEARCH_WM_EVENT_BRIDGE")) {
+        if (resident_mode and envFlagEnabled("WAYSPOT_WM_EVENT_BRIDGE")) {
             runtime.startWmEventBridge(allocator);
         }
         try runtime.service.loadHistory(allocator);
@@ -144,9 +144,9 @@ pub fn main() !void {
         };
         logger.info("runtime ready in {d:.2} ms", .{startup_sw.elapsedMs()});
         if (cfg_issue) |msg| {
-            god_search_ui.config.issue_notice.show(msg, "Fix config.lua and reload (restart daemon or run re-run.sh).");
+            wayspot.config.issue_notice.show(msg, "Fix config.lua and reload (restart daemon or run re-run.sh).");
         }
-        try god_search_ui.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry, .{
+        try wayspot.ui.Shell.run(allocator, &runtime.service, &runtime.telemetry, .{
             .resident_mode = resident_mode,
             .start_hidden = start_hidden,
             .surface_mode = surface_mode,
@@ -159,11 +159,11 @@ pub fn main() !void {
     }
 
     logger.info("startup ready in {d:.2} ms", .{startup_sw.elapsedMs()});
-    try god_search_ui.bufferedPrint();
+    try wayspot.bufferedPrint();
 }
 
-fn isCommandOk(allocator: std.mem.Allocator, cmd: god_search_ui.ipc.control.Command) bool {
-    const response = god_search_ui.ipc.control.executeCommand(allocator, cmd) catch return false;
+fn isCommandOk(allocator: std.mem.Allocator, cmd: wayspot.ipc.control.Command) bool {
+    const response = wayspot.ipc.control.executeCommand(allocator, cmd) catch return false;
     defer {
         allocator.free(response.code);
         allocator.free(response.message);
@@ -176,7 +176,7 @@ fn printCtlUsage() !void {
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const out = &stdout_writer.interface;
     try out.print(
-        \\Usage: god-search-ui --ctl <command>
+        \\Usage: wayspot --ctl <command>
         \\Commands: ping, summon, hide, toggle, version, shell_health, wm_event_stats
         \\
     , .{});
@@ -185,11 +185,11 @@ fn printCtlUsage() !void {
 
 const Runtime = struct {
     const WmEventBridge = struct {
-        backend: ?god_search_ui.wm.Backend = null,
-        subscription: ?god_search_ui.wm.EventSubscription = null,
-        service: ?*god_search_ui.app.SearchService = null,
-        windows: ?*god_search_ui.providers.WindowsProvider = null,
-        workspaces: ?*god_search_ui.providers.WorkspacesProvider = null,
+        backend: ?wayspot.wm.Backend = null,
+        subscription: ?wayspot.wm.EventSubscription = null,
+        service: ?*wayspot.app.SearchService = null,
+        windows: ?*wayspot.providers.WindowsProvider = null,
+        workspaces: ?*wayspot.providers.WorkspacesProvider = null,
         event_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
         refresh_scheduled_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
         refresh_skipped_count: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
@@ -199,16 +199,16 @@ const Runtime = struct {
         fn start(
             self: *WmEventBridge,
             allocator: std.mem.Allocator,
-            service: *god_search_ui.app.SearchService,
-            windows: *god_search_ui.providers.WindowsProvider,
-            workspaces: *god_search_ui.providers.WorkspacesProvider,
-            backend: god_search_ui.wm.Backend,
+            service: *wayspot.app.SearchService,
+            windows: *wayspot.providers.WindowsProvider,
+            workspaces: *wayspot.providers.WorkspacesProvider,
+            backend: wayspot.wm.Backend,
         ) void {
             self.service = service;
             self.windows = windows;
             self.workspaces = workspaces;
             self.backend = backend;
-            self.log_every_event = envFlagEnabled("GOD_SEARCH_WM_EVENT_LOG_EVERY");
+            self.log_every_event = envFlagEnabled("WAYSPOT_WM_EVENT_LOG_EVERY");
             if (!backend.supportsEventStream()) return;
 
             const maybe_sub = backend.subscribeEvents(allocator, self, onWmEvent) catch return;
@@ -226,7 +226,7 @@ const Runtime = struct {
             self.subscription = null;
         }
 
-        fn onWmEvent(ctx: *anyopaque, event: god_search_ui.wm.Event) void {
+        fn onWmEvent(ctx: *anyopaque, event: wayspot.wm.Event) void {
             const self: *WmEventBridge = @ptrCast(@alignCast(ctx));
             const service = self.service orelse return;
             const allocator = std.heap.page_allocator;
@@ -244,7 +244,7 @@ const Runtime = struct {
                 },
             }
             const result = service.scheduleRefreshFromEvent();
-            god_search_ui.wm.event_stats.record(switch (result) {
+            wayspot.wm.event_stats.record(switch (result) {
                 .scheduled => .scheduled,
                 .skipped_running => .skipped_running,
                 .failed_spawn => .failed_spawn,
@@ -286,14 +286,14 @@ const Runtime = struct {
     app_cache_path: []u8,
     history_path: []u8,
     telemetry_path: []u8,
-    actions: god_search_ui.providers.ActionsProvider = .{},
-    apps: god_search_ui.providers.AppsProvider,
-    windows: god_search_ui.providers.WindowsProvider = .{},
-    workspaces: god_search_ui.providers.WorkspacesProvider = .{},
-    dirs: god_search_ui.providers.DirsProvider = .{},
-    provider_list: [5]god_search_ui.search.Provider,
-    service: god_search_ui.app.SearchService,
-    telemetry: god_search_ui.app.TelemetrySink,
+    actions: wayspot.providers.ActionsProvider = .{},
+    apps: wayspot.providers.AppsProvider,
+    windows: wayspot.providers.WindowsProvider = .{},
+    workspaces: wayspot.providers.WorkspacesProvider = .{},
+    dirs: wayspot.providers.DirsProvider = .{},
+    provider_list: [5]wayspot.search.Provider,
+    service: wayspot.app.SearchService,
+    telemetry: wayspot.app.TelemetrySink,
     wm_event_bridge: WmEventBridge = .{},
 
     fn deinit(self: *Runtime, allocator: std.mem.Allocator) void {
@@ -316,12 +316,12 @@ const Runtime = struct {
             self.workspaces.provider(),
             self.dirs.provider(),
         };
-        const registry = god_search_ui.providers.ProviderRegistry.init(&self.provider_list);
-        self.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, self.history_path);
+        const registry = wayspot.providers.ProviderRegistry.init(&self.provider_list);
+        self.service = wayspot.app.SearchService.initWithHistoryPath(registry, self.history_path);
         self.service.max_history = 64;
         self.service.cache_ttl_ns = 30 * std.time.ns_per_s;
         self.service.enable_async_refresh = useAsyncRefresh();
-        self.telemetry = god_search_ui.app.TelemetrySink.init(self.telemetry_path);
+        self.telemetry = wayspot.app.TelemetrySink.init(self.telemetry_path);
     }
 
     fn startWmEventBridge(self: *Runtime, allocator: std.mem.Allocator) void {
@@ -335,7 +335,7 @@ const Runtime = struct {
     }
 };
 
-fn eventRefreshResultLabel(result: god_search_ui.app.SearchService.EventRefreshResult) []const u8 {
+fn eventRefreshResultLabel(result: wayspot.app.SearchService.EventRefreshResult) []const u8 {
     return switch (result) {
         .scheduled => "scheduled",
         .skipped_running => "skipped_running",
@@ -361,9 +361,9 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
 
     const app_cache = try std.fmt.allocPrint(allocator, "{s}/.cache/waybar/wofi-app-launcher.tsv", .{home});
     errdefer allocator.free(app_cache);
-    const history_path = try std.fmt.allocPrint(allocator, "{s}/.local/state/god-search-ui/history.log", .{home});
+    const history_path = try std.fmt.allocPrint(allocator, "{s}/.local/state/wayspot/history.log", .{home});
     errdefer allocator.free(history_path);
-    const telemetry_path = try std.fmt.allocPrint(allocator, "{s}/.local/state/god-search-ui/telemetry.log", .{home});
+    const telemetry_path = try std.fmt.allocPrint(allocator, "{s}/.local/state/wayspot/telemetry.log", .{home});
     errdefer allocator.free(telemetry_path);
 
     var runtime = Runtime{
@@ -371,7 +371,7 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
         .history_path = history_path,
         .telemetry_path = telemetry_path,
         .actions = .{},
-        .apps = god_search_ui.providers.AppsProvider.init(app_cache),
+        .apps = wayspot.providers.AppsProvider.init(app_cache),
         .windows = .{},
         .workspaces = .{},
         .dirs = .{},
@@ -388,18 +388,18 @@ fn setupRuntime(allocator: std.mem.Allocator) !Runtime {
         runtime.dirs.provider(),
     };
 
-    const registry = god_search_ui.providers.ProviderRegistry.init(&runtime.provider_list);
-    runtime.service = god_search_ui.app.SearchService.initWithHistoryPath(registry, history_path);
+    const registry = wayspot.providers.ProviderRegistry.init(&runtime.provider_list);
+    runtime.service = wayspot.app.SearchService.initWithHistoryPath(registry, history_path);
     runtime.service.max_history = 64;
     runtime.service.cache_ttl_ns = 30 * std.time.ns_per_s;
     runtime.service.enable_async_refresh = useAsyncRefresh();
-    runtime.telemetry = god_search_ui.app.TelemetrySink.init(telemetry_path);
+    runtime.telemetry = wayspot.app.TelemetrySink.init(telemetry_path);
 
     return runtime;
 }
 
 fn useAsyncRefresh() bool {
-    const value = std.process.getEnvVarOwned(std.heap.page_allocator, "GOD_SEARCH_ASYNC_REFRESH") catch return false;
+    const value = std.process.getEnvVarOwned(std.heap.page_allocator, "WAYSPOT_ASYNC_REFRESH") catch return false;
     defer std.heap.page_allocator.free(value);
     const trimmed = std.mem.trim(u8, value, " \t\r\n");
     if (trimmed.len == 0) return false;
@@ -425,7 +425,7 @@ fn argValueAfterFlag(args: []const []const u8, flag: []const u8) ?[]const u8 {
     return null;
 }
 
-fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
+fn parseControlCommand(value: []const u8) ?wayspot.ipc.control.Command {
     if (std.mem.eql(u8, value, "ping")) return .ping;
     if (std.mem.eql(u8, value, "summon")) return .summon;
     if (std.mem.eql(u8, value, "hide")) return .hide;
@@ -436,12 +436,12 @@ fn parseControlCommand(value: []const u8) ?god_search_ui.ipc.control.Command {
     return null;
 }
 
-fn resolveSurfaceMode(args: []const []const u8, cfg: god_search_ui.config.Settings) god_search_ui.ui.surfaces.SurfaceMode {
+fn resolveSurfaceMode(args: []const []const u8, cfg: wayspot.config.Settings) wayspot.ui.surfaces.SurfaceMode {
     _ = args;
     return cfg.surface_mode orelse .layer_shell;
 }
 
-fn printResolvedConfig(cfg: god_search_ui.config.Settings, surface_mode: god_search_ui.ui.surfaces.SurfaceMode) !void {
+fn printResolvedConfig(cfg: wayspot.config.Settings, surface_mode: wayspot.ui.surfaces.SurfaceMode) !void {
     var stdout_buffer: [4096]u8 = undefined;
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const out = &stdout_writer.interface;

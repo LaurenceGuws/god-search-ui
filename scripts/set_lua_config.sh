@@ -32,7 +32,7 @@ fi
 
 KEY="$1"
 VALUE="$2"
-CFG="${GOD_SEARCH_CONFIG_LUA:-$HOME/.config/god-search-ui/config.lua}"
+CFG="${WAYSPOT_CONFIG_LUA:-$HOME/.config/wayspot/config.lua}"
 
 if [[ ! -f "$CFG" ]]; then
   scripts/init_lua_config.sh "$CFG" >/dev/null

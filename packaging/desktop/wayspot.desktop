@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=God Search UI
+Name=Wayspot
 Comment=Spotlight-style launcher for Hyprland
-Exec=god-search-ui --ui
-Icon=god-search-ui
+Exec=wayspot --ui
+Icon=wayspot
 Terminal=false
 Categories=Utility;
 Keywords=launcher;search;hyprland;

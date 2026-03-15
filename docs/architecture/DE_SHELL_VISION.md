@@ -5,7 +5,7 @@ Canonical: yes
 
 # DE Shell Vision
 
-This document defines the target shape of `god-search-ui` as a long-lived shell daemon.
+This document defines the target shape of `wayspot` as a long-lived shell daemon.
 
 ## North Star
 
@@ -17,7 +17,7 @@ Build a modular daemon (`shelld`) that can run independently from the compositor
 
 ## Current Baseline
 
-`god-search-ui` currently has:
+`wayspot` currently has:
 - resident/daemon GTK lifecycle (`--ui-resident`, `--ui-daemon`)
 - warm summon path
 - local control-plane IPC (`ping`, `summon`, `hide`, `toggle`, `version`, etc.)

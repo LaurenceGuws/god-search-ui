@@ -12,8 +12,8 @@ const service_name: [*:0]const u8 = "org.freedesktop.Notifications";
 const interface_name: [*:0]const u8 = "org.freedesktop.Notifications";
 const object_path: [*:0]const u8 = "/org/freedesktop/Notifications";
 
-const server_name: [*:0]const u8 = "god-search-ui";
-const server_vendor: [*:0]const u8 = "god-search-ui";
+const server_name: [*:0]const u8 = "wayspot";
+const server_vendor: [*:0]const u8 = "wayspot";
 const server_version: [*:0]const u8 = "0.1.3-dev";
 const server_spec_version: [*:0]const u8 = "1.3";
 

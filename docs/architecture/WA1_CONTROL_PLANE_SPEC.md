@@ -22,8 +22,8 @@ Out-of-scope:
 
 ## Socket
 
-- Path: `$XDG_RUNTIME_DIR/god-search-ui.sock`
-- Fallback when `XDG_RUNTIME_DIR` is missing: `/tmp/god-search-ui-$UID.sock`
+- Path: `$XDG_RUNTIME_DIR/wayspot.sock`
+- Fallback when `XDG_RUNTIME_DIR` is missing: `/tmp/wayspot-$UID.sock`
 - Type: Unix stream socket
 - Ownership: current user only
 - Recommended mode: `0600`
@@ -80,19 +80,19 @@ Error response example:
 
 ## CLI Behavior
 
-`god-search-ui --ui`:
+`wayspot --ui`:
 1. Attempt socket connect and send `summon`.
 2. If daemon responds `ok`, exit immediately with code `0`.
 3. If connect fails, continue local UI startup path.
 
 Dedicated control commands:
-- `god-search-ui --ctl ping`
-- `god-search-ui --ctl summon`
-- `god-search-ui --ctl hide`
-- `god-search-ui --ctl toggle`
-- `god-search-ui --ctl version`
-- `god-search-ui --ctl shell_health`
-- `god-search-ui --ctl wm_event_stats`
+- `wayspot --ctl ping`
+- `wayspot --ctl summon`
+- `wayspot --ctl hide`
+- `wayspot --ctl toggle`
+- `wayspot --ctl version`
+- `wayspot --ctl shell_health`
+- `wayspot --ctl wm_event_stats`
 
 ## Exit Codes
 

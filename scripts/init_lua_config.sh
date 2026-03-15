@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TARGET="${1:-${HOME}/.config/god-search-ui/config.lua}"
+TARGET="${1:-${HOME}/.config/wayspot/config.lua}"
 DIR="$(dirname "${TARGET}")"
 
 mkdir -p "${DIR}"

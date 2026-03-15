@@ -1,16 +1,16 @@
 # Maintainer: Your Name <you@example.com>
-pkgname=god-search-ui-git
+pkgname=wayspot-git
 pkgver=0.1.0.r0.g0000000
 pkgrel=1
 pkgdesc="Spotlight-style launcher UI for Hyprland"
 arch=('x86_64')
-url="https://example.local/god-search-ui"
+url="https://example.local/wayspot"
 license=('MIT')
 depends=('glibc')
 makedepends=('zig' 'git')
 optdepends=('gtk4: enable GTK UI shell at build time')
-provides=('god-search-ui')
-conflicts=('god-search-ui')
+provides=('wayspot')
+conflicts=('wayspot')
 _repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 source=("$pkgname::git+file://${_repo_root}")
 sha256sums=('SKIP')
@@ -33,9 +33,9 @@ check() {
 
 package() {
   cd "$srcdir/$pkgname"
-  install -Dm755 "zig-out/bin/god-search-ui" "$pkgdir/usr/bin/god-search-ui"
-  install -Dm644 "packaging/desktop/god-search-ui.desktop" "$pkgdir/usr/share/applications/god-search-ui.desktop"
-  install -Dm644 "assets/icons/god-search-ui.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/god-search-ui.svg"
-  install -Dm644 "packaging/systemd/god-search-ui.service" "$pkgdir/usr/lib/systemd/user/god-search-ui.service"
+  install -Dm755 "zig-out/bin/wayspot" "$pkgdir/usr/bin/wayspot"
+  install -Dm644 "packaging/desktop/wayspot.desktop" "$pkgdir/usr/share/applications/wayspot.desktop"
+  install -Dm644 "assets/icons/wayspot.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/wayspot.svg"
+  install -Dm644 "packaging/systemd/wayspot.service" "$pkgdir/usr/lib/systemd/user/wayspot.service"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }

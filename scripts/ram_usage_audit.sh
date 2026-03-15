@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-BIN="${BIN:-./zig-out/bin/god-search-ui}"
-DAEMON_LOG="$HOME/.local/state/god-search-ui/daemon.log"
-OUT_CSV="${OUT_CSV:-/tmp/god-search-ui-ram-baseline.csv}"
-OUT_LOG="${OUT_LOG:-/tmp/god-search-ui-ram-daemon-log.txt}"
+BIN="${BIN:-./zig-out/bin/wayspot}"
+DAEMON_LOG="$HOME/.local/state/wayspot/daemon.log"
+OUT_CSV="${OUT_CSV:-/tmp/wayspot-ram-baseline.csv}"
+OUT_LOG="${OUT_LOG:-/tmp/wayspot-ram-daemon-log.txt}"
 QUERY_DELAY_SEC="${QUERY_DELAY_SEC:-10}"
 CLEAR_DELAY_SEC="${CLEAR_DELAY_SEC:-10}"
 

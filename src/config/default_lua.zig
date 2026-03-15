@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub fn resolvePath(allocator: std.mem.Allocator) ![]u8 {
-    const env = std.process.getEnvVarOwned(allocator, "GOD_SEARCH_CONFIG_LUA") catch null;
+    const env = std.process.getEnvVarOwned(allocator, "WAYSPOT_CONFIG_LUA") catch null;
     if (env) |value| {
         const trimmed = std.mem.trim(u8, value, " \t\r\n");
         if (trimmed.len == 0) {
@@ -13,7 +13,7 @@ pub fn resolvePath(allocator: std.mem.Allocator) ![]u8 {
 
     const home = try std.process.getEnvVarOwned(allocator, "HOME");
     defer allocator.free(home);
-    return std.fmt.allocPrint(allocator, "{s}/.config/god-search-ui/config.lua", .{home});
+    return std.fmt.allocPrint(allocator, "{s}/.config/wayspot/config.lua", .{home});
 }
 
 pub fn ensureDefaultConfig(allocator: std.mem.Allocator) !bool {

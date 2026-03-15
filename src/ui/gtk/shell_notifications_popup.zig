@@ -286,7 +286,7 @@ pub const PopupManager = struct {
         if (self.window != null and self.list != null) return true;
 
         const window = c.gtk_application_window_new(self.gtk_app);
-        c.gtk_window_set_title(@ptrCast(window), "God Search Notifications");
+        c.gtk_window_set_title(@ptrCast(window), "Wayspot Notifications");
         c.gtk_widget_add_css_class(window, "gs-notify-window");
         const use_layer_notifications = layer_shell.shouldUseLayerShell(self.surface_mode);
         if (use_layer_notifications and !layer_shell.applyNotifications(window, self.placement_policy)) {

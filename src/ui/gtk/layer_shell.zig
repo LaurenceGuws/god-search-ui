@@ -52,7 +52,7 @@ const enabled = struct {
         if (!runtimeAvailable()) return false;
         const win: *c.GtkWindow = @ptrCast(@alignCast(window));
         c.gtk_layer_init_for_window(win);
-        c.gtk_layer_set_namespace(win, "god-search-ui-launcher");
+        c.gtk_layer_set_namespace(win, "wayspot-launcher");
         c.gtk_layer_set_layer(win, c.GTK_LAYER_SHELL_LAYER_TOP);
         c.gtk_layer_set_keyboard_mode(win, c.GTK_LAYER_SHELL_KEYBOARD_MODE_EXCLUSIVE);
         applyAnchor(win, policy.window.anchor);
@@ -67,7 +67,7 @@ const enabled = struct {
         if (!runtimeAvailable()) return false;
         const win: *c.GtkWindow = @ptrCast(@alignCast(window));
         c.gtk_layer_init_for_window(win);
-        c.gtk_layer_set_namespace(win, "god-search-ui-notifications");
+        c.gtk_layer_set_namespace(win, "wayspot-notifications");
         c.gtk_layer_set_layer(win, c.GTK_LAYER_SHELL_LAYER_TOP);
         c.gtk_layer_set_keyboard_mode(win, c.GTK_LAYER_SHELL_KEYBOARD_MODE_NONE);
         applyAnchor(win, policy.window.anchor);
@@ -104,5 +104,4 @@ const enabled = struct {
     fn runtimeAvailable() bool {
         return c.gtk_layer_is_supported() != 0;
     }
-
 };
